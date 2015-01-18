@@ -46,9 +46,14 @@
     <define name="BODY_TO_IMU_THETA" value="0." unit="deg"/>
     <define name="BODY_TO_IMU_PSI" value="0." unit="deg"/>
 
-    <define name="ACCEL_X_NEUTRAL" value="0"/>
-    <define name="ACCEL_Y_NEUTRAL" value="0"/>
-    <define name="ACCEL_Z_NEUTRAL" value="0"/>
+    <!-- From Delft MAVlab, quick calibration -->
+    <define name="ACCEL_X_NEUTRAL" value="62"/>
+    <define name="ACCEL_Y_NEUTRAL" value="16"/>
+    <define name="ACCEL_Z_NEUTRAL" value="-191"/>
+    <define name="ACCEL_X_SENS" value="4.86205019187" integer="16"/>
+    <define name="ACCEL_Y_SENS" value="4.88606377201" integer="16"/>
+    <define name="ACCEL_Z_SENS" value="4.84406734807" integer="16"/>
+
 
     <!-- From delft MAVLab -->
     <define name="MAG_X_NEUTRAL" value="396"/>
@@ -72,7 +77,10 @@
 
  <section name="BAT">
    <define name="MILLIAMP_AT_FULL_THROTTLE" value="3700"/>
-   <define name="CATASTROPHIC_BAT_LEVEL" value="3.4" unit="V"/>
+   <define name="CATASTROPHIC_BAT_LEVEL" value="3.0" unit="V"/>
+    <define name="CRITIC_BAT_LEVEL" value="3.2" unit="V"/>
+    <define name="LOW_BAT_LEVEL" value="3.5" unit="V"/>
+    <define name="MAX_BAT_LEVEL" value="4.2" unit="V"/>
  </section>
 
 
@@ -164,12 +172,13 @@
   <firmware name="rotorcraft">
     <target name="ap" board="lisa_s_1.0">
       <subsystem name="radio_control" type="superbitrf_rc">
-        <define name="RADIO_TRANSMITTER_ID" value="2008496626"/>   <!-- TUDelft Dx6i: TX 4 -->
-        <define name="RADIO_TRANSMITTER_CHAN" value="6"/>
-        <define name="RADIO_TRANSMITTER_PROTOCOL" value="0x01"/>
+        <!--<define name="RADIO_TRANSMITTER_ID" value="2008496626"/>-->   <!-- TUDelft Dx6i: TX 4 -->
+        <!--<define name="RADIO_TRANSMITTER_CHAN" value="6"/>-->
+        <!--<define name="RADIO_TRANSMITTER_PROTOCOL" value="0x01"/>-->
       </subsystem>
 
       <configure name="AHRS_PROPAGATE_FREQUENCY" value="500"/>
+      <define name="USE_PERSISTENT_SETTINGS" value="TRUE"/>
     </target>
 
     <subsystem name="actuators" type="pwm">
@@ -178,7 +187,11 @@
       <define name="USE_SERVOS_1AND2"/>
     </subsystem>
 
-    <subsystem name="telemetry" type="superbitrf"/>
+    <!-- <subsystem name="telemetry" type="superbitrf" /> -->
+    <subsystem name="telemetry" type="transparent">
+      <configure name="MODEM_BAUD" 		value="B57600"/>
+      <configure name="MODEM_PORT"    value="UART1"/>
+    </subsystem>
     <subsystem name="imu" type="lisa_s_v1.0"/>
     <subsystem name="gps" type="ublox"/>
     <subsystem name="stabilization" type="int_quat"/>
