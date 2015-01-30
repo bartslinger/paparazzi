@@ -5,7 +5,7 @@
     <description>Write logdata directly to a serial port.</description>
   </doc>
   <header>
-    <!--<file name="serial_logger.h"/>-->
+    <file name="serial_logger.h"/>
   </header>
   <periodic fun="serial_logger_periodic()" start="serial_logger_start()" stop="file_logger_stop()" autorun="FALSE"/>
   <makefile target="ap">
@@ -17,6 +17,6 @@
     <define name="USE_$(SERIAL_LOG_UART_UPPER)"/>
     <define name="SERIAL_LOG_UART" value="$(SERIAL_LOG_UART_UPPER)"/>
     <define name="$(SERIAL_LOG_UART_UPPER)_BAUD" value="B115200"/>
-<!--    <file name="serial_logger.c"/>-->
+    <file name="serial_logger.c"/>
   </makefile>
 </module>
