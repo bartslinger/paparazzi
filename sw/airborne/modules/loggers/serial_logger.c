@@ -25,4 +25,25 @@
  */
 
 #include "serial_logger.h"
+#include "mcu_periph/uart.h"
 
+void serial_logger_start(void){
+  uart_periph_init(&SERIAL_LOG_UART); // defined from xml
+  uart_periph_set_bits_stop_parity(&SERIAL_LOG_UART, 8, 1, 0);
+}
+
+void serial_logger_periodic(void){
+  uart_transmit(&SERIAL_LOG_UART, 75);
+  uart_transmit(&SERIAL_LOG_UART, 111);
+  uart_transmit(&SERIAL_LOG_UART, 110);
+  uart_transmit(&SERIAL_LOG_UART, 105);
+  uart_transmit(&SERIAL_LOG_UART, 110);
+  uart_transmit(&SERIAL_LOG_UART, 103);
+  uart_transmit(&SERIAL_LOG_UART, 115);
+  uart_transmit(&SERIAL_LOG_UART, 33);
+  uart_transmit(&SERIAL_LOG_UART, 10);
+}
+
+void serial_logger_stop(void){
+
+}

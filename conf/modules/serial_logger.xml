@@ -7,7 +7,8 @@
   <header>
     <file name="serial_logger.h"/>
   </header>
-  <periodic fun="serial_logger_periodic()" start="serial_logger_start()" stop="file_logger_stop()" autorun="FALSE"/>
+  <init fun="serial_logger_start()"/>
+  <periodic fun="serial_logger_periodic()" autorun="TRUE"/>
   <makefile target="ap">
     <raw>
       SERIAL_LOG_UART ?= uart1
@@ -15,8 +16,8 @@
       SERIAL_LOG_UART_UPPER=$(shell echo $(SERIAL_LOG_UART) | tr a-z A-Z)
     </raw>
     <define name="USE_$(SERIAL_LOG_UART_UPPER)"/>
-    <define name="SERIAL_LOG_UART" value="$(SERIAL_LOG_UART_UPPER)"/>
-    <define name="$(SERIAL_LOG_UART_UPPER)_BAUD" value="B115200"/>
+    <define name="SERIAL_LOG_UART" value="$(SERIAL_LOG_UART_LOWER)"/>
+    <!--<define name="$(SERIAL_LOG_UART_UPPER)_BAUD" value="B57600"/>-->
     <file name="serial_logger.c"/>
   </makefile>
 </module>
