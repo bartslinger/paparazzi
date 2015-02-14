@@ -36,6 +36,7 @@
 *.files
 *.includes
 *.creator
+*.creator.user
 
 paparazzi.sublime-workspace
 
