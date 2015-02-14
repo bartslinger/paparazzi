@@ -40,6 +40,6 @@ new_files_file.close()
 
 # Then, do a full build on the aircraft, but replace compiler with python script
 print "Analyzing make output.."
-cmd = "make -f Makefile.ac PAPARAZZI_HOME=" + PAPARAZZI_HOME + " PAPARAZZI_SRC=" + PAPARAZZI_HOME + " AIRCRAFT=" + AIRCRAFT + " CC='python " + PAPARAZZI_HOME + "/sw/tools/qtcreator_ide_config/gcc_interpeter.py " + AIRCRAFT + "' CP='python " + PAPARAZZI_HOME + "/sw/tools/qtcreator_ide_config/skip_command.py' DMP='python " + PAPARAZZI_HOME + "/sw/tools/qtcreator_ide_config/skip_command.py' NM='python " + PAPARAZZI_HOME + "/sw/tools/qtcreator_ide_config/skip_command.py' NPROCS=1 ap.compile"
+cmd = "make -f Makefile.ac PAPARAZZI_HOME=" + PAPARAZZI_HOME + " PAPARAZZI_SRC=" + PAPARAZZI_HOME + " AIRCRAFT=" + AIRCRAFT + " CC='python " + PAPARAZZI_HOME + "/sw/tools/qtcreator_ide_config/gcc_interpeter.py " + AIRCRAFT + "' CP='python " + PAPARAZZI_HOME + "/sw/tools/qtcreator_ide_config/skip_command.py' LD='python " + PAPARAZZI_HOME + "/sw/tools/qtcreator_ide_config/skip_command.py' DMP='python " + PAPARAZZI_HOME + "/sw/tools/qtcreator_ide_config/skip_command.py' NM='python " + PAPARAZZI_HOME + "/sw/tools/qtcreator_ide_config/skip_command.py' NPROCS=1 ap.compile"
 print os.popen(cmd).read()
 
