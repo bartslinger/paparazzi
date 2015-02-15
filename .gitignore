@@ -31,6 +31,13 @@
 /build.properties
 /META-INF
 
+# QtCreator IDE project files
+*.config
+*.files
+*.includes
+*.creator
+*.creator.user
+
 paparazzi.sublime-workspace
 
 # JetBrains (PyCharm, etc) IDE project files
