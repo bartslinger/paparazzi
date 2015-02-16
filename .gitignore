@@ -38,6 +38,10 @@
 *.creator
 *.creator.user
 
+# For Unity and Cmock unit testing
+*.yml
+Mock*
+
 paparazzi.sublime-workspace
 
 # JetBrains (PyCharm, etc) IDE project files

@@ -88,6 +88,9 @@ extern void uart_event(void);
  * Check UART for available chars in receive buffer.
  * @return number of chars in the buffer
  */
+#ifdef TEST
+uint16_t uart_char_available(struct uart_periph *p);
+#else
 static inline uint16_t uart_char_available(struct uart_periph *p)
 {
   int16_t available = p->rx_insert_idx - p->rx_extract_idx;
@@ -96,6 +99,7 @@ static inline uint16_t uart_char_available(struct uart_periph *p)
   }
   return (uint16_t)available;
 }
+#endif // TEST
 
 
 #if USE_UART0

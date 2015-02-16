@@ -1,0 +1,151 @@
+compiler:
+  path: gcc
+  source_path:     '/home/bart/paparazzi/sw/airborne/'
+  unit_tests_path: &unit_tests_path '/home/bart/paparazzi/tests/unittest/'
+  build_path:      &build_path 'build/'
+  options:
+    - -c
+    - -std=c99
+    - -Wall
+    - -Wextra
+#    - -Werror 
+    - -Wpointer-arith
+    - -Wcast-align
+    - -Wwrite-strings
+    - -Wswitch-default
+    - -Wunreachable-code
+    - -Winit-self
+    - -Wlogical-op
+    - -Wmissing-field-initializers
+    - -Wno-unknown-pragmas
+    - -Wjump-misses-init
+    - -Wstrict-prototypes
+#    - -Wundef
+    - -Wunsafe-loop-optimizations
+    - -Wold-style-definition
+    - -D__thumb2__='1'
+    - -DSTM32F1='1'
+    - -DACTUATORS='1'
+    - -DAHRS_ALIGNER_LED='2'
+    - -DAHRS_PROPAGATE_FREQUENCY='500'
+    - -DAHRS_TYPE_H='"subsystems/ahrs/ahrs_int_cmpl_quat.h"'
+    - -DASPIRIN_2_SPI_DEV='spi1'
+    - -DASPIRIN_2_SPI_SLAVE_IDX='SPI_SLAVE0'
+    - -DBB_MS5611_SLAVE_IDX='SPI_SLAVE1'
+    - -DBB_MS5611_SPI_DEV='spi1'
+    - -DBOARD_CONFIG='"boards/lisa_s_1.0.h"'
+    - -DDATALINK='SUPERBITRF'
+    - -DDOWNLINK='1'
+    - -DDOWNLINK_DEVICE='superbitrf'
+    - -DDOWNLINK_TRANSPORT='pprz_tp'
+    - -DDefaultPeriodic='&telemetry_Main'
+    - -DGIT_DESC='v5.5_devel-169-ge4778ad-dirty'
+    - -DGIT_SHA1='e4778ad010963913de0637d625a0edfa9936ef0b'
+    - -DGPS_LINK='UART3'
+    - -DGPS_TYPE_H='"subsystems/gps/gps_ubx.h"'
+    - -DGPS_UBX_UCENTER='1'
+    - -DIMU_TYPE_H='"imu/imu_aspirin_2_spi.h"'
+    - -DINS_TYPE_H='"subsystems/ins/ins_int.h"'
+    - -DLISA_S='1'
+    - -DPERIODIC_FREQUENCY='512'
+    - -DPERIODIC_TELEMETRY='1'
+    - -DPERIPHERALS_AUTO_INIT='1'
+    - -DPPRZ_VER=''
+    - -DPPRZ_VER_MAJOR='5'
+    - -DPPRZ_VER_MINOR='5'
+    - -DPPRZ_VER_PATCH='0'
+    - -DRADIO_CONTROL='1'
+    - -DRADIO_CONTROL_LED='3'
+    - -DRADIO_CONTROL_TYPE_H='"subsystems/radio_control/superbitrf_rc.h"'
+    - -DRADIO_CONTROL_TYPE_SUPERBITRF='1'
+    - -DSERIAL_LOG_UART='uart1'
+    - -DSERVO_HZ='300'
+    - -DSPI_MASTER='1'
+    - -DSTABILIZATION_ATTITUDE_TYPE_H='"stabilization/stabilization_attitude_quat_int.h"'
+    - -DSTABILIZATION_ATTITUDE_TYPE_INT='1'
+    - -DSYS_TIME_LED='1'
+    - -DTIM5_SERVO_HZ='2000'
+    - -DUART1_BAUD='B57600'
+    - -DUART3_BAUD='B38400'
+    - -DUSE_ADC='1'
+    - -DUSE_AHRS='1'
+    - -DUSE_AHRS_ALIGNER='1'
+    - -DUSE_GPS='1'
+    - -DUSE_IMU='1'
+    - -DUSE_LED='1'
+    - -DUSE_MAGNETOMETER='1'
+    - -DUSE_NAVIGATION='1'
+    - -DUSE_PERSISTENT_SETTINGS='TRUE'
+    - -DUSE_SERVOS_1AND2='1'
+    - -DUSE_SPI='1'
+    - -DUSE_SPI1='1'
+    - -DUSE_SPI2='1'
+    - -DUSE_SPI_SLAVE0='1'
+    - -DUSE_SPI_SLAVE1='1'
+    - -DUSE_SPI_SLAVE2='1'
+    - -DUSE_SUPERBITRF='1'
+    - -DUSE_UART1='1'
+    - -DUSE_UART3='1'
+  includes:
+    prefix: '-I'
+    items:
+      - '/home/bart/paparazzi/sw/airborne/'
+      - '/home/bart/paparazzi/tests/unittest/sw/airborne/'
+      - '/home/bart/paparazzi/sw/airborne/stm32/'
+      - '/home/bart/paparazzi/tests/unittest/sw/airborne/stm32/'
+      - '/home/bart/paparazzi/sw/ext/libopencm3/include/'
+      - '/home/bart/paparazzi/tests/unittest/sw/ext/libopencm3/include/'
+      - '/home/bart/paparazzi/sw/include/'
+      - '/home/bart/paparazzi/sw/include/'
+      - '/home/bart/paparazzi/sw/airborne/'
+      - '/home/bart/paparazzi/sw/airborne/'
+      - '/home/bart/paparazzi/conf/autopilot/'
+      - '/home/bart/paparazzi/conf/autopilot/'
+      - '/home/bart/paparazzi/sw/airborne/arch/stm32/'
+      - '/home/bart/paparazzi/sw/airborne/arch/stm32/'
+      - '/home/bart/paparazzi/var/include/'
+      - '/home/bart/paparazzi/var/include/'
+      - '/home/bart/paparazzi/var/aircrafts/Helisa/ap/'
+      - '/home/bart/paparazzi/var/aircrafts/Helisa/ap/'
+      - '/home/bart/paparazzi/sw/airborne/arch/stm32/modules/'
+      - '/home/bart/paparazzi/tests/unittest/sw/airborne/arch/stm32/modules/'
+      - '/home/bart/paparazzi/sw/airborne/boards/lisa_s/'
+      - '/home/bart/paparazzi/tests/unittest/sw/airborne/boards/lisa_s/'
+      - '/home/bart/paparazzi/sw/airborne/firmwares/rotorcraft/'
+      - '/home/bart/paparazzi/tests/unittest/sw/airborne/firmwares/rotorcraft/'
+      - '/home/bart/paparazzi/sw/airborne/modules/'
+      - '/home/bart/paparazzi/tests/unittest/sw/airborne/modules/'
+      - '/home/bart/unity/src/'
+      - '/home/bart/unity/extras/fixture/src/'
+      - '/'
+      - '/home/bart/cmock/src/'
+      - '/home/bart/unity/src/'
+      - '/home/bart/unity/examples/example_3/helper/'
+      - 'mocks/'
+      - *unit_tests_path
+  defines:
+    prefix: '-D'
+    items:
+      - __monitor
+  object_files:
+    prefix: '-o'
+    extension: '.o'
+    destination: *build_path
+linker:
+  path: gcc
+  options:
+    - -lm
+  includes:
+    prefix: '-I'
+  object_files:
+    path: *build_path
+    extension: '.o'
+  bin_files:
+    prefix: '-o'
+    extension: '.out'
+    destination: *build_path
+:cmock:
+  :treat_externs: :include
+  :plugins: []
+
+colour: true

@@ -1,0 +1,5 @@
+/home/bart/paparazzi/tests/unittest/sw/airborne/modules/loggers/serial_logger_tester.c:21:testIfInitalizationOfModuleAlsoInitializesUart:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK

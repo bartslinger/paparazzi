@@ -28,7 +28,8 @@
 #define SERIAL_LOGGER_H_
 
 extern void serial_logger_start(void);
-extern void serial_logger_stop(void);
-extern void serial_logger_periodic(void);
+
+//extern void serial_logger_stop(void);
+//extern void serial_logger_periodic(void);
 
 #endif /* SERIAL_LOGGER_H_ */

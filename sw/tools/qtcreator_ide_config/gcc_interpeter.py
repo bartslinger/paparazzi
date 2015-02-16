@@ -21,7 +21,8 @@ if not os.path.isfile(PAPARAZZI_HOME + "/" + AIRCRAFT + ".config"):
 	print "Generating config and includes file"
 	config   = open(PAPARAZZI_HOME + "/" + AIRCRAFT + ".config", "w")
 	includes = open(PAPARAZZI_HOME + "/" + AIRCRAFT + ".includes", "w")
-
+	test_config   = open(PAPARAZZI_HOME + "/tests/unittest/" + AIRCRAFT + "Tester.config", "w")
+	test_includes = open(PAPARAZZI_HOME + "/tests/unittest/" + AIRCRAFT + "Tester.includes", "w")
 
 	for argument in sys.argv:
 		matchObj = re.match(r'-D(.+)=(.*)', argument)
@@ -30,23 +31,33 @@ if not os.path.isfile(PAPARAZZI_HOME + "/" + AIRCRAFT + ".config"):
 			newDefine = newDefine.replace('\\"', '"')
 			newDefine = newDefine.replace('\'', '')
 			config.write(newDefine)
+			test_config.write(newDefine)
 			continue
 
 		matchObj = re.match(r'-D(.+)', argument)
 		if(matchObj) :
 			newDefine = '#define ' + matchObj.group(1) + ' 1\n'
 			config.write(newDefine)
+			test_config.write(newDefine)
 			continue
 
 		matchObj = re.match(r'-I(.+)', argument)
 		if(matchObj) :
 			newInclude = os.path.normpath(os.path.join(PAPARAZZI_HOME, './sw/airborne', matchObj.group(1)))
 			includes.write(newInclude + '\n')
+			test_includes.write(newInclude + '\n')
+			newInclude = os.path.normpath(os.path.join(PAPARAZZI_HOME + "/tests/unittest", './sw/airborne', matchObj.group(1)))
+			test_includes.write(newInclude + '\n')
 			#incc.write('-I' + newInclude + ' ')
 
+	# extra includes for unittest
+	test_includes.write('/home/bart/unity/src\n')
+	test_includes.write('/home/bart/unity/extras/fixture/src\n')
 	# close the project files
 	config.close()
 	includes.close()
+	test_config.close()
+	test_includes.close()
 
 # The files-file must be update every every call, to resolve all dependencies
 # First, extract all files currently in there
