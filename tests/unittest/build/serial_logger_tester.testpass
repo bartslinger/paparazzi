@@ -1,5 +1,8 @@
-/home/bart/paparazzi/tests/unittest/sw/airborne/modules/loggers/serial_logger_tester.c:21:testIfInitalizationOfModuleAlsoInitializesUart:PASS
+/home/bart/paparazzi/tests/unittest/sw/airborne/modules/loggers/serial_logger_tester.c:26:test_WriteStartByteWith12DataBytesPeriodicly:PASS
+/home/bart/paparazzi/tests/unittest/sw/airborne/modules/loggers/serial_logger_tester.c:39:test_PreventToWriteTooMuchData:PASS
+/home/bart/paparazzi/tests/unittest/sw/airborne/modules/loggers/serial_logger_tester.c:46:test_SendErrorMessageAfterUnableTooWrite:PASS
+/home/bart/paparazzi/tests/unittest/sw/airborne/modules/loggers/serial_logger_tester.c:62:test_SendNewDataAfterErrorMessage:PASS
 
 -----------------------
-1 Tests 0 Failures 0 Ignored 
+4 Tests 0 Failures 0 Ignored 
 OK

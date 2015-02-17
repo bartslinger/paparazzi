@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Freek van Tienen <freek.v.tienen@gmail.com>
+ * Copyright (C) 2015 Bart Slinger <bartslinger@gmail.com>
  *
  * This file is part of paparazzi.
  *
@@ -27,9 +27,25 @@
 #ifndef SERIAL_LOGGER_H_
 #define SERIAL_LOGGER_H_
 
-extern void serial_logger_start(void);
+// Translates SERIAL_LOGGER_USE_UART to USE_UART1 as defined in serial_logger.xml
+#define __SERIAL_LOGGER_USE_UART(port) USE_##port
+#define _SERIAL_LOGGER_USE_UART(port) __SERIAL_LOGGER_USE_UART(port)
+#define SERIAL_LOGGER_USE_UART _SERIAL_LOGGER_USE_UART(SERIAL_LOG_UART_UPPER)
 
-//extern void serial_logger_stop(void);
-//extern void serial_logger_periodic(void);
+// Translates SERIAL_LOGGER_BAUD to B115200 as defined in serial_logger.xml
+#define __SERIAL_LOGGER_BAUD(port) port##_BAUD
+#define _SERIAL_LOGGER_BAUD(port) __SERIAL_LOGGER_BAUD(port)
+#define SERIAL_LOGGER_BAUD _SERIAL_LOGGER_BAUD(SERIAL_LOG_UART_UPPER)
+
+#include "std.h"
+
+struct serial_logger_struct {
+    bool_t bufferOverrun;
+};
+extern struct serial_logger_struct serial_logger;
+
+extern void serial_logger_start(void);
+extern void serial_logger_periodic(void);
+extern void serial_logger_stop(void);
 
 #endif /* SERIAL_LOGGER_H_ */

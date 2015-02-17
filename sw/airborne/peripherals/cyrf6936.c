@@ -30,7 +30,6 @@
 #include "mcu_periph/sys_time.h"
 #include "subsystems/radio_control.h"
 
-#include "mcu_periph/uart.h"
 #include "messages.h"
 #include "subsystems/datalink/downlink.h"
 

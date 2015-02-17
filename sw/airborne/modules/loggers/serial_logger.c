@@ -27,31 +27,59 @@
 #include "serial_logger.h"
 #include "mcu_periph/uart.h"
 
+// Struct with all the variables for this module
+struct serial_logger_struct serial_logger;
+
 void serial_logger_start(void)
 {
-    uart_periph_init(&uart1);
-}
-
-/* BACKUP the lame way
-
-void serial_logger_start(void){
-  uart_periph_init(&SERIAL_LOG_UART); // defined from xml
-  uart_periph_set_bits_stop_parity(&SERIAL_LOG_UART, 8, 1, 0);
-}
-
-void serial_logger_periodic(void){
-  uart_transmit(&SERIAL_LOG_UART, 75);
-  uart_transmit(&SERIAL_LOG_UART, 111);
-  uart_transmit(&SERIAL_LOG_UART, 110);
-  uart_transmit(&SERIAL_LOG_UART, 105);
-  uart_transmit(&SERIAL_LOG_UART, 110);
-  uart_transmit(&SERIAL_LOG_UART, 103);
-  uart_transmit(&SERIAL_LOG_UART, 115);
-  uart_transmit(&SERIAL_LOG_UART, 33);
-  uart_transmit(&SERIAL_LOG_UART, 10);
-}
-
-void serial_logger_stop(void){
 
 }
-*/
+
+void serial_logger_periodic(void)
+{
+    if(uart_check_free_space(&SERIAL_LOG_UART, 13*8))
+    {
+        if(serial_logger.bufferOverrun)
+        {
+            // Send error message
+            uart_transmit(&SERIAL_LOG_UART, 0xF0);
+            for (uint8_t i=0; i<12; i++)
+            {
+                uart_transmit(&SERIAL_LOG_UART, 0x00);
+            }
+            // Erorr has been sent, can send new data from now on
+            serial_logger.bufferOverrun = FALSE;
+        }
+        else{
+            // Send startbyte
+            uart_transmit(&SERIAL_LOG_UART, 0xFF);
+
+            // Send first 32-bit datafield
+            uart_transmit(&SERIAL_LOG_UART, 0x00);
+            uart_transmit(&SERIAL_LOG_UART, 0x01);
+            uart_transmit(&SERIAL_LOG_UART, 0x10);
+            uart_transmit(&SERIAL_LOG_UART, 0x20);
+
+            // Send second 32-bit datafield
+            uart_transmit(&SERIAL_LOG_UART, 0x05);
+            uart_transmit(&SERIAL_LOG_UART, 0x11);
+            uart_transmit(&SERIAL_LOG_UART, 0x32);
+            uart_transmit(&SERIAL_LOG_UART, 0x33);
+
+            // Send third 32-bit datafield
+            uart_transmit(&SERIAL_LOG_UART, 0x66);
+            uart_transmit(&SERIAL_LOG_UART, 0x44);
+            uart_transmit(&SERIAL_LOG_UART, 0x0F);
+            uart_transmit(&SERIAL_LOG_UART, 0xFF);
+        }
+    }
+    else
+    {
+        serial_logger.bufferOverrun = TRUE;
+    }
+}
+
+void serial_logger_stop(void)
+{
+
+}

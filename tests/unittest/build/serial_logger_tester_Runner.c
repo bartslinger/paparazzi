@@ -28,7 +28,10 @@
 //=======External Functions This Runner Calls=====
 extern void setUp(void);
 extern void tearDown(void);
-extern void testIfInitalizationOfModuleAlsoInitializesUart(void);
+extern void test_WriteStartByteWith12DataBytesPeriodicly(void);
+extern void test_PreventToWriteTooMuchData(void);
+extern void test_SendErrorMessageAfterUnableTooWrite(void);
+extern void test_SendNewDataAfterErrorMessage(void);
 
 
 //=======Test Reset Option=====
@@ -44,7 +47,10 @@ void resetTest(void)
 int main(void)
 {
   UnityBegin("/home/bart/paparazzi/tests/unittest/sw/airborne/modules/loggers/serial_logger_tester.c");
-  RUN_TEST(testIfInitalizationOfModuleAlsoInitializesUart, 21);
+  RUN_TEST(test_WriteStartByteWith12DataBytesPeriodicly, 26);
+  RUN_TEST(test_PreventToWriteTooMuchData, 39);
+  RUN_TEST(test_SendErrorMessageAfterUnableTooWrite, 46);
+  RUN_TEST(test_SendNewDataAfterErrorMessage, 62);
 
   return (UnityEnd());
 }
