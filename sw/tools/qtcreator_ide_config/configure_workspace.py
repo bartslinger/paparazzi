@@ -89,7 +89,7 @@ if TEST_CONF:
 	yml_include_items = "\n".join(test_includes_content)
 
 	# Configure the yml script for unit testing
-	original_yml = open(os.path.join(TEST_HOME, "template.yml"))
+	original_yml = open(os.path.join(TEST_HOME, "yml_template.txt"))
 	original_content = original_yml.read()
 	original_yml.close()
 
