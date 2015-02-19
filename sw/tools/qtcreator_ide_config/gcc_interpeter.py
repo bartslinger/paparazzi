@@ -79,9 +79,10 @@ if not os.path.isfile(os.path.join(PAPARAZZI_HOME, AIRCRAFT + ".config")):
     includes.close()
     if TEST_CONF:
         # extra includes for unittest
-        test_includes.write(os.path.join(TEST_HOME, "cmock", "src") + "\n")
-        test_includes.write(os.path.join(TEST_HOME, "unity", "src") + "\n")
-        test_includes.write(os.path.join(TEST_HOME, "unity", "extras",
+        EXT_TOOLS = os.path.join(PAPARAZZI_HOME, "sw", "ext")
+        test_includes.write(os.path.join(EXT_TOOLS, "cmock", "src") + "\n")
+        test_includes.write(os.path.join(EXT_TOOLS, "unity", "src") + "\n")
+        test_includes.write(os.path.join(EXT_TOOLS, "unity", "extras",
                                          "fixture", "src") + "\n")
         # close test project files
         test_config.close()
