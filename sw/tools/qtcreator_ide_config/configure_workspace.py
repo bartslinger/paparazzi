@@ -93,8 +93,8 @@ if TEST_CONF:
     macro_flags = macro_text.split("\n")
     for i, s in enumerate(macro_flags):
         # defines in <AIRCRAFT>.yml
-        macro_flags[i] = "    - -D" + s.replace("#define ", "") + "'"
-        macro_flags[i].replace(" ", "='")
+        macro_flags[i] = s.replace("#define ", "") + "'"
+        macro_flags[i] = "    - -D" + macro_flags[i].replace(" ", "='")
 
     macro_flags.pop()
     yml_macro_flags = "\n".join(macro_flags)
@@ -116,7 +116,7 @@ if TEST_CONF:
     original_yml.close()
 
     new_content = original_content.replace("MACRO_ITEMS", yml_macro_flags)
-    new_content.replace("INCLUDE_ITEMS", yml_include_items)
+    new_content = new_content.replace("INCLUDE_ITEMS", yml_include_items)
     new_yml = open(os.path.join(TEST_HOME, AIRCRAFT + ".yml"), "w")
     new_yml.write(new_content)
     new_yml.close()
