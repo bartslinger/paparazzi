@@ -64,13 +64,37 @@ COMMON_TEST_SRCS += $(SRC_ARCH)/led_hw.c
 COMMON_TEST_SRCS += $(SRC_ARCH)/mcu_periph/gpio_arch.c
 endif
 
+# pprz downlink/datalink
+COMMON_TELEMETRY_CFLAGS = -DDOWNLINK -DDOWNLINK_TRANSPORT=pprz_tp -DDATALINK=PPRZ
+COMMON_TELEMETRY_SRCS   = subsystems/datalink/downlink.c subsystems/datalink/pprz_transport.c
+
+# check if we are using UDP
+ifneq (,$(findstring UDP, $(MODEM_DEV)))
+include $(CFG_SHARED)/udp.makefile
+MODEM_PORT_OUT    ?= 4242
+MODEM_PORT_IN     ?= 4243
+MODEM_BROADCAST   ?= TRUE
+UDP_MODEM_PORT_LOWER=$(shell echo $(MODEM_DEV) | tr A-Z a-z)
+
+COMMON_TELEMETRY_CFLAGS += -DUSE_$(MODEM_DEV) -D$(MODEM_DEV)_PORT_OUT=$(MODEM_PORT_OUT) -D$(MODEM_DEV)_PORT_IN=$(MODEM_PORT_IN)
+COMMON_TELEMETRY_CFLAGS += -D$(MODEM_DEV)_BROADCAST=$(MODEM_BROADCAST) -D$(MODEM_DEV)_HOST=\"$(MODEM_HOST)\"
+COMMON_TELEMETRY_CFLAGS += -DPPRZ_UART=$(MODEM_DEV)
+COMMON_TELEMETRY_CFLAGS += -DDOWNLINK_DEVICE=$(UDP_MODEM_PORT_LOWER)
+else
+# via UART
+#ifeq ($(MODEM_PORT),)
+#$(error MODEM_PORT not defined)
+#endif
 COMMON_TELEMETRY_MODEM_PORT_LOWER=$(shell echo $(MODEM_PORT) | tr A-Z a-z)
-COMMON_TELEMETRY_CFLAGS  = -DUSE_$(MODEM_PORT) -D$(MODEM_PORT)_BAUD=$(MODEM_BAUD)
-COMMON_TELEMETRY_CFLAGS += -DDOWNLINK -DDOWNLINK_TRANSPORT=pprz_tp -DDOWNLINK_DEVICE=$(COMMON_TELEMETRY_MODEM_PORT_LOWER)
-COMMON_TELEMETRY_CFLAGS += -DDATALINK=PPRZ  -DPPRZ_UART=$(MODEM_PORT)
-COMMON_TELEMETRY_SRCS    = mcu_periph/uart.c
-COMMON_TELEMETRY_SRCS   += $(SRC_ARCH)/mcu_periph/uart_arch.c
-COMMON_TELEMETRY_SRCS   += subsystems/datalink/downlink.c subsystems/datalink/pprz_transport.c
+COMMON_TELEMETRY_CFLAGS += -DUSE_$(MODEM_PORT) -D$(MODEM_PORT)_BAUD=$(MODEM_BAUD)
+COMMON_TELEMETRY_CFLAGS += -DPPRZ_UART=$(MODEM_PORT)
+COMMON_TELEMETRY_CFLAGS += -DDOWNLINK_DEVICE=$(COMMON_TELEMETRY_MODEM_PORT_LOWER)
+COMMON_TELEMETRY_SRCS  += mcu_periph/uart.c
+COMMON_TELEMETRY_SRCS  += $(SRC_ARCH)/mcu_periph/uart_arch.c
+ifeq ($(ARCH), linux)
+COMMON_TELEMETRY_SRCS  += $(SRC_ARCH)/serial_port.c
+endif
+endif #UART
 
 #COMMON_TEST_SRCS   += math/pprz_trig_int.c
 
@@ -117,7 +141,6 @@ test_uart.ARCHDIR = $(ARCH)
 test_uart.CFLAGS += $(COMMON_TEST_CFLAGS)
 test_uart.srcs   += $(COMMON_TEST_SRCS)
 
-test_uart.CFLAGS += -I$(SRC_LISA) -DUSE_UART
 #test_uart.CFLAGS += -DUSE_UART1 -DUART1_BAUD=B57600
 #test_uart.CFLAGS += -DUSE_UART2 -DUART2_BAUD=B57600
 #test_uart.CFLAGS += -DUSE_UART3 -DUART3_BAUD=B57600
@@ -125,7 +148,61 @@ test_uart.CFLAGS += -I$(SRC_LISA) -DUSE_UART
 test_uart.srcs += mcu_periph/uart.c
 test_uart.srcs += $(SRC_ARCH)/mcu_periph/uart_arch.c
 test_uart.srcs += test/mcu_periph/test_uart.c
+ifeq ($(ARCH), linux)
+test_uart.srcs += $(SRC_ARCH)/serial_port.c
+endif
 
+
+#
+# test uart_echo
+#
+# required configuration:
+#   -DUSE_UARTx
+#   -DUARTx_BAUD=B57600
+#
+test_uart_echo.ARCHDIR = $(ARCH)
+test_uart_echo.CFLAGS += $(COMMON_TEST_CFLAGS)
+test_uart_echo.srcs   += $(COMMON_TEST_SRCS)
+test_uart_echo.srcs += mcu_periph/uart.c
+test_uart_echo.srcs += $(SRC_ARCH)/mcu_periph/uart_arch.c
+test_uart_echo.srcs += test/mcu_periph/test_uart_echo.c
+ifeq ($(ARCH), linux)
+test_uart_echo.srcs += $(SRC_ARCH)/serial_port.c
+endif
+
+#
+# test uart_send
+#
+# required configuration:
+#   -DUSE_UARTx
+#   -DUARTx_BAUD=B57600
+#
+test_uart_send.ARCHDIR = $(ARCH)
+test_uart_send.CFLAGS += $(COMMON_TEST_CFLAGS)
+test_uart_send.srcs   += $(COMMON_TEST_SRCS)
+test_uart_send.srcs += mcu_periph/uart.c
+test_uart_send.srcs += $(SRC_ARCH)/mcu_periph/uart_arch.c
+test_uart_send.srcs += test/mcu_periph/test_uart_send.c
+ifeq ($(ARCH), linux)
+test_uart_send.srcs += $(SRC_ARCH)/serial_port.c
+endif
+
+#
+# test uart_recv
+#
+# required configuration:
+#   -DUSE_UARTx
+#   -DUARTx_BAUD=B57600
+#
+test_uart_recv.ARCHDIR = $(ARCH)
+test_uart_recv.CFLAGS += $(COMMON_TEST_CFLAGS)
+test_uart_recv.srcs   += $(COMMON_TEST_SRCS)
+test_uart_recv.srcs += mcu_periph/uart.c
+test_uart_recv.srcs += $(SRC_ARCH)/mcu_periph/uart_arch.c
+test_uart_recv.srcs += test/mcu_periph/test_uart_recv.c
+ifeq ($(ARCH), linux)
+test_uart_recv.srcs += $(SRC_ARCH)/serial_port.c
+endif
 
 #
 # test_telemetry : Sends ALIVE telemetry messages
