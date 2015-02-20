@@ -41,7 +41,7 @@
 # For Unity and Cmock unit testing
 *.yml
 Mock*
-tests/unittest/build
+tests/unittest/build/*
 
 paparazzi.sublime-workspace
 
