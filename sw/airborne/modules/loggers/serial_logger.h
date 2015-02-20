@@ -27,25 +27,29 @@
 #ifndef SERIAL_LOGGER_H_
 #define SERIAL_LOGGER_H_
 
-// Translates SERIAL_LOGGER_USE_UART to USE_UART1 as defined in serial_logger.xml
-#define __SERIAL_LOGGER_USE_UART(port) USE_##port
-#define _SERIAL_LOGGER_USE_UART(port) __SERIAL_LOGGER_USE_UART(port)
-#define SERIAL_LOGGER_USE_UART _SERIAL_LOGGER_USE_UART(SERIAL_LOG_UART_UPPER)
-
-// Translates SERIAL_LOGGER_BAUD to B115200 as defined in serial_logger.xml
-#define __SERIAL_LOGGER_BAUD(port) port##_BAUD
-#define _SERIAL_LOGGER_BAUD(port) __SERIAL_LOGGER_BAUD(port)
-#define SERIAL_LOGGER_BAUD _SERIAL_LOGGER_BAUD(SERIAL_LOG_UART_UPPER)
+#define SERIAL_LOGGER_NOT_SENDING 0
+#define SERIAL_LOGGER_SENDING_DATA 1
+#define SERIAL_LOGGER_TOO_MUCH_DATA 2
 
 #include "std.h"
+#include "subsystems/imu.h"
+
+enum serial_logger_state{
+  STATE_NOT_SENDING = 1,
+  STATE_SENDING_DATA = 2,
+  STATE_TOO_MUCH_DATA = 3
+};
 
 struct serial_logger_struct {
-    bool_t bufferOverrun;
+  enum serial_logger_state state;
 };
 extern struct serial_logger_struct serial_logger;
 
 extern void serial_logger_start(void);
 extern void serial_logger_periodic(void);
 extern void serial_logger_stop(void);
+
+extern void serial_logger_send_data(void);
+extern void serial_logger_send_error(void);
 
 #endif /* SERIAL_LOGGER_H_ */

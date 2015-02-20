@@ -28,7 +28,9 @@
 #include "mcu_periph/uart.h"
 
 // Struct with all the variables for this module
-struct serial_logger_struct serial_logger;
+struct serial_logger_struct serial_logger = {
+  STATE_SENDING_DATA
+};
 
 void serial_logger_start(void)
 {
@@ -37,49 +39,61 @@ void serial_logger_start(void)
 
 void serial_logger_periodic(void)
 {
-    if(uart_check_free_space(&SERIAL_LOG_UART, 13*8))
-    {
-        if(serial_logger.bufferOverrun)
-        {
-            // Send error message
-            uart_transmit(&SERIAL_LOG_UART, 0xF0);
-            for (uint8_t i=0; i<12; i++)
-            {
-                uart_transmit(&SERIAL_LOG_UART, 0x00);
-            }
-            // Erorr has been sent, can send new data from now on
-            serial_logger.bufferOverrun = FALSE;
-        }
-        else{
-            // Send startbyte
-            uart_transmit(&SERIAL_LOG_UART, 0xFF);
-
-            // Send first 32-bit datafield
-            uart_transmit(&SERIAL_LOG_UART, 0x00);
-            uart_transmit(&SERIAL_LOG_UART, 0x01);
-            uart_transmit(&SERIAL_LOG_UART, 0x10);
-            uart_transmit(&SERIAL_LOG_UART, 0x20);
-
-            // Send second 32-bit datafield
-            uart_transmit(&SERIAL_LOG_UART, 0x05);
-            uart_transmit(&SERIAL_LOG_UART, 0x11);
-            uart_transmit(&SERIAL_LOG_UART, 0x32);
-            uart_transmit(&SERIAL_LOG_UART, 0x33);
-
-            // Send third 32-bit datafield
-            uart_transmit(&SERIAL_LOG_UART, 0x66);
-            uart_transmit(&SERIAL_LOG_UART, 0x44);
-            uart_transmit(&SERIAL_LOG_UART, 0x0F);
-            uart_transmit(&SERIAL_LOG_UART, 0xFF);
-        }
-    }
-    else
-    {
-        serial_logger.bufferOverrun = TRUE;
-    }
+  switch(serial_logger.state) {
+    case STATE_NOT_SENDING:
+      // do nothing
+      break;
+    case STATE_SENDING_DATA:
+      if(uart_check_free_space(&SERIAL_LOG_UART, 13)){
+        serial_logger_send_data();
+      }
+      else{
+        serial_logger.state = STATE_TOO_MUCH_DATA;
+      }
+      break;
+    case STATE_TOO_MUCH_DATA:
+      if(uart_check_free_space(&SERIAL_LOG_UART, 5)){
+        serial_logger_send_error();
+        serial_logger.state = STATE_SENDING_DATA;
+      }
+      //
+      break;
+    default:
+      break;
+  }
 }
 
 void serial_logger_stop(void)
 {
 
+}
+
+void serial_logger_send_data(void)
+{
+  // Send startbyte
+  uart_transmit(&SERIAL_LOG_UART, 0xFF);
+
+  // Send first 32-bit datafield
+  for(uint8_t i=0; i<4; i++){
+    uart_transmit(&SERIAL_LOG_UART, (imu.accel_unscaled.x >> 8*i) & 0xFF);
+  }
+
+  // Send second 32-bit datafield
+  for(uint8_t i=0; i<4; i++){
+    uart_transmit(&SERIAL_LOG_UART, (imu.accel_unscaled.y >> 8*i) & 0xFF);
+  }
+
+  // Send third 32-bit datafield
+  for(uint8_t i=0; i<4; i++){
+    uart_transmit(&SERIAL_LOG_UART, (imu.accel_unscaled.z >> 8*i) & 0xFF);
+  }
+}
+
+void serial_logger_send_error(void)
+{
+  uart_transmit(&SERIAL_LOG_UART, 0xF0);
+  for (uint8_t i=0; i<4; i++)
+  {
+    uart_transmit(&SERIAL_LOG_UART, 0x00);
+  }
 }
