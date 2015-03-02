@@ -18,7 +18,7 @@
     <define name="USE_$(SERIAL_LOG_UART_UPPER)"/>
     <define name="SERIAL_LOG_UART" value="$(SERIAL_LOG_UART_LOWER)"/>
     <define name="SERIAL_LOG_UART_UPPER" value="$(SERIAL_LOG_UART_UPPER)"/>
-    <define name="$(SERIAL_LOG_UART_UPPER)_BAUD" value="B115200"/>
+    <define name="$(SERIAL_LOG_UART_UPPER)_BAUD" value="B230400"/>
     <file name="serial_logger.c"/>
   </makefile>
 </module>
