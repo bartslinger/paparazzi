@@ -26,10 +26,10 @@ module RakefileHelpers
 
   def get_unit_test_files
     #path = $cfg['compiler']['unit_tests_path'] + '*_tester' + C_EXTENSION
-    path = Dir.glob("#{$cfg['compiler']['unit_tests_path']}**/*_tester#{C_EXTENSION}").join(' ')
-    #print "DISCOVERED TESTFILES:\n" + path + "\n\n"
-    path.gsub!(/\\/, '/')
-    FileList.new(path)
+    #path = Dir.glob("#{$cfg['compiler']['unit_tests_path']}**/*_tester#{C_EXTENSION}".gsub!(/\\/, '/'))#.join(' ')
+    #\print "DISCOVERED TESTFILES:\n" + path + "\n\n"
+    #path.gsub!(/\\/, '/')
+    FileList.new("#{$cfg['compiler']['unit_tests_path']}**/*sd*_tester#{C_EXTENSION}") # <<<================================================================================================ HIER
   end
 
   def get_local_include_dirs
@@ -181,6 +181,7 @@ module RakefileHelpers
 
     # Build and execute each unit test
     test_files.each do |test|
+
       obj_list = []
 
       # Detect dependencies and build required required modules
@@ -228,7 +229,6 @@ module RakefileHelpers
         end
 
       end
-
       #compile all mocks
       header_list.each do |header|
         #compile source file header if it exists

@@ -109,6 +109,10 @@
 #define SPI_SELECT_SLAVE2_PORT GPIOB
 #define SPI_SELECT_SLAVE2_PIN GPIO12
 
+/* SD SS */
+#define SPI_SELECT_SLAVE3_PORT GPIOB
+#define SPI_SELECT_SLAVE3_PIN GPIO9
+
 /*
  * UART pin configuration
  *
@@ -292,7 +296,7 @@
 #endif
 
 #define USE_PWM3 1
-#define USE_PWM4 1
+#define USE_PWM4 0
 
 //TODO : test that part
 //TODO : merge the USE_SERVOS_1AND2 and DUAL_PWM_ON

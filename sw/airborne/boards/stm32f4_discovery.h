@@ -252,7 +252,9 @@
 #define SPI_SELECT_SLAVE1_PIN GPIO7
 #define SPI_SELECT_SLAVE2_PORT GPIOE
 #define SPI_SELECT_SLAVE2_PIN GPIO3
-
+/* SD SS */
+#define SPI_SELECT_SLAVE3_PORT GPIOB
+#define SPI_SELECT_SLAVE3_PIN GPIO9
 
 /***************************************************************************************************/
 /**************************************    I2C     *************************************************/

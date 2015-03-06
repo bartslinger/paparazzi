@@ -37,8 +37,8 @@ void high_speed_logger_spi_link_init(void)
   high_speed_logger_spi_link_data.id = 0;
 
   high_speed_logger_spi_link_transaction.select        = SPISelectUnselect;
-  high_speed_logger_spi_link_transaction.cpol          = SPICpolIdleHigh;
-  high_speed_logger_spi_link_transaction.cpha          = SPICphaEdge2;
+  high_speed_logger_spi_link_transaction.cpol          = SPICpolIdleLow;
+  high_speed_logger_spi_link_transaction.cpha          = SPICphaEdge1;
   high_speed_logger_spi_link_transaction.dss           = SPIDss8bit;
   high_speed_logger_spi_link_transaction.bitorder      = SPIMSBFirst;
   high_speed_logger_spi_link_transaction.cdiv          = SPIDiv64;

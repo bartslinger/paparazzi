@@ -164,14 +164,15 @@
    <define name="IGAIN" value="0"/>
  </section>
 
- <modules main_freq="512">
+ <modules main_freq="100"> <!-- was 512 -->
    <load name="gps_ubx_ucenter.xml"/>
    <load name="send_imu_mag_current.xml"/>
-   <load name="high_speed_logger_spi_link.xml"/>
+   <!--load name="high_speed_logger_spi_link.xml"/-->
+   <load name="sd_logger.xml"/>
  </modules>
 
   <firmware name="rotorcraft">
-    <target name="ap" board="lisa_s_1.0">
+    <target name="ap" board="stm32f4_discovery">
       <subsystem name="radio_control" type="superbitrf_rc">
         <!--<define name="RADIO_TRANSMITTER_ID" value="2008496626"/>-->   <!-- TUDelft Dx6i: TX 4 -->
         <!--<define name="RADIO_TRANSMITTER_CHAN" value="6"/>-->
@@ -188,6 +189,10 @@
       <define name="USE_SERVOS_1AND2"/>
     </subsystem>
 
+	<!--subsystem name="telemetry" type="transparent">
+	  <configure name="MODEM_BAUD" value="B57600"/>
+	  <configure name="MODEM_PORT" value="UART1"/>
+	</subsystem-->
     <subsystem name="telemetry" type="superbitrf" />
     <subsystem name="imu" type="lisa_s_v1.0"/>
     <subsystem name="gps" type="ublox"/>

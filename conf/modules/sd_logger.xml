@@ -1,0 +1,29 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module name="loggers">
+  <doc>
+    <description>Write logdata directly to an sd card.</description>
+  </doc>
+  <header>
+    <file name="sd_logger.h"/>
+  </header>
+  <init fun="sd_logger_start()"/>
+  <periodic fun="sd_logger_periodic()" autorun="TRUE"/>
+  <makefile target="ap">
+    <raw>
+      SD_LOG_UART ?= uart1
+      SD_LOG_UART_LOWER=$(shell echo $(SD_LOG_UART) | tr A-Z a-z)
+      SD_LOG_UART_UPPER=$(shell echo $(SD_LOG_UART) | tr a-z A-Z)
+    </raw>
+    <define name="USE_$(SD_LOG_UART_UPPER)"/>
+    <define name="SD_LOG_UART" value="$(SD_LOG_UART_LOWER)"/>
+    <define name="SD_LOG_UART_UPPER" value="$(SD_LOG_UART_UPPER)"/>
+    <define name="$(SD_LOG_UART_UPPER)_BAUD" value="B57600"/>
+    <define name="SPI_MASTER" value="1" />
+    <define name="USE_SPI2" value="1" />
+    <define name="SD_LOGGER_SPI_LINK_DEVICE" value="spi2" />
+    <define name="USE_SPI_SLAVE3" value="1" />
+    <define name="SD_LOGGER_SPI_LINK_SLAVE_NUMBER" value="SPI_SLAVE3" />
+    <file name="sd_logger.c"/>
+  </makefile>
+</module>

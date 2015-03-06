@@ -1,0 +1,32 @@
+//! Setup SPI configuration for SD Logger module
+/*!
+ * The SPI peripheral is linked to the SD logger and
+ * the SPI transaction is configured for communication
+ * with an SD card. Initially using SPINoSelect to keep
+ * CS line HIGH when initializing SD in SPI mode.
+ */
+void test_InitializeSpi(void)
+{
+  sd_logger_spi_init(&sd_logger, &(SD_LOGGER_SPI_LINK_DEVICE), SD_LOGGER_SPI_LINK_SLAVE_NUMBER);
+
+  TEST_ASSERT_EQUAL_PTR(&(SD_LOGGER_SPI_LINK_DEVICE), sd_logger.spi_p);
+
+  TEST_ASSERT_EQUAL(SPINoSelect, sd_logger.spi_t.select);
+  TEST_ASSERT_EQUAL(SPITransDone, sd_logger.spi_t.status);
+  TEST_ASSERT_EQUAL(SPICpolIdleLow, sd_logger.spi_t.cpol);
+  TEST_ASSERT_EQUAL(SPICphaEdge1, sd_logger.spi_t.cpha);
+  TEST_ASSERT_EQUAL(SPIDss8bit, sd_logger.spi_t.dss);
+  TEST_ASSERT_EQUAL(SPIMSBFirst, sd_logger.spi_t.bitorder);
+  TEST_ASSERT_EQUAL(SPIDiv64, sd_logger.spi_t.cdiv);
+  TEST_ASSERT_EQUAL(SD_LOGGER_SPI_LINK_SLAVE_NUMBER, sd_logger.spi_t.slave_idx);
+}
+
+
+void test_OnlySubmitSpiIfStatusDoneOrSuccess(void)
+{
+  spi_submit_ExpectAndReturn(&(SD_LOGGER_SPI_LINK_DEVICE), &sd_logger.spi_t, TRUE);
+  spi_submit_IgnoreArg_t();
+  sd_logger.spi_t.status = SPITransPending;
+
+  //sd_logger.st
+}
