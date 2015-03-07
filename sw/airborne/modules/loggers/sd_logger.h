@@ -31,13 +31,21 @@
 #include "std.h"
 #include "subsystems/imu.h"
 
+enum SdCardType{
+  CardUnknown,
+  CardMmcV3,
+  CardSdV1,
+  CardSdV2byte,
+  CardSdV2block
+};
 
 struct SdLogger{
   struct spi_periph *spi_p;                 /**< The SPI peripheral for the connection */
   struct spi_transaction spi_t;             /**< The SPI transaction used for the writing and reading of registers */
-  uint8_t input_buf[700];                    /**< The input buffer for the SPI transaction */
-  uint8_t output_buf[512];                   /**< The output buffer for the SPI transaction */
-  bool alternator;
+  uint8_t input_buf[512];                   /**< The input buffer for the SPI transaction */
+  uint8_t output_buf[512];                  /**< The output buffer for the SPI transaction */
+  uint8_t sd_response;
+  enum SdCardType card_type;
 };
 
 extern struct SdLogger sd_logger;
@@ -45,6 +53,10 @@ extern struct SdLogger sd_logger;
 extern void sd_logger_start(void);
 extern void sd_logger_periodic(void);
 extern void sd_logger_stop(void);
+extern void sd_logger_setup_spi(void);
+
+extern void sd_logger_send_CMD0(struct spi_transaction *t);
+extern void sd_logger_get_CMD0_response(struct spi_transaction *t);
 
 extern void sd_logger_serial_println(const char text[]);
 extern void sd_logger_spi_init(struct SdLogger *sdlog, struct spi_periph *spi_p, uint8_t slave_idx);

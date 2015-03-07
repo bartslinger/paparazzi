@@ -34,7 +34,10 @@ struct SdLogger sd_logger;
 
 void sd_logger_start(void)
 {
-  sd_logger_spi_init(&sd_logger, &(SD_LOGGER_SPI_LINK_DEVICE), SD_LOGGER_SPI_LINK_SLAVE_NUMBER);
+  sd_logger_setup_spi();
+  sd_logger.spi_t.input_length = 0;
+  sd_logger.spi_t.output_length = 10;
+
   sd_logger.output_buf[0] = 0xFF;
   sd_logger.output_buf[1] = 0xFF;
   sd_logger.output_buf[2] = 0xFF;
@@ -45,46 +48,82 @@ void sd_logger_start(void)
   sd_logger.output_buf[7] = 0xFF;
   sd_logger.output_buf[8] = 0xFF;
   sd_logger.output_buf[9] = 0xFF;
-  sd_logger.spi_t.input_length = 10;
-  sd_logger.spi_t.output_length = 0;
-  sd_logger.spi_t.select = SPINoSelect;
-  spi_submit(&(SD_LOGGER_SPI_LINK_DEVICE), &sd_logger.spi_t);
+
+  sd_logger.spi_t.after_cb = &sd_logger_send_CMD0;
+
+  spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
 }
 
 void sd_logger_periodic(void)
 {
-  if(sd_logger.alternator){
-#if 1
-    sd_logger.output_buf[0] = 0x40 | 17;
-    sd_logger.output_buf[1] = 0x00;
-    sd_logger.output_buf[2] = 0x00;
-    sd_logger.output_buf[3] = 0x00;
-    sd_logger.output_buf[4] = 0x00;
-    sd_logger.output_buf[5] = 0x95;
-    sd_logger.spi_t.input_length = 700;
-    sd_logger.spi_t.output_length = 6;
-    sd_logger.spi_t.select = SPISelectUnselect;
-#endif
-  }
-  else{
-    // CMD0
-    sd_logger.output_buf[0] = (1 << 6);
-    sd_logger.output_buf[1] = 0x00;
-    sd_logger.output_buf[2] = 0x00;
-    sd_logger.output_buf[3] = 0x00;
-    sd_logger.output_buf[4] = 0x00;
-    sd_logger.output_buf[5] = 0x95;
-    sd_logger.spi_t.input_length = 8;
-    sd_logger.spi_t.output_length = 6;
-    sd_logger.spi_t.select = SPISelectUnselect;
-  }
-  spi_submit(&(SD_LOGGER_SPI_LINK_DEVICE), &sd_logger.spi_t);
-  sd_logger.alternator = !sd_logger.alternator;
+
 }
 
 void sd_logger_stop(void)
 {
 
+}
+
+void sd_logger_setup_spi(void)
+{
+
+  /* Set spi_peripheral */
+  sd_logger.spi_p = &(SD_LOGGER_SPI_LINK_DEVICE);
+
+  /* Set the spi transaction */
+  sd_logger.spi_t.select    = SPINoSelect;
+  sd_logger.spi_t.status    = SPITransDone;
+  sd_logger.spi_t.cpol      = SPICpolIdleLow;
+  sd_logger.spi_t.cpha      = SPICphaEdge1;
+  sd_logger.spi_t.dss       = SPIDss8bit;
+  sd_logger.spi_t.bitorder  = SPIMSBFirst;
+  sd_logger.spi_t.cdiv      = SPIDiv64;
+  sd_logger.spi_t.slave_idx = SD_LOGGER_SPI_LINK_SLAVE_NUMBER;
+
+  sd_logger.spi_t.input_length = 0;
+  sd_logger.spi_t.output_length = 0;
+  sd_logger.spi_t.input_buf = sd_logger.input_buf;
+  sd_logger.spi_t.output_buf = sd_logger.output_buf;
+}
+
+void sd_logger_send_CMD0(struct spi_transaction *t)
+{
+  t->after_cb = NULL;
+  t->select = SPISelectUnselect;
+  t->output_length = 6;
+  t->input_length = 15;
+  t->after_cb = &sd_logger_get_CMD0_response;
+
+  sd_logger.output_buf[0] = 0x40;
+  sd_logger.output_buf[1] = 0x00;
+  sd_logger.output_buf[2] = 0x00;
+  sd_logger.output_buf[3] = 0x00;
+  sd_logger.output_buf[4] = 0x00;
+  sd_logger.output_buf[5] = 0x95;
+
+  spi_submit(sd_logger.spi_p, t);
+}
+
+void sd_logger_get_CMD0_response(struct spi_transaction *t)
+{
+  for(uint8_t i=6; i<15; i++){
+    if(t->input_buf[i] != 0xFF){
+
+      // Correct response from CMD0, continue with CMD8
+      sd_logger.spi_t.output_length = 6;
+      sd_logger.spi_t.input_length = 19;
+      sd_logger.output_buf[0] = 0x40 + 8;
+      sd_logger.output_buf[1] = 0x00;
+      sd_logger.output_buf[2] = 0x00;
+      sd_logger.output_buf[3] = 0x01;
+      sd_logger.output_buf[4] = 0xAA;
+      sd_logger.output_buf[5] = 0x87;
+
+      spi_submit(sd_logger.spi_p, t);
+
+      return;
+    }
+  }
 }
 
 void sd_logger_serial_println(const char text[])
@@ -97,24 +136,5 @@ void sd_logger_serial_println(const char text[])
   uart_transmit(&SD_LOG_UART, 0x0A); // send "\n" character
 }
 
-void sd_logger_spi_init(struct SdLogger *sdlog, struct spi_periph *spi_p, uint8_t slave_idx)
-{
-  sdlog->alternator = TRUE;
-  /* Set spi_peripheral */
-  sdlog->spi_p = spi_p;
 
-  /* Set the spi transaction */
-  sdlog->spi_t.select    = SPINoSelect;
-  sdlog->spi_t.status    = SPITransDone;
-  sdlog->spi_t.cpol      = SPICpolIdleLow;
-  sdlog->spi_t.cpha      = SPICphaEdge1;
-  sdlog->spi_t.dss       = SPIDss8bit;
-  sdlog->spi_t.bitorder  = SPIMSBFirst;
-  sdlog->spi_t.cdiv      = SPIDiv32;
-  sdlog->spi_t.slave_idx = slave_idx;
 
-  sdlog->spi_t.input_length  = 10;
-  sdlog->spi_t.output_length = 10;
-  sdlog->spi_t.input_buf     = sdlog->input_buf;
-  sdlog->spi_t.output_buf    = sdlog->output_buf;
-}
