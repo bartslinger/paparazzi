@@ -34,6 +34,8 @@ struct SdLogger sd_logger;
 
 void sd_logger_start(void)
 {
+  sd_logger.initialization_counter = 0;
+  sd_logger.initialized = FALSE;
   sd_logger_setup_spi();
   sd_logger.spi_t.input_length = 0;
   sd_logger.spi_t.output_length = 10;
@@ -56,7 +58,39 @@ void sd_logger_start(void)
 
 void sd_logger_periodic(void)
 {
+  if (sd_logger.initialization_counter < 10 && !sd_logger.initialized && !sd_logger.failed){
+    sd_logger.initialization_counter++;
+    // Voltage range is correct, call ACMD41(0x40000000)
+    sd_logger.spi_t.output_length = 21;
+    sd_logger.spi_t.input_length = 30;
+    sd_logger.spi_t.output_buf[0] = 0x40 + 55;
+    sd_logger.spi_t.output_buf[1] = 0x00;
+    sd_logger.spi_t.output_buf[2] = 0x00;
+    sd_logger.spi_t.output_buf[3] = 0x00;
+    sd_logger.spi_t.output_buf[4] = 0x00;
+    sd_logger.spi_t.output_buf[5] = 0x01;
 
+    sd_logger.spi_t.output_buf[6] = 0xFF;
+    sd_logger.spi_t.output_buf[7] = 0xFF;
+    sd_logger.spi_t.output_buf[8] = 0xFF;
+    sd_logger.spi_t.output_buf[9] = 0xFF;
+    sd_logger.spi_t.output_buf[10] = 0xFF;
+    sd_logger.spi_t.output_buf[11] = 0xFF;
+    sd_logger.spi_t.output_buf[12] = 0xFF;
+    sd_logger.spi_t.output_buf[13] = 0xFF;
+    sd_logger.spi_t.output_buf[14] = 0xFF;
+
+    sd_logger.spi_t.output_buf[15] = 0x40 + 41;
+    sd_logger.spi_t.output_buf[16] = 0x40;
+    sd_logger.spi_t.output_buf[17] = 0x00;
+    sd_logger.spi_t.output_buf[18] = 0x00;
+    sd_logger.spi_t.output_buf[19] = 0x00;
+    sd_logger.spi_t.output_buf[20] = 0x01;
+
+    sd_logger.spi_t.after_cb = &sd_logger_process_ACMD41_SDv2;
+
+    spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
+  }
 }
 
 void sd_logger_stop(void)
@@ -86,85 +120,106 @@ void sd_logger_setup_spi(void)
   sd_logger.spi_t.output_buf = sd_logger.output_buf;
 }
 
+void sd_logger_send_cmd(uint8_t cmd, uint32_t arg, enum SdResponseType response_type, SPICallback after_cb)
+{
+  sd_logger.spi_t.select = SPISelectUnselect;
+  sd_logger.spi_t.output_length = 6;
+
+  switch(response_type) {
+    case SdResponseR7:
+      sd_logger.spi_t.input_length = 19;
+      break;
+    default:
+      // falltrough
+    case SdResponseR1:
+      sd_logger.spi_t.input_length = 15;
+      break;
+  }
+
+  sd_logger.output_buf[0] = 0x40 | cmd;
+  sd_logger.output_buf[1] = arg >> 24;
+  sd_logger.output_buf[2] = arg >> 16;
+  sd_logger.output_buf[3] = arg >> 8;
+  sd_logger.output_buf[4] = arg;
+  switch(cmd) {
+    case 0:
+      sd_logger.output_buf[5] = 0x95;
+      break;
+    case 8:
+      sd_logger.output_buf[5] = 0x87;
+      break;
+    default:
+      sd_logger.output_buf[5] = 0x01;
+  }
+
+  sd_logger.spi_t.after_cb = after_cb;
+  spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
+
+}
+
+uint8_t sd_logger_get_response_idx(void)
+{
+  for(uint8_t i=6; i<15; i++){
+    if(sd_logger.spi_t.input_buf[i] != 0xFF){
+      return i;
+      break;
+    }
+  }
+  return 6; // return 0xFF
+}
+
+uint8_t sd_logger_get_R1(void)
+{
+  return sd_logger.spi_t.input_buf[sd_logger_get_response_idx()];
+}
+
+uint32_t sd_logger_get_R7(void)
+{
+  uint8_t response_idx = sd_logger_get_response_idx();
+  return sd_logger.spi_t.input_buf[response_idx+1] << 24 |
+         sd_logger.spi_t.input_buf[response_idx+2] << 16 |
+         sd_logger.spi_t.input_buf[response_idx+3] << 8  |
+         sd_logger.spi_t.input_buf[response_idx+4];
+}
+
 void sd_logger_send_CMD0(struct spi_transaction *t)
 {
-  t->after_cb = NULL;
-  t->select = SPISelectUnselect;
-  t->output_length = 6;
-  t->input_length = 15;
-  t->after_cb = &sd_logger_get_CMD0_response;
-
-  sd_logger.output_buf[0] = 0x40;
-  sd_logger.output_buf[1] = 0x00;
-  sd_logger.output_buf[2] = 0x00;
-  sd_logger.output_buf[3] = 0x00;
-  sd_logger.output_buf[4] = 0x00;
-  sd_logger.output_buf[5] = 0x95;
-
-  spi_submit(sd_logger.spi_p, t);
+  (void) t; // ignore unused warning
+  sd_logger_send_cmd(0, 0x00000000, SdResponseR1, &sd_logger_get_CMD0_response);
 }
 
 void sd_logger_get_CMD0_response(struct spi_transaction *t)
 {
-  for(uint8_t i=6; i<15; i++){
-    if(t->input_buf[i] == 0x01){
-
-      // Correct response from CMD0, continue with CMD8
-      sd_logger.spi_t.output_length = 6;
-      sd_logger.spi_t.input_length = 19;
-      sd_logger.output_buf[0] = 0x40 + 8;
-      sd_logger.output_buf[1] = 0x00;
-      sd_logger.output_buf[2] = 0x00;
-      sd_logger.output_buf[3] = 0x01;
-      sd_logger.output_buf[4] = 0xAA;
-      sd_logger.output_buf[5] = 0x87;
-
-      sd_logger.spi_t.after_cb = &sd_logger_process_CMD8;
-
-      spi_submit(sd_logger.spi_p, t);
-
-      return;
-    }
+  (void) t; // ignore unused warning
+  if(sd_logger_get_R1() == 0x01){
+    // Correct response from CMD0, continue with CMD8
+    sd_logger_send_cmd(8, 0x000001AA, SdResponseR7, &sd_logger_process_CMD8);
+  }
+  else {
+    sd_logger.failed = TRUE;
   }
 }
 
 void sd_logger_process_CMD8(struct spi_transaction *t)
 {
-  // Read R7 response
-  for(uint8_t i=6; i<15; i++){
-    if(t->input_buf[i] == 0x01){
-      // Begin of R7 identified, no errors
-      if(t->input_buf[i+1] == 0x00 && t->input_buf[i+2] == 0x00 && t->input_buf[i+3] == 0x01 && t->input_buf[i+4] == 0xAA){
-        // Voltage range is correct, call ACMD41(0x40000000)
-        t->output_length = 21;
-        t->input_length = 30;
-        t->output_buf[0] = 0x40 + 55;
-        t->output_buf[1] = 0x00;
-        t->output_buf[2] = 0x00;
-        t->output_buf[3] = 0x00;
-        t->output_buf[4] = 0x00;
-        t->output_buf[5] = 0x01;
+  (void) t; // ignore unused warning
+  if(sd_logger_get_R7() != 0x000001AA){
+    sd_logger.failed = TRUE;
+  }
+}
 
-        t->output_buf[6] = 0xFF;
-        t->output_buf[7] = 0xFF;
-        t->output_buf[8] = 0xFF;
-        t->output_buf[9] = 0xFF;
-        t->output_buf[10] = 0xFF;
-        t->output_buf[11] = 0xFF;
-        t->output_buf[12] = 0xFF;
-        t->output_buf[13] = 0xFF;
-        t->output_buf[14] = 0xFF;
-
-        t->output_buf[15] = 0x40 + 41;
-        t->output_buf[16] = 0x40;
-        t->output_buf[17] = 0x00;
-        t->output_buf[18] = 0x00;
-        t->output_buf[19] = 0x00;
-        t->output_buf[20] = 0x01;
-
-        spi_submit(sd_logger.spi_p, t);
-      }
+void sd_logger_process_ACMD41_SDv2(struct spi_transaction *t)
+{
+  (void) t;
+  uint8_t response = 0xFF;
+  for (uint8_t i=21; i<30; i++){
+    if(sd_logger.spi_t.input_buf[i] != 0xFF){
+      response = sd_logger.spi_t.input_buf[i];
+      break;
     }
+  }
+  if(response != 0x00 && response != 0x01){
+    sd_logger.failed = TRUE;
   }
 }
 
@@ -177,6 +232,5 @@ void sd_logger_serial_println(const char text[])
   }
   uart_transmit(&SD_LOG_UART, 0x0A); // send "\n" character
 }
-
 
 

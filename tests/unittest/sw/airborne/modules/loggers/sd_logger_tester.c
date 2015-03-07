@@ -69,6 +69,9 @@ bool_t MySpiSubmitCallbackStartSdCard(struct spi_periph *p, struct spi_transacti
   (void) cmock_num_calls; // ignore unused
   MySpiSubmitCallbackStartSdCardNrCalls++;
 
+  TEST_ASSERT_EQUAL(0, sd_logger.initialization_counter);
+  TEST_ASSERT_FALSE(sd_logger.initialized);
+
   /* First call, this sends 80 (>74) clock pulses with CS and MOSI high */
   TEST_ASSERT_EQUAL_PTR(&(SD_LOGGER_SPI_LINK_DEVICE), p);
   TEST_ASSERT_EQUAL(SPINoSelect, t->select);
@@ -230,6 +233,7 @@ void test_ReceiveResponseCMD0Case3(void)
 
   sd_logger_get_CMD0_response(&sd_logger.spi_t);
   TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
+  TEST_ASSERT_TRUE(sd_logger.failed);
 }
 
 /* WRONG response */
@@ -248,11 +252,12 @@ void test_ReceiveResponseCMD0Case4(void)
 
   sd_logger_get_CMD0_response(&sd_logger.spi_t);
   TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
+  TEST_ASSERT_TRUE(sd_logger.failed);
 }
 
 bool_t MySpiSubmitCallbackProcessCmd8CorrectResponse(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
 {
-  (void) p; (void) cmock_num_calls; // ignore unused
+  (void) p; (void) cmock_num_calls;// ignore unused
   MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls++;
 
   // Perform ACMD41 call with argument 0x40000000
@@ -280,9 +285,20 @@ bool_t MySpiSubmitCallbackProcessCmd8CorrectResponse(struct spi_periph *p, struc
   TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[19]);
   TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[20]);
 
+  // Callback
+  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_ACMD41_SDv2, t->after_cb);
+
   return TRUE;
 }
 
+//! Check response from the CMD8 and continue initialization
+/*!
+ * In case the response matches, the expected voltage is OK.
+ * It then should try to initialize trough ACMD41.
+ * ACMD41 is looped, since initialization might take a while
+ * (several hundreds of milliseconds). Therefore this loop is
+ * executed in the periodic loop.
+ */
 void test_ProcessResponseToCMD8CaseMatched(void)
 {
   sd_logger.input_buf[6]  = 0xFF;
@@ -295,7 +311,105 @@ void test_ProcessResponseToCMD8CaseMatched(void)
   // additional data from buffer is irrelevant
 
   // It matches, so should call ACMD41 with argument 0x40000000
-  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd8CorrectResponse);
+  // But this is done only during the next sd_logger_periodic()!!
   sd_logger_process_CMD8(&sd_logger.spi_t);
+
+  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd8CorrectResponse);
+  sd_logger_periodic();
   TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls, "spi_submit call count mismatch.");
+}
+
+void test_ProcessResponseToCMD8CaseMismatch(void)
+{
+  sd_logger.input_buf[6]  = 0xFF;
+  sd_logger.input_buf[7]  = 0xFF;
+  sd_logger.input_buf[8]  = 0x01; // R1 response (idle state)
+  sd_logger.input_buf[9]  = 0x00;
+  sd_logger.input_buf[10] = 0x00;
+  sd_logger.input_buf[11] = 0x01;
+  sd_logger.input_buf[12] = 0xAB; // MISMATCH!
+
+  // execute callback
+  sd_logger_process_CMD8(&sd_logger.spi_t);
+
+  // expect zero calls of spi_submit in periodic loop
+  sd_logger_periodic();
+
+  TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
+  TEST_ASSERT_TRUE(sd_logger.failed);
+}
+
+//! Try ACMD41 every periodic loop until timeout, then stop
+/*!
+ * period loop executed 12 times in this test, but expect only
+ * 10 submits because of timeout.
+ */
+void test_InitializeACMD41_SDv2_ErrorAndOrTimeout(void){
+  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd8CorrectResponse);
+  for (uint8_t i=0; i<12; i++){
+    sd_logger_periodic();
+  }
+  TEST_ASSERT_EQUAL_MESSAGE(10, MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls, "spi_submit call count mismatch.");
+}
+
+//! Try ACMD41 until initialization flag is set (by the callback function)
+/*!
+ * period loop executed 4 times in this test, but expect only
+ * 3 submits because of succesful initialization.
+ */
+void test_InitializeACMD41_SDv2_StopWhenInitialized(void){
+  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd8CorrectResponse);
+  sd_logger_periodic();
+  sd_logger_periodic();
+  sd_logger_periodic();
+  sd_logger.initialized = TRUE;
+  sd_logger_periodic();
+  TEST_ASSERT_EQUAL_MESSAGE(3, MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls, "spi_submit call count mismatch.");
+}
+
+//! Do not execute any code when there is an unusable card
+/*!
+ * Check by flag 'failed'
+ */
+void test_DoNotCallSpiWhenCardIdentificationFailed(void)
+{
+  sd_logger.failed = TRUE;
+  sd_logger_periodic();
+  // gives error if mock function is called too often.
+}
+
+void test_ProcessResponseToACMD41_SDv2_AbortWhenWrongResponse(void)
+{
+  sd_logger.spi_t.input_buf[21] = 0xFF;
+  sd_logger.spi_t.input_buf[22] = 0xFF;
+  sd_logger.spi_t.input_buf[23] = 0xFF;
+  sd_logger.spi_t.input_buf[24] = 0xFF;
+  sd_logger.spi_t.input_buf[25] = 0xFF;
+  sd_logger.spi_t.input_buf[26] = 0xFF;
+  sd_logger.spi_t.input_buf[27] = 0x02; // wrong response
+  sd_logger.spi_t.input_buf[28] = 0xFF;
+  sd_logger.spi_t.input_buf[29] = 0xFF;
+
+  // the callback
+  sd_logger_process_ACMD41_SDv2(&sd_logger.spi_t);
+  TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
+  TEST_ASSERT_TRUE(sd_logger.failed);
+}
+
+void test_ProcessResponseToACMD41_SDv2_AbortWhenNoResponse(void)
+{
+  sd_logger.spi_t.input_buf[21] = 0xFF;
+  sd_logger.spi_t.input_buf[22] = 0xFF;
+  sd_logger.spi_t.input_buf[23] = 0xFF;
+  sd_logger.spi_t.input_buf[24] = 0xFF;
+  sd_logger.spi_t.input_buf[25] = 0xFF;
+  sd_logger.spi_t.input_buf[26] = 0xFF;
+  sd_logger.spi_t.input_buf[27] = 0xFF;
+  sd_logger.spi_t.input_buf[28] = 0xFF;
+  sd_logger.spi_t.input_buf[29] = 0xFF;
+
+  // the callback
+  sd_logger_process_ACMD41_SDv2(&sd_logger.spi_t);
+  TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
+  TEST_ASSERT_TRUE(sd_logger.failed);
 }
