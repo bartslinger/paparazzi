@@ -57,6 +57,7 @@ extern void sd_logger_setup_spi(void);
 
 extern void sd_logger_send_CMD0(struct spi_transaction *t);
 extern void sd_logger_get_CMD0_response(struct spi_transaction *t);
+extern void sd_logger_process_CMD8(struct spi_transaction *t);
 
 extern void sd_logger_serial_println(const char text[]);
 extern void sd_logger_spi_init(struct SdLogger *sdlog, struct spi_periph *spi_p, uint8_t slave_idx);

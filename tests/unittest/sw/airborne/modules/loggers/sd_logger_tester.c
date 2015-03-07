@@ -19,6 +19,7 @@ struct Imu imu_original;
 uint8_t MySpiSubmitCallbackSendCMD0NrCalls;
 uint8_t MySpiSubmitCallbackStartSdCardNrCalls;
 uint8_t MySpiSubmitCallbackReceiveCorrectResponseCMD0NrCalls;
+uint8_t MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls;
 
 void setUp(void)
 {
@@ -28,6 +29,7 @@ void setUp(void)
   MySpiSubmitCallbackSendCMD0NrCalls                   = 0;
   MySpiSubmitCallbackStartSdCardNrCalls                = 0;
   MySpiSubmitCallbackReceiveCorrectResponseCMD0NrCalls = 0;
+  MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls = 0;
   imu_original = imu;
   Mockuart_Init();
   Mockspi_Init();
@@ -164,6 +166,7 @@ bool_t MySpiSubmitCallbackReceiveCorrectResponseCMD0(struct spi_periph *p, struc
   TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[3]);
   TEST_ASSERT_EQUAL_HEX8(0xAA, t->output_buf[4]);
   TEST_ASSERT_EQUAL_HEX8(0x87, t->output_buf[5]); // CRC7 for CMD8(0x000001AA)
+  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_CMD8, t->after_cb); // Continue with processing the response
 
   return TRUE;
 }
@@ -192,7 +195,8 @@ void test_ReceiveResponseCMD0Case1(void)
 }
 
 /* Changed Ncr (response time) */
-void test_ReceiveResponseCMD0Case2(void){
+void test_ReceiveResponseCMD0Case2(void)
+{
   // Bytes 0-5 = command
   sd_logger.input_buf[6] = 0xFF;
   sd_logger.input_buf[7] = 0xFF;
@@ -210,7 +214,8 @@ void test_ReceiveResponseCMD0Case2(void){
 }
 
 /* No response at all */
-void test_ReceiveResponseCMD0Case3(void){
+void test_ReceiveResponseCMD0Case3(void)
+{
   // Bytes 0-5 = command
   sd_logger.input_buf[6] = 0xFF;
   sd_logger.input_buf[7] = 0xFF;
@@ -227,7 +232,70 @@ void test_ReceiveResponseCMD0Case3(void){
   TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
 }
 
-/* TESTS TO ADD:
- * What if spi_submit returns false?
- * CMD0 does not reply
- */
+/* WRONG response */
+void test_ReceiveResponseCMD0Case4(void)
+{
+  // Bytes 0-5 = command
+  sd_logger.input_buf[6] = 0xFF;
+  sd_logger.input_buf[7] = 0xFF;
+  sd_logger.input_buf[8] = 0xFF;
+  sd_logger.input_buf[9] = 0x02; // wrong value/error
+  sd_logger.input_buf[10] = 0xFF;
+  sd_logger.input_buf[11] = 0xFF;
+  sd_logger.input_buf[12] = 0xFF;
+  sd_logger.input_buf[13] = 0xFF;
+  sd_logger.input_buf[14] = 0xFF;
+
+  sd_logger_get_CMD0_response(&sd_logger.spi_t);
+  TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
+}
+
+bool_t MySpiSubmitCallbackProcessCmd8CorrectResponse(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) p; (void) cmock_num_calls; // ignore unused
+  MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls++;
+
+  // Perform ACMD41 call with argument 0x40000000
+  TEST_ASSERT_EQUAL(6+8+1+6, t->output_length); // CMD55 + Ncr (max 8) + R1 + CMD41
+  TEST_ASSERT_EQUAL(6+8+1+6+8+1, t->input_length); // CMD41 responds also with R1
+
+  // CMD55
+  TEST_ASSERT_EQUAL_HEX8(0x77, t->output_buf[0]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[1]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[2]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[3]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
+  TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]);
+
+  // Response time CMD55 (8+1)
+  for(uint8_t i=0; i<9; i++){
+    TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[i+6]);
+  }
+
+  // CMD41(0x40000000)
+  TEST_ASSERT_EQUAL_HEX8(0x69, t->output_buf[15]);
+  TEST_ASSERT_EQUAL_HEX8(0x40, t->output_buf[16]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[17]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[18]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[19]);
+  TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[20]);
+
+  return TRUE;
+}
+
+void test_ProcessResponseToCMD8CaseMatched(void)
+{
+  sd_logger.input_buf[6]  = 0xFF;
+  sd_logger.input_buf[7]  = 0xFF;
+  sd_logger.input_buf[8]  = 0x01; // R1 response (idle state)
+  sd_logger.input_buf[9]  = 0x00; // matching value 0x000001AA
+  sd_logger.input_buf[10] = 0x00;
+  sd_logger.input_buf[11] = 0x01;
+  sd_logger.input_buf[12] = 0xAA;
+  // additional data from buffer is irrelevant
+
+  // It matches, so should call ACMD41 with argument 0x40000000
+  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd8CorrectResponse);
+  sd_logger_process_CMD8(&sd_logger.spi_t);
+  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls, "spi_submit call count mismatch.");
+}

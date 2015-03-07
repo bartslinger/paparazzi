@@ -107,7 +107,7 @@ void sd_logger_send_CMD0(struct spi_transaction *t)
 void sd_logger_get_CMD0_response(struct spi_transaction *t)
 {
   for(uint8_t i=6; i<15; i++){
-    if(t->input_buf[i] != 0xFF){
+    if(t->input_buf[i] == 0x01){
 
       // Correct response from CMD0, continue with CMD8
       sd_logger.spi_t.output_length = 6;
@@ -119,9 +119,51 @@ void sd_logger_get_CMD0_response(struct spi_transaction *t)
       sd_logger.output_buf[4] = 0xAA;
       sd_logger.output_buf[5] = 0x87;
 
+      sd_logger.spi_t.after_cb = &sd_logger_process_CMD8;
+
       spi_submit(sd_logger.spi_p, t);
 
       return;
+    }
+  }
+}
+
+void sd_logger_process_CMD8(struct spi_transaction *t)
+{
+  // Read R7 response
+  for(uint8_t i=6; i<15; i++){
+    if(t->input_buf[i] == 0x01){
+      // Begin of R7 identified, no errors
+      if(t->input_buf[i+1] == 0x00 && t->input_buf[i+2] == 0x00 && t->input_buf[i+3] == 0x01 && t->input_buf[i+4] == 0xAA){
+        // Voltage range is correct, call ACMD41(0x40000000)
+        t->output_length = 21;
+        t->input_length = 30;
+        t->output_buf[0] = 0x40 + 55;
+        t->output_buf[1] = 0x00;
+        t->output_buf[2] = 0x00;
+        t->output_buf[3] = 0x00;
+        t->output_buf[4] = 0x00;
+        t->output_buf[5] = 0x01;
+
+        t->output_buf[6] = 0xFF;
+        t->output_buf[7] = 0xFF;
+        t->output_buf[8] = 0xFF;
+        t->output_buf[9] = 0xFF;
+        t->output_buf[10] = 0xFF;
+        t->output_buf[11] = 0xFF;
+        t->output_buf[12] = 0xFF;
+        t->output_buf[13] = 0xFF;
+        t->output_buf[14] = 0xFF;
+
+        t->output_buf[15] = 0x40 + 41;
+        t->output_buf[16] = 0x40;
+        t->output_buf[17] = 0x00;
+        t->output_buf[18] = 0x00;
+        t->output_buf[19] = 0x00;
+        t->output_buf[20] = 0x01;
+
+        spi_submit(sd_logger.spi_p, t);
+      }
     }
   }
 }
