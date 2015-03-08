@@ -60,36 +60,17 @@ void sd_logger_periodic(void)
 {
   if (sd_logger.initialization_counter < 10 && !sd_logger.initialized && !sd_logger.failed){
     sd_logger.initialization_counter++;
-    // Voltage range is correct, call ACMD41(0x40000000)
-    sd_logger.spi_t.output_length = 21;
-    sd_logger.spi_t.input_length = 30;
-    sd_logger.spi_t.output_buf[0] = 0x40 + 55;
-    sd_logger.spi_t.output_buf[1] = 0x00;
-    sd_logger.spi_t.output_buf[2] = 0x00;
-    sd_logger.spi_t.output_buf[3] = 0x00;
-    sd_logger.spi_t.output_buf[4] = 0x00;
-    sd_logger.spi_t.output_buf[5] = 0x01;
 
-    sd_logger.spi_t.output_buf[6] = 0xFF;
-    sd_logger.spi_t.output_buf[7] = 0xFF;
-    sd_logger.spi_t.output_buf[8] = 0xFF;
-    sd_logger.spi_t.output_buf[9] = 0xFF;
-    sd_logger.spi_t.output_buf[10] = 0xFF;
-    sd_logger.spi_t.output_buf[11] = 0xFF;
-    sd_logger.spi_t.output_buf[12] = 0xFF;
-    sd_logger.spi_t.output_buf[13] = 0xFF;
-    sd_logger.spi_t.output_buf[14] = 0xFF;
-
-    sd_logger.spi_t.output_buf[15] = 0x40 + 41;
-    sd_logger.spi_t.output_buf[16] = 0x40;
-    sd_logger.spi_t.output_buf[17] = 0x00;
-    sd_logger.spi_t.output_buf[18] = 0x00;
-    sd_logger.spi_t.output_buf[19] = 0x00;
-    sd_logger.spi_t.output_buf[20] = 0x01;
-
-    sd_logger.spi_t.after_cb = &sd_logger_process_ACMD41_SDv2;
-
-    spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
+    switch(sd_logger.try_card_type) {
+      case SDTryV2:
+        sd_logger_send_app_cmd(41, 0x40000000, SdResponseR1, &sd_logger_process_ACMD41_SDv2);
+        break;
+      case SDTryV1:
+        // falltrough
+      default:
+        sd_logger_send_app_cmd(41, 0x00000000, SdResponseR1, &sd_logger_process_ACMD41_SDv1);
+        break;
+    }
   }
 }
 
@@ -126,6 +107,8 @@ void sd_logger_send_cmd(uint8_t cmd, uint32_t arg, enum SdResponseType response_
   sd_logger.spi_t.output_length = 6;
 
   switch(response_type) {
+    case SdResponseR3:
+      // falltrough
     case SdResponseR7:
       sd_logger.spi_t.input_length = 19;
       break;
@@ -157,6 +140,50 @@ void sd_logger_send_cmd(uint8_t cmd, uint32_t arg, enum SdResponseType response_
 
 }
 
+void sd_logger_send_app_cmd(uint8_t cmd, uint32_t arg, enum SdResponseType response_type, SPICallback after_cb)
+{
+  sd_logger.spi_t.select = SPISelectUnselect;
+  sd_logger.spi_t.output_length = 21;
+
+  switch(response_type) {
+    case SdResponseR7:
+      sd_logger.spi_t.input_length = 34;
+      break;
+    default:
+      // falltrough
+    case SdResponseR1:
+      sd_logger.spi_t.input_length = 30;
+      break;
+  }
+
+  sd_logger.output_buf[0] = 0x77; // CMD55
+  sd_logger.output_buf[1] = 0x00;
+  sd_logger.output_buf[2] = 0x00;
+  sd_logger.output_buf[3] = 0x00;
+  sd_logger.output_buf[4] = 0x00;
+  sd_logger.output_buf[5] = 0x01; // End CMD55
+  sd_logger.output_buf[6] = 0xFF;
+  sd_logger.output_buf[7] = 0xFF;
+  sd_logger.output_buf[8] = 0xFF;
+  sd_logger.output_buf[9] = 0xFF;
+  sd_logger.output_buf[10] = 0xFF;
+  sd_logger.output_buf[11] = 0xFF;
+  sd_logger.output_buf[12] = 0xFF;
+  sd_logger.output_buf[13] = 0xFF;
+  sd_logger.output_buf[14] = 0xFF;
+
+  sd_logger.output_buf[15] = 0x40 + cmd;
+  sd_logger.output_buf[16] = arg >> 24;
+  sd_logger.output_buf[17] = arg >> 16;
+  sd_logger.output_buf[18] = arg >> 8;
+  sd_logger.output_buf[19] = arg;
+  sd_logger.output_buf[20] = 0x01;
+
+  sd_logger.spi_t.after_cb = after_cb;
+  spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
+
+}
+
 uint8_t sd_logger_get_response_idx(void)
 {
   for(uint8_t i=6; i<15; i++){
@@ -182,6 +209,23 @@ uint32_t sd_logger_get_R7(void)
          sd_logger.spi_t.input_buf[response_idx+4];
 }
 
+uint32_t sd_logger_get_R3(void)
+{
+  return sd_logger_get_R7();
+}
+
+uint8_t sd_logger_get_ACMD_R1(void)
+{
+  uint8_t response = 0xFF;
+  for (uint8_t i=21; i<30; i++){
+    if(sd_logger.spi_t.input_buf[i] != 0xFF){
+      response = sd_logger.spi_t.input_buf[i];
+      break;
+    }
+  }
+  return response;
+}
+
 void sd_logger_send_CMD0(struct spi_transaction *t)
 {
   (void) t; // ignore unused warning
@@ -203,22 +247,60 @@ void sd_logger_get_CMD0_response(struct spi_transaction *t)
 void sd_logger_process_CMD8(struct spi_transaction *t)
 {
   (void) t; // ignore unused warning
-  if(sd_logger_get_R7() != 0x000001AA){
+  if(sd_logger_get_R1() != 0x01){
+    sd_logger.try_card_type = SDTryV1;
+  }
+  else if(sd_logger_get_R7() == 0x000001AA){
+    sd_logger.try_card_type = SDTryV2;
+  }
+  else{
     sd_logger.failed = TRUE;
   }
+}
+
+void sd_logger_process_CMD16(struct spi_transaction *t)
+{
+  (void) t; // ignore unused warning
+  sd_logger.ready = (sd_logger_get_R1() == 0x00);
+
 }
 
 void sd_logger_process_ACMD41_SDv2(struct spi_transaction *t)
 {
   (void) t;
-  uint8_t response = 0xFF;
-  for (uint8_t i=21; i<30; i++){
-    if(sd_logger.spi_t.input_buf[i] != 0xFF){
-      response = sd_logger.spi_t.input_buf[i];
+  uint8_t response = sd_logger_get_ACMD_R1();
+  switch(response) {
+    case 0x00:
+      sd_logger_send_cmd(58, 0x00000000, SdResponseR3, &sd_logger_process_CMD58);
       break;
+    case 0x01:
+      break;
+    default:
+      sd_logger.failed = TRUE;
+  }
+}
+
+void sd_logger_process_ACMD41_SDv1(struct spi_transaction *t)
+{
+  (void) t; // ignore unused
+
+}
+
+void sd_logger_process_CMD58(struct spi_transaction *t)
+{
+  (void) t; // ignore unused
+  uint32_t response = sd_logger_get_R3();
+  if(response & (1 << 31)){
+    if(response & (1 << 30)){
+      sd_logger.card_type = CardSdV2block;
+    }
+    else{
+      sd_logger.card_type = CardSdV2byte;
+      sd_logger_send_cmd(16, 0x00000200, SdResponseR1, &sd_logger_process_CMD16);
     }
   }
-  if(response != 0x00 && response != 0x01){
+  else{
+    sd_logger.card_type = CardUnknown;
     sd_logger.failed = TRUE;
   }
 }

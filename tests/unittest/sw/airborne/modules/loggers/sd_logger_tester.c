@@ -20,16 +20,22 @@ uint8_t MySpiSubmitCallbackSendCMD0NrCalls;
 uint8_t MySpiSubmitCallbackStartSdCardNrCalls;
 uint8_t MySpiSubmitCallbackReceiveCorrectResponseCMD0NrCalls;
 uint8_t MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls;
+uint8_t MySpiSubmitCallbackProcessCmd8ErrorOrNoResponseNrCalls;
+uint8_t MySpiSubmitCallbackContinueCmd58NrCalls;
+uint8_t MySpiSubmitCallbackContinueCmd16NrCalls;
 
 void setUp(void)
 {
   // Store initial (unset) value of sd_logger struct
   sd_logger_original = sd_logger;
   sd_logger_setup_spi();
-  MySpiSubmitCallbackSendCMD0NrCalls                   = 0;
-  MySpiSubmitCallbackStartSdCardNrCalls                = 0;
-  MySpiSubmitCallbackReceiveCorrectResponseCMD0NrCalls = 0;
-  MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls = 0;
+  MySpiSubmitCallbackSendCMD0NrCalls                     = 0;
+  MySpiSubmitCallbackStartSdCardNrCalls                  = 0;
+  MySpiSubmitCallbackReceiveCorrectResponseCMD0NrCalls   = 0;
+  MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls   = 0;
+  MySpiSubmitCallbackProcessCmd8ErrorOrNoResponseNrCalls = 0;
+  MySpiSubmitCallbackContinueCmd58NrCalls                = 0;
+  MySpiSubmitCallbackContinueCmd16NrCalls                = 0;
   imu_original = imu;
   Mockuart_Init();
   Mockspi_Init();
@@ -291,6 +297,42 @@ bool_t MySpiSubmitCallbackProcessCmd8CorrectResponse(struct spi_periph *p, struc
   return TRUE;
 }
 
+bool_t MySpiSubmitCallbackProcessCmd8ErrorOrNoResponse(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) p; (void) cmock_num_calls;// ignore unused
+  MySpiSubmitCallbackProcessCmd8ErrorOrNoResponseNrCalls++;
+
+  // Perform ACMD41 call with argument 0x40000000
+  TEST_ASSERT_EQUAL(6+8+1+6, t->output_length); // CMD55 + Ncr (max 8) + R1 + CMD41
+  TEST_ASSERT_EQUAL(6+8+1+6+8+1, t->input_length); // CMD41 responds also with R1
+
+  // CMD55
+  TEST_ASSERT_EQUAL_HEX8(0x77, t->output_buf[0]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[1]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[2]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[3]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
+  TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]);
+
+  // Response time CMD55 (8+1)
+  for(uint8_t i=0; i<9; i++){
+    TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[i+6]);
+  }
+
+  // CMD41(0x00000000)
+  TEST_ASSERT_EQUAL_HEX8(0x69, t->output_buf[15]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[16]); // DIFFERS HERE with argument 0x00000000
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[17]); // INSTEAD OF                 0x40000000
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[18]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[19]);
+  TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[20]);
+
+  // Callback
+  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_ACMD41_SDv1, t->after_cb);
+
+  return TRUE;
+}
+
 //! Check response from the CMD8 and continue initialization
 /*!
  * In case the response matches, the expected voltage is OK.
@@ -338,6 +380,29 @@ void test_ProcessResponseToCMD8CaseMismatch(void)
   TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
   TEST_ASSERT_TRUE(sd_logger.failed);
 }
+
+void test_ProcessResponseToCMD8Error(void){
+  sd_logger.input_buf[6]  = 0xFF;
+  sd_logger.input_buf[7]  = 0xFF;
+  sd_logger.input_buf[8]  = 0x02; // R1 response ERROR
+  sd_logger.input_buf[9]  = 0x00; // data doesnt matter
+  sd_logger.input_buf[10] = 0xCD;
+  sd_logger.input_buf[11] = 0x01;
+  sd_logger.input_buf[12] = 0xAB;
+
+  // execute callback
+  sd_logger_process_CMD8(&sd_logger.spi_t);
+
+  // Expect call to ACMD41 with argument 0x00000000 in first periodic cycle
+  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd8ErrorOrNoResponse);
+  sd_logger_periodic();
+  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackProcessCmd8ErrorOrNoResponseNrCalls, "spi_submit call count mismatch.");
+}
+
+void test_ProcessResponseToCMD8NoResponse(void){
+
+}
+
 
 //! Try ACMD41 every periodic loop until timeout, then stop
 /*!
@@ -412,4 +477,176 @@ void test_ProcessResponseToACMD41_SDv2_AbortWhenNoResponse(void)
   sd_logger_process_ACMD41_SDv2(&sd_logger.spi_t);
   TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
   TEST_ASSERT_TRUE(sd_logger.failed);
+}
+
+void test_ProcessResponseToACMD41_SDv2_0x01(void)
+{
+  sd_logger.spi_t.input_buf[21] = 0xFF;
+  sd_logger.spi_t.input_buf[22] = 0xFF;
+  sd_logger.spi_t.input_buf[23] = 0xFF;
+  sd_logger.spi_t.input_buf[24] = 0xFF;
+  sd_logger.spi_t.input_buf[25] = 0xFF;
+  sd_logger.spi_t.input_buf[26] = 0xFF;
+  sd_logger.spi_t.input_buf[27] = 0x01; // CORERCT response here
+  sd_logger.spi_t.input_buf[28] = 0xFF;
+  sd_logger.spi_t.input_buf[29] = 0xFF;
+
+  sd_logger_process_ACMD41_SDv2(&sd_logger.spi_t);
+}
+
+bool_t MySpiSubmitCallbackContinueCmd58(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) p; (void) cmock_num_calls; // ignore unused
+  MySpiSubmitCallbackContinueCmd58NrCalls++;
+
+  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
+  TEST_ASSERT_EQUAL(6, t->output_length);
+  TEST_ASSERT_EQUAL(6+8+1+4, t->input_length);  // R3 response
+  TEST_ASSERT_EQUAL(SPITransDone, t->status);
+
+  TEST_ASSERT_EQUAL_HEX8(0x7A, t->output_buf[0]); // CMD byte
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[1]); // paramter bytes (ignored)
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[2]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[3]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
+  TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]); // Stop bit
+
+  // spi callback function to process the response
+  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_CMD58, sd_logger.spi_t.after_cb);
+
+  return TRUE;
+}
+
+void test_ProcessResponseToACMD41_SDv2_0x00(void)
+{
+  sd_logger.spi_t.input_buf[21] = 0xFF;
+  sd_logger.spi_t.input_buf[22] = 0x00; // Initialization complete
+  sd_logger.spi_t.input_buf[23] = 0xFF;
+  sd_logger.spi_t.input_buf[24] = 0xFF;
+  sd_logger.spi_t.input_buf[25] = 0xFF;
+  sd_logger.spi_t.input_buf[26] = 0xFF;
+  sd_logger.spi_t.input_buf[27] = 0xFF;
+  sd_logger.spi_t.input_buf[28] = 0xFF;
+  sd_logger.spi_t.input_buf[29] = 0xFF;
+
+  // Immediately continue with CMD58
+  spi_submit_StubWithCallback(MySpiSubmitCallbackContinueCmd58);
+
+  sd_logger_process_ACMD41_SDv2(&sd_logger.spi_t);
+  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackContinueCmd58NrCalls, "spi_submit call count mismatch.");
+}
+
+//! Process CMD58 to determine if card is block or byte addressed
+/*!
+ *
+ */
+void test_ProcessResponseToCMD58_Case1(void)
+{
+  sd_logger.input_buf[6] = 0x00; // response starts immediately
+  sd_logger.input_buf[7] = 0xCF; // bit 30 and 31 set
+  sd_logger.input_buf[8] = 0xFF;
+  sd_logger.input_buf[9] = 0xFF;
+  sd_logger.input_buf[10] = 0xFF; // last byte
+  sd_logger.input_buf[11] = 0xFF;
+  sd_logger.input_buf[12] = 0xFF;
+  sd_logger.input_buf[13] = 0xFF;
+  sd_logger.input_buf[14] = 0xFF;
+
+  sd_logger_process_CMD58(&sd_logger.spi_t);
+  TEST_ASSERT_EQUAL(CardSdV2block, sd_logger.card_type);
+}
+
+bool_t MySpiSubmitCallbackContinueCmd16(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) p; (void) cmock_num_calls;
+  MySpiSubmitCallbackContinueCmd16NrCalls++;
+
+  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
+  TEST_ASSERT_EQUAL(6, t->output_length);
+  TEST_ASSERT_EQUAL(6+8+1, t->input_length);  // R1 response
+  TEST_ASSERT_EQUAL(SPITransDone, t->status);
+
+  TEST_ASSERT_EQUAL_HEX8(0x50, t->output_buf[0]); // CMD byte
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[1]); // paramter bytes
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[2]);
+  TEST_ASSERT_EQUAL_HEX8(0x02, t->output_buf[3]); // force blocksize 512 bytes.
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
+  TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]); // Stop bit
+
+  // spi callback
+  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_CMD16, sd_logger.spi_t.after_cb);
+  return TRUE;
+}
+
+void test_ProcessResponseToCMD58_Case2(void)
+{
+  sd_logger.input_buf[6] = 0x00; // response starts immediately
+  sd_logger.input_buf[7] = 0x8F; // bit 30 (CCS) not set
+  sd_logger.input_buf[8] = 0xFF;
+  sd_logger.input_buf[9] = 0xFF;
+  sd_logger.input_buf[10] = 0xFF; // last byte
+  sd_logger.input_buf[11] = 0xFF;
+  sd_logger.input_buf[12] = 0xFF;
+  sd_logger.input_buf[13] = 0xFF;
+  sd_logger.input_buf[14] = 0xFF;
+
+  spi_submit_StubWithCallback(MySpiSubmitCallbackContinueCmd16);
+  sd_logger_process_CMD58(&sd_logger.spi_t);
+  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackContinueCmd16NrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL(CardSdV2byte, sd_logger.card_type);
+}
+
+void test_ProcessResponseToCMD58_Case3(void)
+{
+  sd_logger.input_buf[6] = 0x00; // response starts immediately
+  sd_logger.input_buf[7] = 0x4F; // bit 31 not set (then bit 30 is not valid)
+  sd_logger.input_buf[8] = 0xFF;
+  sd_logger.input_buf[9] = 0xFF;
+  sd_logger.input_buf[10] = 0xFF; // last byte
+  sd_logger.input_buf[11] = 0xFF;
+  sd_logger.input_buf[12] = 0xFF;
+  sd_logger.input_buf[13] = 0xFF;
+  sd_logger.input_buf[14] = 0xFF;
+
+  sd_logger_process_CMD58(&sd_logger.spi_t);
+  TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
+  TEST_ASSERT_TRUE(sd_logger.failed);
+}
+
+//! Process CMD16 in which block size is set to 512 bytes
+/*!
+ *
+ */
+void test_ProcessResponseToCMD16NoErrors(void)
+{
+  sd_logger.input_buf[6] = 0xFF;
+  sd_logger.input_buf[7] = 0xFF;
+  sd_logger.input_buf[8] = 0xFF;
+  sd_logger.input_buf[9] = 0xFF;
+  sd_logger.input_buf[10] = 0xFF;
+  sd_logger.input_buf[11] = 0xFF;
+  sd_logger.input_buf[12] = 0xFF;
+  sd_logger.input_buf[13] = 0xFF;
+  sd_logger.input_buf[14] = 0x00;
+
+  sd_logger_process_CMD16(&sd_logger.spi_t);
+
+  TEST_ASSERT_TRUE(sd_logger.ready);
+}
+
+void test_ProcessResponseToCMD16WithErrors(void)
+{
+  sd_logger.input_buf[6] = 0xFF;
+  sd_logger.input_buf[7] = 0xFF;
+  sd_logger.input_buf[8] = 0xFF;
+  sd_logger.input_buf[9] = 0xFF;
+  sd_logger.input_buf[10] = 0xFF;
+  sd_logger.input_buf[11] = 0xFF;
+  sd_logger.input_buf[12] = 0xFF;
+  sd_logger.input_buf[13] = 0xFF;
+  sd_logger.input_buf[14] = 0x01;
+
+  sd_logger_process_CMD16(&sd_logger.spi_t);
+
+  TEST_ASSERT_FALSE(sd_logger.ready);
 }

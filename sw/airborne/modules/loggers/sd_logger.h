@@ -45,16 +45,24 @@ enum SdResponseType{
   SdResponseR7
 };
 
+enum SdTryCardInitialize{
+  SDTryV2,
+  SDTryV1,
+  SDTryMMC
+};
+
 struct SdLogger{
   struct spi_periph *spi_p;                 /**< The SPI peripheral for the connection */
   struct spi_transaction spi_t;             /**< The SPI transaction used for the writing and reading of registers */
   uint8_t input_buf[512];                   /**< The input buffer for the SPI transaction */
   uint8_t output_buf[512];                  /**< The output buffer for the SPI transaction */
+  enum SdTryCardInitialize try_card_type;
   bool failed;
   uint8_t sd_response;
   enum SdCardType card_type;
   uint8_t initialization_counter;
   bool initialized;
+  bool ready;
 };
 
 extern struct SdLogger sd_logger;
@@ -66,15 +74,21 @@ extern void sd_logger_stop(void);
 /* Helper functions */
 extern void sd_logger_setup_spi(void);
 extern void sd_logger_send_cmd(uint8_t cmd, uint32_t arg, enum SdResponseType response_type, SPICallback after_cb);
+extern void sd_logger_send_app_cmd(uint8_t cmd, uint32_t arg, enum SdResponseType response_type, SPICallback after_cb);
 extern uint8_t sd_logger_get_response_idx(void);
 extern uint8_t sd_logger_get_R1(void);
 extern uint32_t sd_logger_get_R7(void);
+extern uint32_t sd_logger_get_R3(void);
+extern uint8_t sd_logger_get_ACMD_R1(void);
 
 /* SPI callback functions */
 extern void sd_logger_send_CMD0(struct spi_transaction *t);
 extern void sd_logger_get_CMD0_response(struct spi_transaction *t);
 extern void sd_logger_process_CMD8(struct spi_transaction *t);
 extern void sd_logger_process_ACMD41_SDv2(struct spi_transaction *t);
+extern void sd_logger_process_ACMD41_SDv1(struct spi_transaction *t);
+extern void sd_logger_process_CMD58(struct spi_transaction *t);
+extern void sd_logger_process_CMD16(struct spi_transaction *t);
 
 extern void sd_logger_serial_println(const char text[]);
 extern void sd_logger_spi_init(struct SdLogger *sdlog, struct spi_periph *spi_p, uint8_t slave_idx);
