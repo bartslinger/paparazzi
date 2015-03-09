@@ -164,7 +164,7 @@
    <define name="IGAIN" value="0"/>
  </section>
 
- <modules main_freq="1"> <!-- was 512 -->
+ <modules main_freq="512"> <!-- was 512 -->
    <load name="gps_ubx_ucenter.xml"/>
    <load name="send_imu_mag_current.xml"/>
    <!--load name="high_speed_logger_spi_link.xml"/-->

@@ -53,7 +53,9 @@ void sd_logger_start(void)
 
   sd_logger.spi_t.after_cb = &sd_logger_send_CMD0;
 
-  spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
+  if(!spi_submit(sd_logger.spi_p, &sd_logger.spi_t)){
+    sd_logger_serial_println("SDinit failed.");
+  }
 }
 
 void sd_logger_periodic(void)
@@ -104,18 +106,19 @@ void sd_logger_setup_spi(void)
 void sd_logger_send_cmd(uint8_t cmd, uint32_t arg, enum SdResponseType response_type, SPICallback after_cb)
 {
   sd_logger.spi_t.select = SPISelectUnselect;
-  sd_logger.spi_t.output_length = 6;
 
   switch(response_type) {
     case SdResponseR3:
       // falltrough
     case SdResponseR7:
       sd_logger.spi_t.input_length = 19;
+      sd_logger.spi_t.output_length = 19;
       break;
     default:
       // falltrough
     case SdResponseR1:
       sd_logger.spi_t.input_length = 15;
+      sd_logger.spi_t.output_length = 15;
       break;
   }
 
@@ -135,24 +138,30 @@ void sd_logger_send_cmd(uint8_t cmd, uint32_t arg, enum SdResponseType response_
       sd_logger.output_buf[5] = 0x01;
   }
 
-  sd_logger.spi_t.after_cb = after_cb;
-  spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
+  for(uint8_t i=6; i<19; i++){
+    sd_logger.output_buf[i] = 0xFF;
+  }
 
+  sd_logger.spi_t.after_cb = after_cb;
+  if(!spi_submit(sd_logger.spi_p, &sd_logger.spi_t)){
+    sd_logger_serial_println("SDcmd failed.");
+  }
 }
 
 void sd_logger_send_app_cmd(uint8_t cmd, uint32_t arg, enum SdResponseType response_type, SPICallback after_cb)
 {
   sd_logger.spi_t.select = SPISelectUnselect;
-  sd_logger.spi_t.output_length = 21;
 
   switch(response_type) {
     case SdResponseR7:
       sd_logger.spi_t.input_length = 34;
+      sd_logger.spi_t.output_length = 34;
       break;
     default:
       // falltrough
     case SdResponseR1:
       sd_logger.spi_t.input_length = 30;
+      sd_logger.spi_t.output_length = 30;
       break;
   }
 
@@ -179,8 +188,13 @@ void sd_logger_send_app_cmd(uint8_t cmd, uint32_t arg, enum SdResponseType respo
   sd_logger.output_buf[19] = arg;
   sd_logger.output_buf[20] = 0x01;
 
+  for(uint8_t i=21; i<34; i++){
+    sd_logger.output_buf[i] = 0xFF;
+  }
   sd_logger.spi_t.after_cb = after_cb;
-  spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
+  if(!spi_submit(sd_logger.spi_p, &sd_logger.spi_t)){
+    sd_logger_serial_println("SDappcmd failed.");
+  }
 
 }
 
@@ -271,6 +285,7 @@ void sd_logger_process_ACMD41_SDv2(struct spi_transaction *t)
   uint8_t response = sd_logger_get_ACMD_R1();
   switch(response) {
     case 0x00:
+      sd_logger.initialized = TRUE;
       sd_logger_send_cmd(58, 0x00000000, SdResponseR3, &sd_logger_process_CMD58);
       break;
     case 0x01:
@@ -283,7 +298,18 @@ void sd_logger_process_ACMD41_SDv2(struct spi_transaction *t)
 void sd_logger_process_ACMD41_SDv1(struct spi_transaction *t)
 {
   (void) t; // ignore unused
-
+  uint8_t response = sd_logger_get_ACMD_R1();
+  switch(response) {
+    case 0x00:
+      sd_logger.initialized = TRUE;
+      sd_logger.card_type = CardSdV1;
+      sd_logger_send_cmd(16, 0x00000200, SdResponseR1, &sd_logger_process_CMD16);
+      break;
+    case 0x01:
+      break;
+    default:
+      sd_logger.failed = TRUE;
+  }
 }
 
 void sd_logger_process_CMD58(struct spi_transaction *t)

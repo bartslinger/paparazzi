@@ -118,6 +118,21 @@ void test_StartSdCard(void)
   TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackStartSdCardNrCalls, "spi_submit called too often.");
 }
 
+void test_StartSdCardSpiSubmitFails(void)
+{
+  spi_submit_ExpectAndReturn(sd_logger.spi_p, &sd_logger.spi_t, FALSE);
+  spi_submit_IgnoreArg_p();
+  spi_submit_IgnoreArg_t();
+
+  char message[] = "SDinit failed.";
+  uint8_t len = strlen(message);
+  for(uint8_t i=0; i<len; i++){
+    uart_transmit_Expect(&SD_LOG_UART, message[i]);
+  }
+  uart_transmit_Expect(&SD_LOG_UART, 0x0A);
+  sd_logger_start();
+}
+
 
 bool_t MySpiSubmitCallbackSendCMD0(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
 {
@@ -125,7 +140,7 @@ bool_t MySpiSubmitCallbackSendCMD0(struct spi_periph *p, struct spi_transaction 
   MySpiSubmitCallbackSendCMD0NrCalls++;
 
   TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
-  TEST_ASSERT_EQUAL(6, t->output_length);
+  TEST_ASSERT_EQUAL(6+8+1, t->output_length);
   TEST_ASSERT_EQUAL(6+8+1, t->input_length);
   TEST_ASSERT_EQUAL(SPITransDone, t->status);
 
@@ -135,6 +150,10 @@ bool_t MySpiSubmitCallbackSendCMD0(struct spi_periph *p, struct spi_transaction 
   TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[3]);
   TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
   TEST_ASSERT_EQUAL_HEX8(0x95, t->output_buf[5]); // CRC7 for CMD0(0x00000000)
+
+  for(uint8_t i=6; i<15; i++){
+    TEST_ASSERT_EQUAL_HEX8(0XFF, t->output_buf[i]);
+  }
 
   // Set reply
   t->input_buf[6] = 0xFF;
@@ -166,7 +185,7 @@ bool_t MySpiSubmitCallbackReceiveCorrectResponseCMD0(struct spi_periph *p, struc
   /* Next step is to send CMD8.
    * Response type is R7 (R1 + 32bit) = 5 bytes
    */
-  TEST_ASSERT_EQUAL(6, t->output_length);
+  TEST_ASSERT_EQUAL(6+8+5, t->output_length);
   TEST_ASSERT_EQUAL(6+8+5, t->input_length); // CMD + Ncr_max + response
 
   TEST_ASSERT_EQUAL_HEX8(0x48, t->output_buf[0]); // CMD8
@@ -177,6 +196,9 @@ bool_t MySpiSubmitCallbackReceiveCorrectResponseCMD0(struct spi_periph *p, struc
   TEST_ASSERT_EQUAL_HEX8(0x87, t->output_buf[5]); // CRC7 for CMD8(0x000001AA)
   TEST_ASSERT_EQUAL_PTR(&sd_logger_process_CMD8, t->after_cb); // Continue with processing the response
 
+  for(uint8_t i=6; i<19; i++){
+    TEST_ASSERT_EQUAL_HEX8(0XFF, t->output_buf[i]);
+  }
   return TRUE;
 }
 
@@ -267,7 +289,7 @@ bool_t MySpiSubmitCallbackProcessCmd8CorrectResponse(struct spi_periph *p, struc
   MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls++;
 
   // Perform ACMD41 call with argument 0x40000000
-  TEST_ASSERT_EQUAL(6+8+1+6, t->output_length); // CMD55 + Ncr (max 8) + R1 + CMD41
+  TEST_ASSERT_EQUAL(6+8+1+6+8+1, t->output_length); // CMD55 + Ncr (max 8) + R1 + CMD41
   TEST_ASSERT_EQUAL(6+8+1+6+8+1, t->input_length); // CMD41 responds also with R1
 
   // CMD55
@@ -291,6 +313,9 @@ bool_t MySpiSubmitCallbackProcessCmd8CorrectResponse(struct spi_periph *p, struc
   TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[19]);
   TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[20]);
 
+  for(uint8_t i=21; i<30; i++){
+    TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[i]);
+  }
   // Callback
   TEST_ASSERT_EQUAL_PTR(&sd_logger_process_ACMD41_SDv2, t->after_cb);
 
@@ -303,7 +328,7 @@ bool_t MySpiSubmitCallbackProcessCmd8ErrorOrNoResponse(struct spi_periph *p, str
   MySpiSubmitCallbackProcessCmd8ErrorOrNoResponseNrCalls++;
 
   // Perform ACMD41 call with argument 0x40000000
-  TEST_ASSERT_EQUAL(6+8+1+6, t->output_length); // CMD55 + Ncr (max 8) + R1 + CMD41
+  TEST_ASSERT_EQUAL(6+8+1+6+8+1, t->output_length); // CMD55 + Ncr (max 8) + R1 + CMD41
   TEST_ASSERT_EQUAL(6+8+1+6+8+1, t->input_length); // CMD41 responds also with R1
 
   // CMD55
@@ -327,6 +352,9 @@ bool_t MySpiSubmitCallbackProcessCmd8ErrorOrNoResponse(struct spi_periph *p, str
   TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[19]);
   TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[20]);
 
+  for(uint8_t i=21; i<30; i++){
+    TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[i]);
+  }
   // Callback
   TEST_ASSERT_EQUAL_PTR(&sd_logger_process_ACMD41_SDv1, t->after_cb);
 
@@ -400,7 +428,21 @@ void test_ProcessResponseToCMD8Error(void){
 }
 
 void test_ProcessResponseToCMD8NoResponse(void){
+  sd_logger.input_buf[6]  = 0xFF; // No response at all
+  sd_logger.input_buf[7]  = 0xFF;
+  sd_logger.input_buf[8]  = 0xFF;
+  sd_logger.input_buf[9]  = 0xFF;
+  sd_logger.input_buf[10] = 0xFF;
+  sd_logger.input_buf[11] = 0xFF;
+  sd_logger.input_buf[12] = 0xFF;
 
+  // execute callback
+  sd_logger_process_CMD8(&sd_logger.spi_t);
+
+  // Expect call to ACMD41 with argument 0x00000000 in first periodic cycle
+  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd8ErrorOrNoResponse);
+  sd_logger_periodic();
+  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackProcessCmd8ErrorOrNoResponseNrCalls, "spi_submit call count mismatch.");
 }
 
 
@@ -500,7 +542,7 @@ bool_t MySpiSubmitCallbackContinueCmd58(struct spi_periph *p, struct spi_transac
   MySpiSubmitCallbackContinueCmd58NrCalls++;
 
   TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
-  TEST_ASSERT_EQUAL(6, t->output_length);
+  TEST_ASSERT_EQUAL(6+8+1+4, t->output_length);
   TEST_ASSERT_EQUAL(6+8+1+4, t->input_length);  // R3 response
   TEST_ASSERT_EQUAL(SPITransDone, t->status);
 
@@ -511,6 +553,9 @@ bool_t MySpiSubmitCallbackContinueCmd58(struct spi_periph *p, struct spi_transac
   TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
   TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]); // Stop bit
 
+  for(uint8_t i=6; i<19; i++){
+    TEST_ASSERT_EQUAL_HEX8(0XFF, t->output_buf[i]);
+  }
   // spi callback function to process the response
   TEST_ASSERT_EQUAL_PTR(&sd_logger_process_CMD58, sd_logger.spi_t.after_cb);
 
@@ -534,6 +579,9 @@ void test_ProcessResponseToACMD41_SDv2_0x00(void)
 
   sd_logger_process_ACMD41_SDv2(&sd_logger.spi_t);
   TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackContinueCmd58NrCalls, "spi_submit call count mismatch.");
+
+  // Abort the loop
+  TEST_ASSERT_TRUE(sd_logger.initialized);
 }
 
 //! Process CMD58 to determine if card is block or byte addressed
@@ -562,7 +610,7 @@ bool_t MySpiSubmitCallbackContinueCmd16(struct spi_periph *p, struct spi_transac
   MySpiSubmitCallbackContinueCmd16NrCalls++;
 
   TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
-  TEST_ASSERT_EQUAL(6, t->output_length);
+  TEST_ASSERT_EQUAL(6+8+1, t->output_length);
   TEST_ASSERT_EQUAL(6+8+1, t->input_length);  // R1 response
   TEST_ASSERT_EQUAL(SPITransDone, t->status);
 
@@ -572,6 +620,9 @@ bool_t MySpiSubmitCallbackContinueCmd16(struct spi_periph *p, struct spi_transac
   TEST_ASSERT_EQUAL_HEX8(0x02, t->output_buf[3]); // force blocksize 512 bytes.
   TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
   TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]); // Stop bit
+  for(uint8_t i=6; i<15; i++){
+    TEST_ASSERT_EQUAL_HEX8(0XFF, t->output_buf[i]);
+  }
 
   // spi callback
   TEST_ASSERT_EQUAL_PTR(&sd_logger_process_CMD16, sd_logger.spi_t.after_cb);
@@ -613,6 +664,63 @@ void test_ProcessResponseToCMD58_Case3(void)
   TEST_ASSERT_TRUE(sd_logger.failed);
 }
 
+void test_ProcessResponseToACMD41_SDv1_AbortWhenNoResponse(void)
+{
+  sd_logger.spi_t.input_buf[21] = 0xFF;
+  sd_logger.spi_t.input_buf[22] = 0xFF;
+  sd_logger.spi_t.input_buf[23] = 0xFF;
+  sd_logger.spi_t.input_buf[24] = 0xFF;
+  sd_logger.spi_t.input_buf[25] = 0xFF;
+  sd_logger.spi_t.input_buf[26] = 0xFF;
+  sd_logger.spi_t.input_buf[27] = 0xFF;
+  sd_logger.spi_t.input_buf[28] = 0xFF;
+  sd_logger.spi_t.input_buf[29] = 0xFF;
+
+  // the callback
+  sd_logger_process_ACMD41_SDv1(&sd_logger.spi_t);
+  TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
+  TEST_ASSERT_TRUE(sd_logger.failed);
+}
+
+void test_ProcessResponseToACMD41_SDv1_0x01(void)
+{
+  sd_logger.spi_t.input_buf[21] = 0xFF;
+  sd_logger.spi_t.input_buf[22] = 0xFF;
+  sd_logger.spi_t.input_buf[23] = 0xFF;
+  sd_logger.spi_t.input_buf[24] = 0xFF;
+  sd_logger.spi_t.input_buf[25] = 0xFF;
+  sd_logger.spi_t.input_buf[26] = 0xFF;
+  sd_logger.spi_t.input_buf[27] = 0x01; // CORERCT response here
+  sd_logger.spi_t.input_buf[28] = 0xFF;
+  sd_logger.spi_t.input_buf[29] = 0xFF;
+
+  sd_logger_process_ACMD41_SDv1(&sd_logger.spi_t);
+}
+
+void test_ProcessResponseToACMD41_SDv1_0x00(void)
+{
+  sd_logger.spi_t.input_buf[21] = 0xFF;
+  sd_logger.spi_t.input_buf[22] = 0xFF;
+  sd_logger.spi_t.input_buf[23] = 0xFF;
+  sd_logger.spi_t.input_buf[24] = 0xFF;
+  sd_logger.spi_t.input_buf[25] = 0x00; // CORERCT response here
+  sd_logger.spi_t.input_buf[26] = 0xFF;
+  sd_logger.spi_t.input_buf[27] = 0xFF;
+  sd_logger.spi_t.input_buf[28] = 0xFF;
+  sd_logger.spi_t.input_buf[29] = 0xFF;
+
+  // Immediately continue with CMD16
+  spi_submit_StubWithCallback(MySpiSubmitCallbackContinueCmd16);
+
+  sd_logger_process_ACMD41_SDv1(&sd_logger.spi_t);
+  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackContinueCmd16NrCalls, "spi_submit call count mismatch.");
+
+  // Abort the loop
+  TEST_ASSERT_TRUE(sd_logger.initialized);
+  // Card type identified
+  TEST_ASSERT_EQUAL(CardSdV1, sd_logger.card_type);
+}
+
 //! Process CMD16 in which block size is set to 512 bytes
 /*!
  *
@@ -649,4 +757,38 @@ void test_ProcessResponseToCMD16WithErrors(void)
   sd_logger_process_CMD16(&sd_logger.spi_t);
 
   TEST_ASSERT_FALSE(sd_logger.ready);
+}
+
+//! Send UART debug message if spi_submit returns false
+/*!
+ *
+ */
+void test_SendCmdSpiSubmitFails(void)
+{
+  spi_submit_ExpectAndReturn(sd_logger.spi_p, &sd_logger.spi_t, FALSE);
+  spi_submit_IgnoreArg_p();
+  spi_submit_IgnoreArg_t();
+
+  char message[] = "SDcmd failed.";
+  uint8_t len = strlen(message);
+  for(uint8_t i=0; i<len; i++){
+    uart_transmit_Expect(&SD_LOG_UART, message[i]);
+  }
+  uart_transmit_Expect(&SD_LOG_UART, 0x0A);
+  sd_logger_send_cmd(0, 0x00000000, SdResponseR1, NULL);
+}
+
+void test_SendAppCmdSpiSubmitFails(void)
+{
+  spi_submit_ExpectAndReturn(sd_logger.spi_p, &sd_logger.spi_t, FALSE);
+  spi_submit_IgnoreArg_p();
+  spi_submit_IgnoreArg_t();
+
+  char message[] = "SDappcmd failed.";
+  uint8_t len = strlen(message);
+  for(uint8_t i=0; i<len; i++){
+    uart_transmit_Expect(&SD_LOG_UART, message[i]);
+  }
+  uart_transmit_Expect(&SD_LOG_UART, 0x0A);
+  sd_logger_send_app_cmd(0, 0x00000000, SdResponseR1, NULL);
 }
