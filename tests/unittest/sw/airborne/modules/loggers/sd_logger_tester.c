@@ -23,6 +23,8 @@ uint8_t MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls;
 uint8_t MySpiSubmitCallbackProcessCmd8ErrorOrNoResponseNrCalls;
 uint8_t MySpiSubmitCallbackContinueCmd58NrCalls;
 uint8_t MySpiSubmitCallbackContinueCmd16NrCalls;
+uint8_t MySpiSubmitCallbackSendCMD17NrCalls;
+uint8_t MySpiSubmitCallbackReadSingleByteNrCalls;
 
 void setUp(void)
 {
@@ -36,6 +38,8 @@ void setUp(void)
   MySpiSubmitCallbackProcessCmd8ErrorOrNoResponseNrCalls = 0;
   MySpiSubmitCallbackContinueCmd58NrCalls                = 0;
   MySpiSubmitCallbackContinueCmd16NrCalls                = 0;
+  MySpiSubmitCallbackSendCMD17NrCalls                    = 0;
+  MySpiSubmitCallbackReadSingleByteNrCalls               = 0;
   imu_original = imu;
   Mockuart_Init();
   Mockspi_Init();
@@ -791,4 +795,84 @@ void test_SendAppCmdSpiSubmitFails(void)
   }
   uart_transmit_Expect(&SD_LOG_UART, 0x0A);
   sd_logger_send_app_cmd(0, 0x00000000, SdResponseR1, NULL);
+}
+
+bool_t MySpiSubmitCallbackSendCMD17(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) p; (void) cmock_num_calls; // ignore unused warning
+  MySpiSubmitCallbackSendCMD17NrCalls++;
+  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
+  TEST_ASSERT_EQUAL(6+8+1, t->output_length);
+  TEST_ASSERT_EQUAL(6+8+1, t->input_length);  // R1 response
+  TEST_ASSERT_EQUAL(SPITransDone, t->status);
+
+  TEST_ASSERT_EQUAL_HEX8(0x51, t->output_buf[0]); // CMD byte
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[1]); // paramter bytes
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[2]); // read address 0
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[3]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
+  TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]); // Stop bit
+  for(uint8_t i=6; i<15; i++){
+    TEST_ASSERT_EQUAL_HEX8(0XFF, t->output_buf[i]);
+  }
+
+  // spi callback
+  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_CMD17, sd_logger.spi_t.after_cb);
+
+  return TRUE;
+}
+
+//! Read data block at 0x00
+void test_ReadFirstDataBlockSendCMD17(void)
+{
+  spi_submit_StubWithCallback(MySpiSubmitCallbackSendCMD17);
+  sd_logger.initialized = TRUE;
+  sd_logger.failed = FALSE;
+  sd_logger.ready = TRUE;
+  sd_logger.card_type = CardSdV2block;
+
+  // in the periodic loop
+  sd_logger_periodic();
+  //sd_logger_periodic();
+  // Send the command only once!
+  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackSendCMD17NrCalls, "spi_submit different call count.");
+}
+
+bool_t MySpiSubmitCallbackReadSingleByte(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) p; (void) cmock_num_calls; // ignore unused warnings
+  TEST_ASSERT_EQUAL(1, t->input_length);
+  TEST_ASSERT_EQUAL(1, t->output_length);
+  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
+  TEST_ASSERT_EQUAL(SPITransDone, t->status);
+
+  TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[0]);
+
+
+  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_single_byte, t->after_cb);
+
+  MySpiSubmitCallbackReadSingleByteNrCalls++;
+  return TRUE;
+}
+
+void test_ProcessResponseToCMD17DataAccepted(void)
+{
+  sd_logger.input_buf[6] = 0xF5; // 1111 0101 data accepted
+  sd_logger.input_buf[7] = 0xFF;
+  sd_logger.input_buf[8] = 0xFF;
+  sd_logger.input_buf[9] = 0xFF;
+  sd_logger.input_buf[10] = 0xFF;
+  sd_logger.input_buf[11] = 0xFF;
+  sd_logger.input_buf[12] = 0xFF;
+  sd_logger.input_buf[13] = 0xFF;
+  sd_logger.input_buf[14] = 0xFF;
+  spi_submit_StubWithCallback(MySpiSubmitCallbackReadSingleByte);
+  sd_logger_process_CMD17(&sd_logger.spi_t);
+
+  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackReadSingleByteNrCalls, "spi_submit different call count.");
+}
+
+void test_ProcessSingleByte(void)
+{
+
 }

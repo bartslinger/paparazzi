@@ -74,6 +74,13 @@ void sd_logger_periodic(void)
         break;
     }
   }
+  if(sd_logger.ready && sd_logger.read_request_sent){
+    sd_logger_send_single_byte();
+  }
+  if(sd_logger.ready && !sd_logger.read_request_sent){
+    sd_logger_send_cmd(17, 0x00000000, SdResponseR1, &sd_logger_process_CMD17);
+    sd_logger.read_request_sent = TRUE;
+  }
 }
 
 void sd_logger_stop(void)
@@ -246,6 +253,16 @@ void sd_logger_send_CMD0(struct spi_transaction *t)
   sd_logger_send_cmd(0, 0x00000000, SdResponseR1, &sd_logger_get_CMD0_response);
 }
 
+void sd_logger_send_single_byte(void)
+{
+  sd_logger.spi_t.output_length = 1;
+  sd_logger.spi_t.input_length = 1;
+  sd_logger.spi_t.select = SPISelectUnselect;
+  sd_logger.output_buf[0] = 0xFF;
+  sd_logger.spi_t.after_cb = &sd_logger_process_single_byte;
+  spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
+}
+
 void sd_logger_get_CMD0_response(struct spi_transaction *t)
 {
   (void) t; // ignore unused warning
@@ -277,6 +294,12 @@ void sd_logger_process_CMD16(struct spi_transaction *t)
   (void) t; // ignore unused warning
   sd_logger.ready = (sd_logger_get_R1() == 0x00);
 
+}
+
+void sd_logger_process_CMD17(struct spi_transaction *t)
+{
+  (void) t; // ignore unused warning
+  sd_logger_send_single_byte();
 }
 
 void sd_logger_process_ACMD41_SDv2(struct spi_transaction *t)
@@ -329,6 +352,12 @@ void sd_logger_process_CMD58(struct spi_transaction *t)
     sd_logger.card_type = CardUnknown;
     sd_logger.failed = TRUE;
   }
+}
+
+void sd_logger_process_single_byte(struct spi_transaction *t)
+{
+  (void) t; // ignore unused warning
+  sd_logger_send_single_byte();
 }
 
 void sd_logger_serial_println(const char text[])
