@@ -31,6 +31,8 @@
 #include "std.h"
 #include "subsystems/imu.h"
 
+#define SD_LOGGER_UART_CHUNKSIZE 32
+
 enum SdCardType{
   CardUnknown,
   CardMmcV3,
@@ -60,19 +62,22 @@ enum SdLoggerState{
   SdLoggerStateReady,
   SdLoggerStateIdle,
   SdLoggerStateRequestingData,
-  SdLoggerStateReadingData
+  SdLoggerStateReadingData,
+  SdLoggerStateSendingBlock
 };
 
 struct SdLogger{
   struct spi_periph *spi_p;                 /**< The SPI peripheral for the connection */
   struct spi_transaction spi_t;             /**< The SPI transaction used for the writing and reading of registers */
-  uint8_t input_buf[512];                   /**< The input buffer for the SPI transaction */
-  uint8_t output_buf[512];                  /**< The output buffer for the SPI transaction */
+  uint8_t input_buf[514];                   /**< The input buffer for the SPI transaction */
+  uint8_t output_buf[514];                  /**< The output buffer for the SPI transaction */
   enum SdTryCardInitialize try_card_type;
   uint8_t sd_response;
   enum SdCardType card_type;
   uint8_t initialization_counter;
   uint8_t try_counter;
+  uint16_t buffer_to_uart_idx;
+  uint32_t read_address;
   enum SdLoggerState state;
 };
 
@@ -103,6 +108,7 @@ extern void sd_logger_process_CMD16(struct spi_transaction *t);
 extern void sd_logger_process_CMD17_request_single_byte(struct spi_transaction *t);
 extern void sd_logger_process_CMD17_single_byte(struct spi_transaction *t);
 extern void sd_logger_process_datarequest_single_byte(struct spi_transaction *t);
+extern void sd_logger_process_SD_datablock(struct spi_transaction *t);
 
 extern void sd_logger_serial_println(const char text[]);
 extern void sd_logger_spi_init(struct SdLogger *sdlog, struct spi_periph *spi_p, uint8_t slave_idx);

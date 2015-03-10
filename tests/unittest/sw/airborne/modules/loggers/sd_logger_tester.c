@@ -27,6 +27,7 @@ uint8_t MySpiSubmitCallbackSendCMD17NrCalls;
 uint8_t MySpiSubmitCallbackReadSingleByteNrCalls;
 uint8_t MySpiSubmitCallbackProcessCmd17ReqSingleByteNrCalls;
 uint8_t MySpiSubmitCallbackReadingDataReqSingleByteNrCalls;
+uint8_t MySpiSubmitCallbackReadingDataReqSdDataBlockNrCalls;
 
 void setUp(void)
 {
@@ -44,6 +45,7 @@ void setUp(void)
   MySpiSubmitCallbackReadSingleByteNrCalls               = 0;
   MySpiSubmitCallbackProcessCmd17ReqSingleByteNrCalls    = 0;
   MySpiSubmitCallbackReadingDataReqSingleByteNrCalls     = 0;
+  MySpiSubmitCallbackReadingDataReqSdDataBlockNrCalls    = 0;
   imu_original = imu;
   Mockuart_Init();
   Mockspi_Init();
@@ -857,15 +859,33 @@ bool_t MySpiSubmitCallbackSendCMD17(struct spi_periph *p, struct spi_transaction
   TEST_ASSERT_EQUAL(6, t->output_length);
   TEST_ASSERT_EQUAL(6, t->input_length);  // reading response later
 
-  TEST_ASSERT_EQUAL_HEX8(0x51, t->output_buf[0]); // CMD byte
-  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[1]); // paramter bytes
-  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[2]); // read address 0
-  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[3]);
-  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
-  TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]); // Stop bit
+  switch (cmock_num_calls) {
+    case 0:
+      TEST_ASSERT_EQUAL_HEX8(0x51, t->output_buf[0]); // CMD byte
+      TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[1]); // paramter bytes
+      TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[2]); // read address 0
+      TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[3]);
+      TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
+      TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]); // Stop bit
+      break;
+    case 1:
+      TEST_ASSERT_EQUAL_HEX8(0x51, t->output_buf[0]); // CMD byte
+      TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[1]); // paramter bytes
+      TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[2]); // SECOND TIME, READ NEXT ADDRESS
+      TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[3]);
+      TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[4]);
+      TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]); // Stop bit
+      break;
+    default:
+      break;
+  }
+
 
   // spi callback
   TEST_ASSERT_EQUAL_PTR(&sd_logger_process_CMD17_request_single_byte, sd_logger.spi_t.after_cb);
+
+  // Reset number of tries to read its response
+  TEST_ASSERT_EQUAL(0, sd_logger.try_counter);
 
   return TRUE;
 }
@@ -874,13 +894,29 @@ void test_StateRequestingDataWhenSpiAvailableSendCmd17(void)
 {
   sd_logger.state = SdLoggerStateRequestingData;
   spi_submit_StubWithCallback(MySpiSubmitCallbackSendCMD17);
-
+  sd_logger.card_type = CardSdV2block;
   sd_logger.spi_t.status = SPITransDone;
   sd_logger_periodic();
   sd_logger.spi_t.status = SPITransSuccess;
   sd_logger_periodic();
 
   TEST_ASSERT_EQUAL_MESSAGE(2, MySpiSubmitCallbackSendCMD17NrCalls, "spi_submit call count mismatch");
+}
+
+void test_StateRequestingDataWhenSpiAvailableSendCmd17UsingByteAddresses(void)
+{
+  sd_logger.state = SdLoggerStateRequestingData;
+  sd_logger.spi_t.status = SPITransDone;
+  sd_logger.card_type = CardSdV2byte;
+  spi_submit_ExpectAndReturn(sd_logger.spi_p, &sd_logger.spi_t, TRUE);
+  spi_submit_IgnoreArg_p();
+  spi_submit_IgnoreArg_t();
+  spi_submit_ExpectAndReturn(sd_logger.spi_p, &sd_logger.spi_t, TRUE);
+  spi_submit_IgnoreArg_p();
+  spi_submit_IgnoreArg_t();
+  sd_logger_periodic();
+  sd_logger_periodic();
+  TEST_ASSERT_EQUAL(512*2, sd_logger.read_address);
 }
 
 void test_StateRequestingDataWhenSpiUnavailableDoNothing(void)
@@ -998,4 +1034,103 @@ void test_StateReadingData_SpiUnavailable_DoNothing(void)
   sd_logger.spi_t.status = SPITransPending;
   sd_logger_periodic();
   // test fails if mock function gets called
+}
+
+bool_t MySpiSubmitCallbackReadingDataReqSdDataBlock(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) p; (void) cmock_num_calls;
+  MySpiSubmitCallbackReadingDataReqSdDataBlockNrCalls++;
+  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
+  TEST_ASSERT_EQUAL(512+2, t->output_length);
+  TEST_ASSERT_EQUAL(512+2, t->input_length);  // reading response later
+
+  for (uint16_t i=0; i<514; i++) {
+    TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[i]);
+  }
+
+  // Callback
+  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_SD_datablock, sd_logger.spi_t.after_cb);
+
+  return TRUE;
+}
+
+void test_StateReadingData_ProcessResponseIsCorrect(void)
+{
+  // callback from read data byte command
+  sd_logger.spi_t.input_buf[0] = 0xFE; // DATA TOKEN
+  spi_submit_StubWithCallback(MySpiSubmitCallbackReadingDataReqSdDataBlock);
+  sd_logger_process_datarequest_single_byte(&sd_logger.spi_t);
+  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackReadingDataReqSdDataBlockNrCalls, "spi_submit different call count.");
+}
+
+void test_StateReadingData_ProcessResponseIs0xFF(void)
+{
+  sd_logger.spi_t.input_buf[0] = 0xFF;
+  sd_logger_process_datarequest_single_byte(&sd_logger.spi_t);
+  // do nothing
+}
+
+void test_StateReadingData_ProcessResponseIsDataRejected(void)
+{
+  sd_logger.spi_t.input_buf[0] = 0xAB; // No data token
+  helper_ExpectSerialMessage("Expected data token.");
+  sd_logger_process_datarequest_single_byte(&sd_logger.spi_t);
+}
+
+void test_StateReadingData_ProcessSdCardOutput(void)
+{
+  // callback when SD data block finished reading
+  sd_logger_process_SD_datablock(&sd_logger.spi_t);
+  TEST_ASSERT_EQUAL(SdLoggerStateSendingBlock, sd_logger.state);
+}
+
+//! Buffer filled with data from sd card, send it to uart
+void test_StateSendingBlock_WriteAllToUART(void)
+{
+  // fill test buffer with values 1->512
+  for (uint16_t i=0; i<512; i++) {
+    sd_logger.input_buf[i] = i+1;
+  }
+
+  sd_logger.state = SdLoggerStateSendingBlock;
+  sd_logger.buffer_to_uart_idx = 0;
+  for (uint8_t i=0; i<16; i++) {
+    uart_check_free_space_ExpectAndReturn(&SD_LOG_UART, 32, 32); // enough free space
+    for (uint8_t j=0; j<32; j++) {
+      uart_transmit_Expect(&SD_LOG_UART, (i*32+j)+1);
+    }
+  }
+  sd_logger_periodic();
+
+  TEST_ASSERT_EQUAL(SdLoggerStateIdle, sd_logger.state);
+}
+
+void test_StateSendingBlock_WriteToUartInMultipleCycles(void)
+{
+  // fill test buffer with values 1->512
+  for (uint16_t i=0; i<512; i++) {
+    sd_logger.input_buf[i] = i+1;
+  }
+
+  sd_logger.state = SdLoggerStateSendingBlock;
+  sd_logger.buffer_to_uart_idx = 0;
+  for (uint8_t i=0; i<8; i++) {
+    uart_check_free_space_ExpectAndReturn(&SD_LOG_UART, 32, 32); // enough free space
+    for (uint8_t j=0; j<32; j++) {
+      uart_transmit_Expect(&SD_LOG_UART, (i*32+j)+1);
+    }
+  }
+  uart_check_free_space_ExpectAndReturn(&SD_LOG_UART, 32, 0); // not enough free space anymore
+  sd_logger_periodic();
+
+  // SECOND loop cycle
+  for (uint8_t i=8; i<16; i++) {
+    uart_check_free_space_ExpectAndReturn(&SD_LOG_UART, 32, 32); // enough free space
+    for (uint8_t j=0; j<32; j++) {
+      uart_transmit_Expect(&SD_LOG_UART, (i*32+j)+1);
+    }
+  }
+  sd_logger_periodic();
+  TEST_ASSERT_EQUAL(SdLoggerStateIdle, sd_logger.state);
+
 }

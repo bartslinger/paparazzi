@@ -89,7 +89,14 @@ void sd_logger_periodic(void)
       break;
     case SdLoggerStateRequestingData:
       if(sd_logger.spi_t.status == SPITransSuccess || sd_logger.spi_t.status == SPITransDone){
-        sd_logger_send_cmd(17, 0x00000000, SdResponseNone, &sd_logger_process_CMD17_request_single_byte);
+        sd_logger_send_cmd(17, sd_logger.read_address, SdResponseNone, &sd_logger_process_CMD17_request_single_byte);
+        sd_logger.try_counter = 0;
+        if(sd_logger.card_type == CardSdV2block) {
+          sd_logger.read_address++;
+        }
+        else {
+          sd_logger.read_address += 512;
+        }
       }
       break;
     case SdLoggerStateReadingData:
@@ -102,6 +109,18 @@ void sd_logger_periodic(void)
         spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
       }
       break;
+    case SdLoggerStateSendingBlock:
+      while (uart_check_free_space(&SD_LOG_UART, SD_LOGGER_UART_CHUNKSIZE)) {
+        for (uint16_t i=0; i<SD_LOGGER_UART_CHUNKSIZE; i++) {
+          uart_transmit(&SD_LOG_UART, sd_logger.spi_t.input_buf[sd_logger.buffer_to_uart_idx+i]);
+        }
+        sd_logger.buffer_to_uart_idx += SD_LOGGER_UART_CHUNKSIZE;
+        if (sd_logger.buffer_to_uart_idx >= 512) {
+          sd_logger.buffer_to_uart_idx = 0;
+          sd_logger.state = SdLoggerStateIdle;
+          break;
+        }
+      }
     case SdLoggerStateFailed:
       // falltrough
     case SdLoggerStateDisabled:
@@ -413,7 +432,32 @@ void sd_logger_process_CMD17_single_byte(struct spi_transaction *t)
 
 void sd_logger_process_datarequest_single_byte(struct spi_transaction *t)
 {
-  (void) t; // ignore unused parameter
+  switch (t->input_buf[0]) {
+    case 0xFE: // data token
+      sd_logger.spi_t.select = SPISelectUnselect;
+      sd_logger.spi_t.output_length = 514;
+      sd_logger.spi_t.input_length = 514;
+
+      for (uint16_t i=0; i<514; i++) {
+        sd_logger.spi_t.output_buf[i] = 0xFF;
+      }
+
+      sd_logger.spi_t.after_cb = &sd_logger_process_SD_datablock;
+
+      spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
+      break;
+    case 0xFF:
+      // do nothing
+      break;
+    default:
+      sd_logger_serial_println("Expected data token.");
+  }
+}
+
+void sd_logger_process_SD_datablock(struct spi_transaction *t)
+{
+  (void) t; // ignore unused warning
+  sd_logger.state = SdLoggerStateSendingBlock;
 }
 
 void sd_logger_serial_println(const char text[])
