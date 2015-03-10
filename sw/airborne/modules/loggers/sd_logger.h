@@ -57,7 +57,8 @@ enum SdLoggerState{
   SdLoggerStateInitializing,
   SdLoggerStateInitialized,
   SdLoggerStateReady,
-  SdLoggerStateIdle
+  SdLoggerStateIdle,
+  SdLoggerStateRequestingData
 };
 
 struct SdLogger{

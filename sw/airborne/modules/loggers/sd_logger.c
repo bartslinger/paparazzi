@@ -78,7 +78,15 @@ void sd_logger_periodic(void)
       }
       break;
     case SdLoggerStateReady:
-      // falltrough
+      sd_logger.state = SdLoggerStateIdle;
+      break;
+    case SdLoggerStateIdle:
+      if(uart_char_available(&SD_LOG_UART) > 0) {
+        if(uart_getch(&SD_LOG_UART) == 0x41) {
+          sd_logger.state = SdLoggerStateRequestingData;
+        }
+      }
+      break;
     case SdLoggerStateFailed:
       // falltrough
     case SdLoggerStateDisabled:

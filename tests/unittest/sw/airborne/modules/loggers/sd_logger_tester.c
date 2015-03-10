@@ -822,9 +822,37 @@ bool_t MySpiSubmitCallbackSendCMD17(struct spi_periph *p, struct spi_transaction
   return TRUE;
 }
 
-void test_WhenStateReadyDoNothing(void)
+void test_WhenStateReadySwitchToIdle(void)
 {
   sd_logger.state = SdLoggerStateReady;
   sd_logger_periodic();
+  TEST_ASSERT_EQUAL(SdLoggerStateIdle, sd_logger.state);
   // gives error when mock is called.
 }
+
+void test_StateIdleProcessUartReadCommand(void)
+{
+  sd_logger.state = SdLoggerStateIdle;
+  uart_char_available_ExpectAndReturn(&SD_LOG_UART, 1);
+  uart_getch_ExpectAndReturn(&SD_LOG_UART, 0x41); // A = correct command
+  sd_logger_periodic();
+  TEST_ASSERT_EQUAL(SdLoggerStateRequestingData, sd_logger.state);
+}
+
+void test_StateIdleWrongUartCommand(void)
+{
+  sd_logger.state = SdLoggerStateIdle;
+  uart_char_available_ExpectAndReturn(&SD_LOG_UART, 1);
+  uart_getch_ExpectAndReturn(&SD_LOG_UART, 0x42); // B = wrong command
+  sd_logger_periodic();
+  TEST_ASSERT_EQUAL(SdLoggerStateIdle, sd_logger.state);
+}
+
+void test_StateIdleNoUartCharsAvailable(void)
+{
+  sd_logger.state = SdLoggerStateIdle;
+  uart_char_available_ExpectAndReturn(&SD_LOG_UART, 0);
+  sd_logger_periodic();
+  TEST_ASSERT_EQUAL(SdLoggerStateIdle, sd_logger.state);
+}
+
