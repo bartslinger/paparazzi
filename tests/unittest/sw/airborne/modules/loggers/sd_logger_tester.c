@@ -25,6 +25,8 @@ uint8_t MySpiSubmitCallbackContinueCmd58NrCalls;
 uint8_t MySpiSubmitCallbackContinueCmd16NrCalls;
 uint8_t MySpiSubmitCallbackSendCMD17NrCalls;
 uint8_t MySpiSubmitCallbackReadSingleByteNrCalls;
+uint8_t MySpiSubmitCallbackProcessCmd17ReqSingleByteNrCalls;
+uint8_t MySpiSubmitCallbackReadingDataReqSingleByteNrCalls;
 
 void setUp(void)
 {
@@ -40,6 +42,8 @@ void setUp(void)
   MySpiSubmitCallbackContinueCmd16NrCalls                = 0;
   MySpiSubmitCallbackSendCMD17NrCalls                    = 0;
   MySpiSubmitCallbackReadSingleByteNrCalls               = 0;
+  MySpiSubmitCallbackProcessCmd17ReqSingleByteNrCalls    = 0;
+  MySpiSubmitCallbackReadingDataReqSingleByteNrCalls     = 0;
   imu_original = imu;
   Mockuart_Init();
   Mockspi_Init();
@@ -54,6 +58,16 @@ void tearDown(void)
   Mockuart_Destroy();
   Mockspi_Verify();
   Mockspi_Destroy();
+}
+
+void helper_ExpectSerialMessage(const char message[])
+{
+  uint8_t len = strlen(message);
+  //uart_check_free_space_ExpectAndReturn(&SD_LOG_UART, len, len);
+  for(uint8_t i=0; i<len; i++){
+    uart_transmit_Expect(&SD_LOG_UART, message[i]);
+  }
+  uart_transmit_Expect(&SD_LOG_UART, 0x0A);
 }
 
 void test_SerialPrintLine(void)
@@ -800,27 +814,6 @@ void test_SendAppCmdSpiSubmitFails(void)
   sd_logger_send_app_cmd(0, 0x00000000, SdResponseR1, NULL);
 }
 
-bool_t MySpiSubmitCallbackSendCMD17(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
-{
-  (void) p; (void) cmock_num_calls; // ignore unused warning
-  MySpiSubmitCallbackSendCMD17NrCalls++;
-  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
-  TEST_ASSERT_EQUAL(6, t->output_length);
-  TEST_ASSERT_EQUAL(6, t->input_length);  // reading response later
-  TEST_ASSERT_EQUAL(SPITransDone, t->status);
-
-  TEST_ASSERT_EQUAL_HEX8(0x51, t->output_buf[0]); // CMD byte
-  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[1]); // paramter bytes
-  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[2]); // read address 0
-  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[3]);
-  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
-  TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]); // Stop bit
-
-  // spi callback
-  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_CMD17, sd_logger.spi_t.after_cb);
-
-  return TRUE;
-}
 
 void test_WhenStateReadySwitchToIdle(void)
 {
@@ -856,3 +849,153 @@ void test_StateIdleNoUartCharsAvailable(void)
   TEST_ASSERT_EQUAL(SdLoggerStateIdle, sd_logger.state);
 }
 
+bool_t MySpiSubmitCallbackSendCMD17(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) p; (void) cmock_num_calls; // ignore unused warning
+  MySpiSubmitCallbackSendCMD17NrCalls++;
+  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
+  TEST_ASSERT_EQUAL(6, t->output_length);
+  TEST_ASSERT_EQUAL(6, t->input_length);  // reading response later
+
+  TEST_ASSERT_EQUAL_HEX8(0x51, t->output_buf[0]); // CMD byte
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[1]); // paramter bytes
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[2]); // read address 0
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[3]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
+  TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]); // Stop bit
+
+  // spi callback
+  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_CMD17_request_single_byte, sd_logger.spi_t.after_cb);
+
+  return TRUE;
+}
+
+void test_StateRequestingDataWhenSpiAvailableSendCmd17(void)
+{
+  sd_logger.state = SdLoggerStateRequestingData;
+  spi_submit_StubWithCallback(MySpiSubmitCallbackSendCMD17);
+
+  sd_logger.spi_t.status = SPITransDone;
+  sd_logger_periodic();
+  sd_logger.spi_t.status = SPITransSuccess;
+  sd_logger_periodic();
+
+  TEST_ASSERT_EQUAL_MESSAGE(2, MySpiSubmitCallbackSendCMD17NrCalls, "spi_submit call count mismatch");
+}
+
+void test_StateRequestingDataWhenSpiUnavailableDoNothing(void)
+{
+  sd_logger.state = SdLoggerStateRequestingData;
+  sd_logger.spi_t.status = SPITransPending;
+
+  sd_logger_periodic();
+  // expect no calls
+}
+
+bool_t MySpiSubmitCallbackProcessCmd17ReqSingleByte(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) p; (void) cmock_num_calls;
+  MySpiSubmitCallbackProcessCmd17ReqSingleByteNrCalls++;
+  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
+  TEST_ASSERT_EQUAL(1, t->output_length);
+  TEST_ASSERT_EQUAL(1, t->input_length);  // reading response later
+
+  TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[0]); // CMD byte
+
+  // spi callback
+  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_CMD17_single_byte, sd_logger.spi_t.after_cb);
+
+  return TRUE;
+}
+
+void test_StateRequestingDataProcessingCmd17Byte(void)
+{
+//  sd_logger.state = SdLoggerStateRequestingData;
+  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd17ReqSingleByte);
+  sd_logger_process_CMD17_request_single_byte(&sd_logger.spi_t);
+
+  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackProcessCmd17ReqSingleByteNrCalls, "spi_submit call count mismatch");
+}
+
+void test_StateRequestingData_ReadByteResponse_0xFF_ReadNextByte(void)
+{
+  sd_logger.spi_t.input_buf[0] = 0xFF;
+  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd17ReqSingleByte);
+  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
+
+  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackProcessCmd17ReqSingleByteNrCalls, "spi_submit call count mismatch");
+}
+
+//! maximum number of retries reached. Nr of tries = 9
+//! Send uart error message
+void test_StateRequestingData_ReadByteResponse_0xFF_NcrExceeded(void)
+{
+  sd_logger.spi_t.input_buf[0] = 0xFF;
+  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd17ReqSingleByte);
+  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
+  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
+  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
+  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
+  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
+  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
+  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
+  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
+  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
+
+  helper_ExpectSerialMessage("CMD17 no response.");
+  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t); // 10th call
+
+  TEST_ASSERT_EQUAL_MESSAGE(9, MySpiSubmitCallbackProcessCmd17ReqSingleByteNrCalls, "spi_submit call count mismatch");
+
+}
+
+void test_StateRequestingData_ReadWrongResponse(void)
+{
+  sd_logger.spi_t.input_buf[0] = 0x02; // unexpected or error response
+  helper_ExpectSerialMessage("CMD17 wrong response.");
+  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
+}
+
+void test_StateRequestingData_ReadCorrectResponse_0x00(void)
+{
+  sd_logger.spi_t.input_buf[0] = 0x00; // Correct response, continue with reading data from SDCard
+  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
+  TEST_ASSERT_EQUAL(SdLoggerStateReadingData, sd_logger.state);
+}
+
+bool_t MySpiSubmitCallbackReadingDataReqSingleByte(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) p; (void) cmock_num_calls;
+  MySpiSubmitCallbackReadingDataReqSingleByteNrCalls++;
+  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
+  TEST_ASSERT_EQUAL(1, t->output_length);
+  TEST_ASSERT_EQUAL(1, t->input_length);  // reading response later
+
+  TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[0]); // CMD byte
+
+  // spi callback
+  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_datarequest_single_byte, sd_logger.spi_t.after_cb);
+
+  return TRUE;
+}
+
+void test_StateReadingData_SpiAvailable_ReadByte(void)
+{
+  sd_logger.state = SdLoggerStateReadingData;
+  spi_submit_StubWithCallback(MySpiSubmitCallbackReadingDataReqSingleByte);
+
+  sd_logger.spi_t.status = SPITransDone;
+  sd_logger_periodic();
+  sd_logger.spi_t.status = SPITransSuccess;
+  sd_logger_periodic();
+
+  TEST_ASSERT_EQUAL_MESSAGE(2, MySpiSubmitCallbackReadingDataReqSingleByteNrCalls, "spi_submit different call count");
+}
+
+void test_StateReadingData_SpiUnavailable_DoNothing(void)
+{
+  sd_logger.state = SdLoggerStateReadingData;
+  sd_logger.spi_t.status = SPITransPending;
+  sd_logger_periodic();
+  // test fails if mock function gets called
+}

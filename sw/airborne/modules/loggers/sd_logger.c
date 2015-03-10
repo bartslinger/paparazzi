@@ -87,6 +87,21 @@ void sd_logger_periodic(void)
         }
       }
       break;
+    case SdLoggerStateRequestingData:
+      if(sd_logger.spi_t.status == SPITransSuccess || sd_logger.spi_t.status == SPITransDone){
+        sd_logger_send_cmd(17, 0x00000000, SdResponseNone, &sd_logger_process_CMD17_request_single_byte);
+      }
+      break;
+    case SdLoggerStateReadingData:
+      if(sd_logger.spi_t.status == SPITransSuccess || sd_logger.spi_t.status == SPITransDone){
+        sd_logger.spi_t.select = SPISelectUnselect;
+        sd_logger.spi_t.output_length = 1;
+        sd_logger.spi_t.input_length = 1;
+        sd_logger.spi_t.output_buf[0] = 0xFF;
+        sd_logger.spi_t.after_cb = &sd_logger_process_datarequest_single_byte;
+        spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
+      }
+      break;
     case SdLoggerStateFailed:
       // falltrough
     case SdLoggerStateDisabled:
@@ -128,8 +143,11 @@ void sd_logger_setup_spi(void)
 void sd_logger_send_cmd(uint8_t cmd, uint32_t arg, enum SdResponseType response_type, SPICallback after_cb)
 {
   sd_logger.spi_t.select = SPISelectUnselect;
-
   switch(response_type) {
+    case SdResponseNone:
+      sd_logger.spi_t.input_length = 6;
+      sd_logger.spi_t.output_length = 6;
+      break;
     case SdResponseR3:
       // falltrough
     case SdResponseR7:
@@ -268,18 +286,6 @@ void sd_logger_send_CMD0(struct spi_transaction *t)
   sd_logger_send_cmd(0, 0x00000000, SdResponseR1, &sd_logger_get_CMD0_response);
 }
 
-void sd_logger_send_single_byte(void)
-{
-  /*
-  sd_logger.spi_t.output_length = 1;
-  sd_logger.spi_t.input_length = 1;
-  sd_logger.spi_t.select = SPISelectUnselect;
-  sd_logger.output_buf[0] = 0xFF;
-  sd_logger.spi_t.after_cb = &sd_logger_process_single_byte;
-  spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
-  */
-}
-
 void sd_logger_get_CMD0_response(struct spi_transaction *t)
 {
   (void) t; // ignore unused warning
@@ -317,12 +323,6 @@ void sd_logger_process_CMD16(struct spi_transaction *t)
   else {
     sd_logger.state = SdLoggerStateFailed;
   }
-}
-
-void sd_logger_process_CMD17(struct spi_transaction *t)
-{
-  (void) t; // ignore unused warning
-  //sd_logger_send_single_byte();
 }
 
 void sd_logger_process_ACMD41_SDv2(struct spi_transaction *t)
@@ -378,9 +378,42 @@ void sd_logger_process_CMD58(struct spi_transaction *t)
   }
 }
 
-void sd_logger_process_single_byte(struct spi_transaction *t)
+void sd_logger_process_CMD17_request_single_byte(struct spi_transaction *t)
 {
   (void) t; // ignore unused warning
+  sd_logger.spi_t.select = SPISelectUnselect;
+  sd_logger.spi_t.output_length = 1;
+  sd_logger.spi_t.input_length = 1;
+  sd_logger.spi_t.output_buf[0] = 0xFF;
+
+  sd_logger.spi_t.after_cb = &sd_logger_process_CMD17_single_byte;
+
+  spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
+}
+
+void sd_logger_process_CMD17_single_byte(struct spi_transaction *t)
+{
+  if (sd_logger.try_counter < 9) {
+    sd_logger.try_counter++;
+    switch(t->input_buf[0]) {
+      case 0xFF:
+        sd_logger_process_CMD17_request_single_byte(t);
+        break;
+      case 0x00:
+        sd_logger.state = SdLoggerStateReadingData;
+        break;
+      default:
+        sd_logger_serial_println("CMD17 wrong response.");
+    }
+  }
+  else {
+    sd_logger_serial_println("CMD17 no response.");
+  }
+}
+
+void sd_logger_process_datarequest_single_byte(struct spi_transaction *t)
+{
+  (void) t; // ignore unused parameter
 }
 
 void sd_logger_serial_println(const char text[])
@@ -392,5 +425,3 @@ void sd_logger_serial_println(const char text[])
   }
   uart_transmit(&SD_LOG_UART, 0x0A); // send "\n" character
 }
-
-

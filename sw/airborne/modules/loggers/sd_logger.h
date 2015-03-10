@@ -40,6 +40,7 @@ enum SdCardType{
 };
 
 enum SdResponseType{
+  SdResponseNone,
   SdResponseR1,
   SdResponseR3,
   SdResponseR7
@@ -58,7 +59,8 @@ enum SdLoggerState{
   SdLoggerStateInitialized,
   SdLoggerStateReady,
   SdLoggerStateIdle,
-  SdLoggerStateRequestingData
+  SdLoggerStateRequestingData,
+  SdLoggerStateReadingData
 };
 
 struct SdLogger{
@@ -70,7 +72,7 @@ struct SdLogger{
   uint8_t sd_response;
   enum SdCardType card_type;
   uint8_t initialization_counter;
-  bool read_request_sent;
+  uint8_t try_counter;
   enum SdLoggerState state;
 };
 
@@ -84,7 +86,6 @@ extern void sd_logger_stop(void);
 extern void sd_logger_setup_spi(void);
 extern void sd_logger_send_cmd(uint8_t cmd, uint32_t arg, enum SdResponseType response_type, SPICallback after_cb);
 extern void sd_logger_send_app_cmd(uint8_t cmd, uint32_t arg, enum SdResponseType response_type, SPICallback after_cb);
-extern void sd_logger_send_single_byte(void);
 extern uint8_t sd_logger_get_response_idx(void);
 extern uint8_t sd_logger_get_R1(void);
 extern uint32_t sd_logger_get_R7(void);
@@ -99,8 +100,9 @@ extern void sd_logger_process_ACMD41_SDv2(struct spi_transaction *t);
 extern void sd_logger_process_ACMD41_SDv1(struct spi_transaction *t);
 extern void sd_logger_process_CMD58(struct spi_transaction *t);
 extern void sd_logger_process_CMD16(struct spi_transaction *t);
-extern void sd_logger_process_CMD17(struct spi_transaction *t);
-extern void sd_logger_process_single_byte(struct spi_transaction *t);
+extern void sd_logger_process_CMD17_request_single_byte(struct spi_transaction *t);
+extern void sd_logger_process_CMD17_single_byte(struct spi_transaction *t);
+extern void sd_logger_process_datarequest_single_byte(struct spi_transaction *t);
 
 extern void sd_logger_serial_println(const char text[]);
 extern void sd_logger_spi_init(struct SdLogger *sdlog, struct spi_periph *spi_p, uint8_t slave_idx);
