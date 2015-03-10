@@ -68,14 +68,14 @@ enum SdLoggerState{
   SdLoggerStateReadingData,
   SdLoggerStateSendingBlock,
   SdLoggerStateRecording,
-  SdLoggerStateSpiBusy
+  SdLoggerStateSpiBusyCMD17
 };
 
 struct SdLogger{
   struct spi_periph *spi_p;                 /**< The SPI peripheral for the connection */
   struct spi_transaction spi_t;             /**< The SPI transaction used for the writing and reading of registers */
-  uint8_t input_buf[514];                   /**< The input buffer for the SPI transaction */
-  uint8_t output_buf[514];                  /**< The output buffer for the SPI transaction */
+  uint8_t input_buf[520];                   /**< The input buffer for the SPI transaction */
+  uint8_t output_buf[520];                  /**< The output buffer for the SPI transaction */
   enum SdTryCardInitialize try_card_type;
   uint8_t sd_response;
   enum SdCardType card_type;
@@ -113,6 +113,7 @@ extern void sd_logger_process_CMD58(struct spi_transaction *t);
 extern void sd_logger_process_CMD16(struct spi_transaction *t);
 extern void sd_logger_request_single_byte(struct spi_transaction *t);
 extern void sd_logger_process_single_byte(struct spi_transaction *t);
+extern void sd_logger_process_CMD17_byte(uint8_t byte);
 extern void sd_logger_process_datarequest_single_byte(struct spi_transaction *t);
 extern void sd_logger_process_SD_datablock(struct spi_transaction *t);
 

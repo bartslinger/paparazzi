@@ -30,6 +30,7 @@ uint8_t SpiSubmitCallProcessCmd17ReqSingleByteNrCalls;
 uint8_t SpiSubmitCallReadingDataReqSingleByteNrCalls;
 uint8_t SpiSubmitCallReadingDataReqSdDataBlockNrCalls;
 uint8_t SpiSubmitCallSendCMD24NrCalls;
+uint8_t SpiSubmitCallWriteDataBlockNrCalls;
 
 void setUp(void)
 {
@@ -49,6 +50,7 @@ void setUp(void)
   SpiSubmitCallReadingDataReqSingleByteNrCalls     = 0;
   SpiSubmitCallReadingDataReqSdDataBlockNrCalls    = 0;
   SpiSubmitCallSendCMD24NrCalls                    = 0;
+  SpiSubmitCallWriteDataBlockNrCalls               = 0;
   imu_original = imu;
   Mockuart_Init();
   Mockspi_Init();
@@ -987,7 +989,7 @@ void test_StateRequestingData_ReadByteResponse_0xFF_NcrExceeded(void)
   sd_logger_process_single_byte(&sd_logger.spi_t);
   sd_logger_process_single_byte(&sd_logger.spi_t);
 
-  helper_ExpectSerialMessage("CMD17 no response.");
+  helper_ExpectSerialMessage("CMD no response.");
   sd_logger_process_single_byte(&sd_logger.spi_t); // 10th call
 
   TEST_ASSERT_EQUAL_MESSAGE(9, SpiSubmitCallProcessCmd17ReqSingleByteNrCalls, "spi_submit call count mismatch");
@@ -1213,6 +1215,8 @@ bool_t SpiSubmitCallSendCMD24(struct spi_periph *p, struct spi_transaction *t, i
   TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
   TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]);
 
+  TEST_ASSERT_EQUAL_PTR(&sd_logger_request_single_byte, t->after_cb);
+
   return TRUE;
 }
 
@@ -1245,7 +1249,40 @@ void test_StateRecordingWriteImuDataTillBufferIsFull(void)
   TEST_ASSERT_EQUAL(119, sd_logger.spi_t.output_buf[509]);
 
   // An extra IMU cycle does not fit anymore
-  TEST_ASSERT_EQUAL(SdLoggerStateSpiBusy, sd_logger.state);
+  TEST_ASSERT_EQUAL(SdLoggerStateSpiBusyCMD17, sd_logger.state);
   TEST_ASSERT_EQUAL(0, sd_logger.try_counter);
   TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallSendCMD24NrCalls, "spi_submit call count different.");
+}
+
+bool_t SpiSubmitCallWriteDataBlock(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) cmock_num_calls; // ignore unused warning
+  SpiSubmitCallWriteDataBlockNrCalls++;
+
+  TEST_ASSERT_EQUAL_PTR(sd_logger.spi_p, p);
+
+  // First 6 bytes were used for CMD24, first 5 now replaced by ones
+  // At least one of this is needed according to sdcard interface
+  for (uint8_t i=0; i<5; i++) {
+    TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[i]);
+  }
+  // Sixth byte is the data packet token
+  TEST_ASSERT_EQUAL(0xFE, t->output_buf[5]);
+  // Last 8 bytes given zeros
+  for (uint16_t i=510; i<518; i++) {
+    TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[i]);
+  }
+  // CRC (not used now)
+  TEST_ASSERT_EQUAL(0x00, t->output_buf[518]);
+  TEST_ASSERT_EQUAL(0x00, t->output_buf[519]);
+  return TRUE;
+}
+
+void test_StateSpiBusyCMD17ReadyToWriteToSD(void)
+{
+  sd_logger.state = SdLoggerStateSpiBusyCMD17;
+  sd_logger.spi_t.input_buf[0] = 0x00; // Awesome, we can now write the block to SD card
+  spi_submit_StubWithCallback(SpiSubmitCallWriteDataBlock);
+  sd_logger_process_single_byte(&sd_logger.spi_t);
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallWriteDataBlockNrCalls, "spi_submit call count different.");
 }
