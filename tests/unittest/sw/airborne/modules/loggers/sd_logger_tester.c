@@ -80,7 +80,7 @@ bool_t MySpiSubmitCallbackStartSdCard(struct spi_periph *p, struct spi_transacti
   MySpiSubmitCallbackStartSdCardNrCalls++;
 
   TEST_ASSERT_EQUAL(0, sd_logger.initialization_counter);
-  TEST_ASSERT_FALSE(sd_logger.initialized);
+  TEST_ASSERT_EQUAL(SdLoggerStateInitializing, sd_logger.state);
 
   /* First call, this sends 80 (>74) clock pulses with CS and MOSI high */
   TEST_ASSERT_EQUAL_PTR(&(SD_LOGGER_SPI_LINK_DEVICE), p);
@@ -265,7 +265,7 @@ void test_ReceiveResponseCMD0Case3(void)
 
   sd_logger_get_CMD0_response(&sd_logger.spi_t);
   TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
-  TEST_ASSERT_TRUE(sd_logger.failed);
+  TEST_ASSERT_EQUAL(SdLoggerStateFailed, sd_logger.state);
 }
 
 /* WRONG response */
@@ -284,7 +284,7 @@ void test_ReceiveResponseCMD0Case4(void)
 
   sd_logger_get_CMD0_response(&sd_logger.spi_t);
   TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
-  TEST_ASSERT_TRUE(sd_logger.failed);
+  TEST_ASSERT_EQUAL(SdLoggerStateFailed, sd_logger.state);
 }
 
 bool_t MySpiSubmitCallbackProcessCmd8CorrectResponse(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
@@ -410,7 +410,7 @@ void test_ProcessResponseToCMD8CaseMismatch(void)
   sd_logger_periodic();
 
   TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
-  TEST_ASSERT_TRUE(sd_logger.failed);
+  TEST_ASSERT_EQUAL(SdLoggerStateFailed, sd_logger.state);
 }
 
 void test_ProcessResponseToCMD8Error(void){
@@ -456,6 +456,7 @@ void test_ProcessResponseToCMD8NoResponse(void){
  * 10 submits because of timeout.
  */
 void test_InitializeACMD41_SDv2_ErrorAndOrTimeout(void){
+  sd_logger.state = SdLoggerStateInitializing;
   spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd8CorrectResponse);
   for (uint8_t i=0; i<12; i++){
     sd_logger_periodic();
@@ -469,11 +470,12 @@ void test_InitializeACMD41_SDv2_ErrorAndOrTimeout(void){
  * 3 submits because of succesful initialization.
  */
 void test_InitializeACMD41_SDv2_StopWhenInitialized(void){
+  sd_logger.state = SdLoggerStateInitializing;
   spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd8CorrectResponse);
   sd_logger_periodic();
   sd_logger_periodic();
   sd_logger_periodic();
-  sd_logger.initialized = TRUE;
+  sd_logger.state = SdLoggerStateInitialized;
   sd_logger_periodic();
   TEST_ASSERT_EQUAL_MESSAGE(3, MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls, "spi_submit call count mismatch.");
 }
@@ -484,7 +486,7 @@ void test_InitializeACMD41_SDv2_StopWhenInitialized(void){
  */
 void test_DoNotCallSpiWhenCardIdentificationFailed(void)
 {
-  sd_logger.failed = TRUE;
+  sd_logger.state = SdLoggerStateFailed;
   sd_logger_periodic();
   // gives error if mock function is called too often.
 }
@@ -504,7 +506,7 @@ void test_ProcessResponseToACMD41_SDv2_AbortWhenWrongResponse(void)
   // the callback
   sd_logger_process_ACMD41_SDv2(&sd_logger.spi_t);
   TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
-  TEST_ASSERT_TRUE(sd_logger.failed);
+  TEST_ASSERT_EQUAL(SdLoggerStateFailed, sd_logger.state);
 }
 
 void test_ProcessResponseToACMD41_SDv2_AbortWhenNoResponse(void)
@@ -522,7 +524,7 @@ void test_ProcessResponseToACMD41_SDv2_AbortWhenNoResponse(void)
   // the callback
   sd_logger_process_ACMD41_SDv2(&sd_logger.spi_t);
   TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
-  TEST_ASSERT_TRUE(sd_logger.failed);
+  TEST_ASSERT_EQUAL(SdLoggerStateFailed, sd_logger.state);
 }
 
 void test_ProcessResponseToACMD41_SDv2_0x01(void)
@@ -585,7 +587,7 @@ void test_ProcessResponseToACMD41_SDv2_0x00(void)
   TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackContinueCmd58NrCalls, "spi_submit call count mismatch.");
 
   // Abort the loop
-  TEST_ASSERT_TRUE(sd_logger.initialized);
+  TEST_ASSERT_EQUAL(SdLoggerStateInitialized, sd_logger.state);
 }
 
 //! Process CMD58 to determine if card is block or byte addressed
@@ -606,6 +608,7 @@ void test_ProcessResponseToCMD58_Case1(void)
 
   sd_logger_process_CMD58(&sd_logger.spi_t);
   TEST_ASSERT_EQUAL(CardSdV2block, sd_logger.card_type);
+  TEST_ASSERT_EQUAL(SdLoggerStateReady, sd_logger.state);
 }
 
 bool_t MySpiSubmitCallbackContinueCmd16(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
@@ -665,7 +668,7 @@ void test_ProcessResponseToCMD58_Case3(void)
 
   sd_logger_process_CMD58(&sd_logger.spi_t);
   TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
-  TEST_ASSERT_TRUE(sd_logger.failed);
+  TEST_ASSERT_EQUAL(SdLoggerStateFailed, sd_logger.state);
 }
 
 void test_ProcessResponseToACMD41_SDv1_AbortWhenNoResponse(void)
@@ -683,7 +686,7 @@ void test_ProcessResponseToACMD41_SDv1_AbortWhenNoResponse(void)
   // the callback
   sd_logger_process_ACMD41_SDv1(&sd_logger.spi_t);
   TEST_ASSERT_EQUAL(CardUnknown, sd_logger.card_type);
-  TEST_ASSERT_TRUE(sd_logger.failed);
+  TEST_ASSERT_EQUAL(SdLoggerStateFailed, sd_logger.state);
 }
 
 void test_ProcessResponseToACMD41_SDv1_0x01(void)
@@ -720,7 +723,7 @@ void test_ProcessResponseToACMD41_SDv1_0x00(void)
   TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackContinueCmd16NrCalls, "spi_submit call count mismatch.");
 
   // Abort the loop
-  TEST_ASSERT_TRUE(sd_logger.initialized);
+  TEST_ASSERT_EQUAL(SdLoggerStateInitialized, sd_logger.state);
   // Card type identified
   TEST_ASSERT_EQUAL(CardSdV1, sd_logger.card_type);
 }
@@ -743,7 +746,7 @@ void test_ProcessResponseToCMD16NoErrors(void)
 
   sd_logger_process_CMD16(&sd_logger.spi_t);
 
-  TEST_ASSERT_TRUE(sd_logger.ready);
+  TEST_ASSERT_EQUAL(SdLoggerStateReady, sd_logger.state);
 }
 
 void test_ProcessResponseToCMD16WithErrors(void)
@@ -760,7 +763,7 @@ void test_ProcessResponseToCMD16WithErrors(void)
 
   sd_logger_process_CMD16(&sd_logger.spi_t);
 
-  TEST_ASSERT_FALSE(sd_logger.ready);
+  TEST_ASSERT_EQUAL(SdLoggerStateFailed, sd_logger.state);
 }
 
 //! Send UART debug message if spi_submit returns false
@@ -802,8 +805,8 @@ bool_t MySpiSubmitCallbackSendCMD17(struct spi_periph *p, struct spi_transaction
   (void) p; (void) cmock_num_calls; // ignore unused warning
   MySpiSubmitCallbackSendCMD17NrCalls++;
   TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
-  TEST_ASSERT_EQUAL(6+8+1, t->output_length);
-  TEST_ASSERT_EQUAL(6+8+1, t->input_length);  // R1 response
+  TEST_ASSERT_EQUAL(6, t->output_length);
+  TEST_ASSERT_EQUAL(6, t->input_length);  // reading response later
   TEST_ASSERT_EQUAL(SPITransDone, t->status);
 
   TEST_ASSERT_EQUAL_HEX8(0x51, t->output_buf[0]); // CMD byte
@@ -812,9 +815,6 @@ bool_t MySpiSubmitCallbackSendCMD17(struct spi_periph *p, struct spi_transaction
   TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[3]);
   TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
   TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]); // Stop bit
-  for(uint8_t i=6; i<15; i++){
-    TEST_ASSERT_EQUAL_HEX8(0XFF, t->output_buf[i]);
-  }
 
   // spi callback
   TEST_ASSERT_EQUAL_PTR(&sd_logger_process_CMD17, sd_logger.spi_t.after_cb);
@@ -822,57 +822,9 @@ bool_t MySpiSubmitCallbackSendCMD17(struct spi_periph *p, struct spi_transaction
   return TRUE;
 }
 
-//! Read data block at 0x00
-void test_ReadFirstDataBlockSendCMD17(void)
+void test_WhenStateReadyDoNothing(void)
 {
-  spi_submit_StubWithCallback(MySpiSubmitCallbackSendCMD17);
-  sd_logger.initialized = TRUE;
-  sd_logger.failed = FALSE;
-  sd_logger.ready = TRUE;
-  sd_logger.card_type = CardSdV2block;
-
-  // in the periodic loop
+  sd_logger.state = SdLoggerStateReady;
   sd_logger_periodic();
-  //sd_logger_periodic();
-  // Send the command only once!
-  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackSendCMD17NrCalls, "spi_submit different call count.");
-}
-
-bool_t MySpiSubmitCallbackReadSingleByte(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
-{
-  (void) p; (void) cmock_num_calls; // ignore unused warnings
-  TEST_ASSERT_EQUAL(1, t->input_length);
-  TEST_ASSERT_EQUAL(1, t->output_length);
-  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
-  TEST_ASSERT_EQUAL(SPITransDone, t->status);
-
-  TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[0]);
-
-
-  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_single_byte, t->after_cb);
-
-  MySpiSubmitCallbackReadSingleByteNrCalls++;
-  return TRUE;
-}
-
-void test_ProcessResponseToCMD17DataAccepted(void)
-{
-  sd_logger.input_buf[6] = 0xF5; // 1111 0101 data accepted
-  sd_logger.input_buf[7] = 0xFF;
-  sd_logger.input_buf[8] = 0xFF;
-  sd_logger.input_buf[9] = 0xFF;
-  sd_logger.input_buf[10] = 0xFF;
-  sd_logger.input_buf[11] = 0xFF;
-  sd_logger.input_buf[12] = 0xFF;
-  sd_logger.input_buf[13] = 0xFF;
-  sd_logger.input_buf[14] = 0xFF;
-  spi_submit_StubWithCallback(MySpiSubmitCallbackReadSingleByte);
-  sd_logger_process_CMD17(&sd_logger.spi_t);
-
-  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackReadSingleByteNrCalls, "spi_submit different call count.");
-}
-
-void test_ProcessSingleByte(void)
-{
-
+  // gives error when mock is called.
 }

@@ -35,7 +35,7 @@ struct SdLogger sd_logger;
 void sd_logger_start(void)
 {
   sd_logger.initialization_counter = 0;
-  sd_logger.initialized = FALSE;
+  sd_logger.state = SdLoggerStateInitializing;
   sd_logger_setup_spi();
   sd_logger.spi_t.input_length = 0;
   sd_logger.spi_t.output_length = 10;
@@ -60,27 +60,34 @@ void sd_logger_start(void)
 
 void sd_logger_periodic(void)
 {
-  if (sd_logger.initialization_counter < 10 && !sd_logger.initialized && !sd_logger.failed){
-    sd_logger.initialization_counter++;
+  switch(sd_logger.state) {
+    case SdLoggerStateInitializing:
+      if (sd_logger.initialization_counter < 10){
+        sd_logger.initialization_counter++;
 
-    switch(sd_logger.try_card_type) {
-      case SDTryV2:
-        sd_logger_send_app_cmd(41, 0x40000000, SdResponseR1, &sd_logger_process_ACMD41_SDv2);
-        break;
-      case SDTryV1:
-        // falltrough
-      default:
-        sd_logger_send_app_cmd(41, 0x00000000, SdResponseR1, &sd_logger_process_ACMD41_SDv1);
-        break;
-    }
+        switch(sd_logger.try_card_type) {
+          case SDTryV2:
+            sd_logger_send_app_cmd(41, 0x40000000, SdResponseR1, &sd_logger_process_ACMD41_SDv2);
+            break;
+          case SDTryV1:
+            // falltrough
+          default:
+            sd_logger_send_app_cmd(41, 0x00000000, SdResponseR1, &sd_logger_process_ACMD41_SDv1);
+            break;
+        }
+      }
+      break;
+    case SdLoggerStateReady:
+      // falltrough
+    case SdLoggerStateFailed:
+      // falltrough
+    case SdLoggerStateDisabled:
+      // falltrough
+    default:
+      // do nothing
+      break;
   }
-  if(sd_logger.ready && sd_logger.read_request_sent){
-    sd_logger_send_single_byte();
-  }
-  if(sd_logger.ready && !sd_logger.read_request_sent){
-    sd_logger_send_cmd(17, 0x00000000, SdResponseR1, &sd_logger_process_CMD17);
-    sd_logger.read_request_sent = TRUE;
-  }
+
 }
 
 void sd_logger_stop(void)
@@ -255,12 +262,14 @@ void sd_logger_send_CMD0(struct spi_transaction *t)
 
 void sd_logger_send_single_byte(void)
 {
+  /*
   sd_logger.spi_t.output_length = 1;
   sd_logger.spi_t.input_length = 1;
   sd_logger.spi_t.select = SPISelectUnselect;
   sd_logger.output_buf[0] = 0xFF;
   sd_logger.spi_t.after_cb = &sd_logger_process_single_byte;
   spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
+  */
 }
 
 void sd_logger_get_CMD0_response(struct spi_transaction *t)
@@ -271,7 +280,7 @@ void sd_logger_get_CMD0_response(struct spi_transaction *t)
     sd_logger_send_cmd(8, 0x000001AA, SdResponseR7, &sd_logger_process_CMD8);
   }
   else {
-    sd_logger.failed = TRUE;
+    sd_logger.state = SdLoggerStateFailed;
   }
 }
 
@@ -280,26 +289,32 @@ void sd_logger_process_CMD8(struct spi_transaction *t)
   (void) t; // ignore unused warning
   if(sd_logger_get_R1() != 0x01){
     sd_logger.try_card_type = SDTryV1;
+    sd_logger.state = SdLoggerStateInitializing;
   }
   else if(sd_logger_get_R7() == 0x000001AA){
     sd_logger.try_card_type = SDTryV2;
+    sd_logger.state = SdLoggerStateInitializing;
   }
   else{
-    sd_logger.failed = TRUE;
+    sd_logger.state = SdLoggerStateFailed;
   }
 }
 
 void sd_logger_process_CMD16(struct spi_transaction *t)
 {
   (void) t; // ignore unused warning
-  sd_logger.ready = (sd_logger_get_R1() == 0x00);
-
+  if(sd_logger_get_R1() == 0x00) {
+    sd_logger.state = SdLoggerStateReady;
+  }
+  else {
+    sd_logger.state = SdLoggerStateFailed;
+  }
 }
 
 void sd_logger_process_CMD17(struct spi_transaction *t)
 {
   (void) t; // ignore unused warning
-  sd_logger_send_single_byte();
+  //sd_logger_send_single_byte();
 }
 
 void sd_logger_process_ACMD41_SDv2(struct spi_transaction *t)
@@ -308,13 +323,13 @@ void sd_logger_process_ACMD41_SDv2(struct spi_transaction *t)
   uint8_t response = sd_logger_get_ACMD_R1();
   switch(response) {
     case 0x00:
-      sd_logger.initialized = TRUE;
+      sd_logger.state = SdLoggerStateInitialized;
       sd_logger_send_cmd(58, 0x00000000, SdResponseR3, &sd_logger_process_CMD58);
       break;
     case 0x01:
       break;
     default:
-      sd_logger.failed = TRUE;
+      sd_logger.state = SdLoggerStateFailed;
   }
 }
 
@@ -324,14 +339,14 @@ void sd_logger_process_ACMD41_SDv1(struct spi_transaction *t)
   uint8_t response = sd_logger_get_ACMD_R1();
   switch(response) {
     case 0x00:
-      sd_logger.initialized = TRUE;
+      sd_logger.state = SdLoggerStateInitialized;
       sd_logger.card_type = CardSdV1;
       sd_logger_send_cmd(16, 0x00000200, SdResponseR1, &sd_logger_process_CMD16);
       break;
     case 0x01:
       break;
     default:
-      sd_logger.failed = TRUE;
+      sd_logger.state = SdLoggerStateFailed;
   }
 }
 
@@ -342,6 +357,7 @@ void sd_logger_process_CMD58(struct spi_transaction *t)
   if(response & (1 << 31)){
     if(response & (1 << 30)){
       sd_logger.card_type = CardSdV2block;
+      sd_logger.state = SdLoggerStateReady;
     }
     else{
       sd_logger.card_type = CardSdV2byte;
@@ -350,14 +366,13 @@ void sd_logger_process_CMD58(struct spi_transaction *t)
   }
   else{
     sd_logger.card_type = CardUnknown;
-    sd_logger.failed = TRUE;
+    sd_logger.state = SdLoggerStateFailed;
   }
 }
 
 void sd_logger_process_single_byte(struct spi_transaction *t)
 {
   (void) t; // ignore unused warning
-  sd_logger_send_single_byte();
 }
 
 void sd_logger_serial_println(const char text[])

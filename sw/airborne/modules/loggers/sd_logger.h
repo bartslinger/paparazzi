@@ -51,19 +51,26 @@ enum SdTryCardInitialize{
   SDTryMMC
 };
 
+enum SdLoggerState{
+  SdLoggerStateDisabled,
+  SdLoggerStateFailed,
+  SdLoggerStateInitializing,
+  SdLoggerStateInitialized,
+  SdLoggerStateReady,
+  SdLoggerStateIdle
+};
+
 struct SdLogger{
   struct spi_periph *spi_p;                 /**< The SPI peripheral for the connection */
   struct spi_transaction spi_t;             /**< The SPI transaction used for the writing and reading of registers */
   uint8_t input_buf[512];                   /**< The input buffer for the SPI transaction */
   uint8_t output_buf[512];                  /**< The output buffer for the SPI transaction */
   enum SdTryCardInitialize try_card_type;
-  bool failed;
   uint8_t sd_response;
   enum SdCardType card_type;
   uint8_t initialization_counter;
-  bool initialized;
-  bool ready;
   bool read_request_sent;
+  enum SdLoggerState state;
 };
 
 extern struct SdLogger sd_logger;
