@@ -25,9 +25,6 @@
  */
 
 #include "sd_logger.h"
-#include "mcu_periph/uart.h"
-#include "mcu_periph/spi.h"
-#include "mcu_periph/gpio.h"
 
 // Struct with all the variables for this module
 struct SdLogger sd_logger;
@@ -35,6 +32,7 @@ struct SdLogger sd_logger;
 void sd_logger_start(void)
 {
   sd_logger.initialization_counter = 0;
+  sd_logger.imu_buffer_idx = 6;
   sd_logger.state = SdLoggerStateInitializing;
   sd_logger_setup_spi();
   sd_logger.spi_t.input_length = 0;
@@ -88,10 +86,10 @@ void sd_logger_periodic(void)
       }
       break;
     case SdLoggerStateRequestingData:
-      if(sd_logger.spi_t.status == SPITransSuccess || sd_logger.spi_t.status == SPITransDone){
-        sd_logger_send_cmd(17, sd_logger.read_address, SdResponseNone, &sd_logger_process_CMD17_request_single_byte);
+      if (sd_logger.spi_t.status == SPITransSuccess || sd_logger.spi_t.status == SPITransDone) {
+        sd_logger_send_cmd(17, sd_logger.read_address, SdResponseNone, &sd_logger_request_single_byte);
         sd_logger.try_counter = 0;
-        if(sd_logger.card_type == CardSdV2block) {
+        if (sd_logger.card_type == CardSdV2block) {
           sd_logger.read_address++;
         }
         else {
@@ -121,6 +119,24 @@ void sd_logger_periodic(void)
           break;
         }
       }
+      break;
+    case SdLoggerStateRecording:
+      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+0] = imu.gyro_unscaled.p;
+      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+1] = imu.gyro_unscaled.q;
+      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+2] = imu.gyro_unscaled.r;
+      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+3] = imu.accel_unscaled.x;
+      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+4] = imu.accel_unscaled.y;
+      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+5] = imu.accel_unscaled.z;
+      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+6] = imu.mag_unscaled.x;
+      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+7] = imu.mag_unscaled.y;
+      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+8] = imu.mag_unscaled.z;
+      sd_logger.imu_buffer_idx += 9;
+      if (sd_logger.imu_buffer_idx >= 510) {
+        sd_logger.state = SdLoggerStateSpiBusy;
+        sd_logger.try_counter = 0;
+        sd_logger_send_cmd(24, 0x00000000, SdResponseNone, NULL);
+      }
+      break;
     case SdLoggerStateFailed:
       // falltrough
     case SdLoggerStateDisabled:
@@ -397,36 +413,50 @@ void sd_logger_process_CMD58(struct spi_transaction *t)
   }
 }
 
-void sd_logger_process_CMD17_request_single_byte(struct spi_transaction *t)
+void sd_logger_request_single_byte(struct spi_transaction *t)
 {
-  (void) t; // ignore unused warning
-  sd_logger.spi_t.select = SPISelectUnselect;
-  sd_logger.spi_t.output_length = 1;
-  sd_logger.spi_t.input_length = 1;
-  sd_logger.spi_t.output_buf[0] = 0xFF;
+  switch (sd_logger.state) {
+    case SdLoggerStateRequestingData:
+      t->select = SPISelectUnselect;
+      t->output_length = 1;
+      t->input_length = 1;
+      t->output_buf[0] = 0xFF;
 
-  sd_logger.spi_t.after_cb = &sd_logger_process_CMD17_single_byte;
+      t->after_cb = &sd_logger_process_single_byte;
 
-  spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
+      spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
+      break;
+    default:
+      // do nothing
+      break;
+  }
+
 }
 
-void sd_logger_process_CMD17_single_byte(struct spi_transaction *t)
+void sd_logger_process_single_byte(struct spi_transaction *t)
 {
-  if (sd_logger.try_counter < 9) {
-    sd_logger.try_counter++;
-    switch(t->input_buf[0]) {
-      case 0xFF:
-        sd_logger_process_CMD17_request_single_byte(t);
-        break;
-      case 0x00:
-        sd_logger.state = SdLoggerStateReadingData;
-        break;
-      default:
-        sd_logger_serial_println("CMD17 wrong response.");
-    }
-  }
-  else {
-    sd_logger_serial_println("CMD17 no response.");
+  switch(sd_logger.state) {
+    case SdLoggerStateRequestingData:
+      if (sd_logger.try_counter < 9) {
+        sd_logger.try_counter++;
+        switch(t->input_buf[0]) {
+          case 0xFF:
+            sd_logger_request_single_byte(t);
+            break;
+          case 0x00:
+            sd_logger.state = SdLoggerStateReadingData;
+            break;
+          default:
+            sd_logger_serial_println("CMD17 wrong response.");
+        }
+      }
+      else {
+        sd_logger_serial_println("CMD17 no response.");
+      }
+      break;
+    default:
+      // do nothing
+      break;
   }
 }
 

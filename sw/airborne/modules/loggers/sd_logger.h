@@ -29,6 +29,9 @@
 
 
 #include "std.h"
+#include "mcu_periph/uart.h"
+#include "mcu_periph/spi.h"
+#include "mcu_periph/gpio.h"
 #include "subsystems/imu.h"
 
 #define SD_LOGGER_UART_CHUNKSIZE 32
@@ -63,7 +66,9 @@ enum SdLoggerState{
   SdLoggerStateIdle,
   SdLoggerStateRequestingData,
   SdLoggerStateReadingData,
-  SdLoggerStateSendingBlock
+  SdLoggerStateSendingBlock,
+  SdLoggerStateRecording,
+  SdLoggerStateSpiBusy
 };
 
 struct SdLogger{
@@ -78,6 +83,7 @@ struct SdLogger{
   uint8_t try_counter;
   uint16_t buffer_to_uart_idx;
   uint32_t read_address;
+  uint16_t imu_buffer_idx;
   enum SdLoggerState state;
 };
 
@@ -105,8 +111,8 @@ extern void sd_logger_process_ACMD41_SDv2(struct spi_transaction *t);
 extern void sd_logger_process_ACMD41_SDv1(struct spi_transaction *t);
 extern void sd_logger_process_CMD58(struct spi_transaction *t);
 extern void sd_logger_process_CMD16(struct spi_transaction *t);
-extern void sd_logger_process_CMD17_request_single_byte(struct spi_transaction *t);
-extern void sd_logger_process_CMD17_single_byte(struct spi_transaction *t);
+extern void sd_logger_request_single_byte(struct spi_transaction *t);
+extern void sd_logger_process_single_byte(struct spi_transaction *t);
 extern void sd_logger_process_datarequest_single_byte(struct spi_transaction *t);
 extern void sd_logger_process_SD_datablock(struct spi_transaction *t);
 

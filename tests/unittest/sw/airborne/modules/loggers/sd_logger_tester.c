@@ -1,6 +1,7 @@
 #include "unity.h"
 #include "mcu_periph/Mockuart.h"
 #include "mcu_periph/Mockspi.h"
+#include "subsystems/Mockimu.h"
 #include "loggers/sd_logger.h"
 
 
@@ -16,39 +17,42 @@ struct Imu imu;
 struct SdLogger sd_logger_original;
 struct Imu imu_original;
 
-uint8_t MySpiSubmitCallbackSendCMD0NrCalls;
-uint8_t MySpiSubmitCallbackStartSdCardNrCalls;
-uint8_t MySpiSubmitCallbackReceiveCorrectResponseCMD0NrCalls;
-uint8_t MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls;
-uint8_t MySpiSubmitCallbackProcessCmd8ErrorOrNoResponseNrCalls;
-uint8_t MySpiSubmitCallbackContinueCmd58NrCalls;
-uint8_t MySpiSubmitCallbackContinueCmd16NrCalls;
-uint8_t MySpiSubmitCallbackSendCMD17NrCalls;
-uint8_t MySpiSubmitCallbackReadSingleByteNrCalls;
-uint8_t MySpiSubmitCallbackProcessCmd17ReqSingleByteNrCalls;
-uint8_t MySpiSubmitCallbackReadingDataReqSingleByteNrCalls;
-uint8_t MySpiSubmitCallbackReadingDataReqSdDataBlockNrCalls;
+uint8_t SpiSubmitCallSendCMD0NrCalls;
+uint8_t SpiSubmitCallStartSdCardNrCalls;
+uint8_t SpiSubmitCallReceiveCorrectResponseCMD0NrCalls;
+uint8_t SpiSubmitCallProcessCmd8CorrectResponseNrCalls;
+uint8_t SpiSubmitCallProcessCmd8ErrorOrNoResponseNrCalls;
+uint8_t SpiSubmitCallContinueCmd58NrCalls;
+uint8_t SpiSubmitCallContinueCmd16NrCalls;
+uint8_t SpiSubmitCallSendCMD17NrCalls;
+uint8_t SpiSubmitCallReadSingleByteNrCalls;
+uint8_t SpiSubmitCallProcessCmd17ReqSingleByteNrCalls;
+uint8_t SpiSubmitCallReadingDataReqSingleByteNrCalls;
+uint8_t SpiSubmitCallReadingDataReqSdDataBlockNrCalls;
+uint8_t SpiSubmitCallSendCMD24NrCalls;
 
 void setUp(void)
 {
   // Store initial (unset) value of sd_logger struct
   sd_logger_original = sd_logger;
   sd_logger_setup_spi();
-  MySpiSubmitCallbackSendCMD0NrCalls                     = 0;
-  MySpiSubmitCallbackStartSdCardNrCalls                  = 0;
-  MySpiSubmitCallbackReceiveCorrectResponseCMD0NrCalls   = 0;
-  MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls   = 0;
-  MySpiSubmitCallbackProcessCmd8ErrorOrNoResponseNrCalls = 0;
-  MySpiSubmitCallbackContinueCmd58NrCalls                = 0;
-  MySpiSubmitCallbackContinueCmd16NrCalls                = 0;
-  MySpiSubmitCallbackSendCMD17NrCalls                    = 0;
-  MySpiSubmitCallbackReadSingleByteNrCalls               = 0;
-  MySpiSubmitCallbackProcessCmd17ReqSingleByteNrCalls    = 0;
-  MySpiSubmitCallbackReadingDataReqSingleByteNrCalls     = 0;
-  MySpiSubmitCallbackReadingDataReqSdDataBlockNrCalls    = 0;
+  SpiSubmitCallSendCMD0NrCalls                     = 0;
+  SpiSubmitCallStartSdCardNrCalls                  = 0;
+  SpiSubmitCallReceiveCorrectResponseCMD0NrCalls   = 0;
+  SpiSubmitCallProcessCmd8CorrectResponseNrCalls   = 0;
+  SpiSubmitCallProcessCmd8ErrorOrNoResponseNrCalls = 0;
+  SpiSubmitCallContinueCmd58NrCalls                = 0;
+  SpiSubmitCallContinueCmd16NrCalls                = 0;
+  SpiSubmitCallSendCMD17NrCalls                    = 0;
+  SpiSubmitCallReadSingleByteNrCalls               = 0;
+  SpiSubmitCallProcessCmd17ReqSingleByteNrCalls    = 0;
+  SpiSubmitCallReadingDataReqSingleByteNrCalls     = 0;
+  SpiSubmitCallReadingDataReqSdDataBlockNrCalls    = 0;
+  SpiSubmitCallSendCMD24NrCalls                    = 0;
   imu_original = imu;
   Mockuart_Init();
   Mockspi_Init();
+  Mockimu_Init();
 }
 
 void tearDown(void)
@@ -60,6 +64,8 @@ void tearDown(void)
   Mockuart_Destroy();
   Mockspi_Verify();
   Mockspi_Destroy();
+  Mockimu_Verify();
+  Mockimu_Destroy();
 }
 
 void helper_ExpectSerialMessage(const char message[])
@@ -90,12 +96,13 @@ void test_SerialPrintLine(void)
   sd_logger_serial_println("doei");
 }
 
-bool_t MySpiSubmitCallbackStartSdCard(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+bool_t SpiSubmitCallStartSdCard(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
 {
   (void) cmock_num_calls; // ignore unused
-  MySpiSubmitCallbackStartSdCardNrCalls++;
+  SpiSubmitCallStartSdCardNrCalls++;
 
   TEST_ASSERT_EQUAL(0, sd_logger.initialization_counter);
+  TEST_ASSERT_EQUAL(6, sd_logger.imu_buffer_idx); // begin filling spi buffer with imu data from idx 6
   TEST_ASSERT_EQUAL(SdLoggerStateInitializing, sd_logger.state);
 
   /* First call, this sends 80 (>74) clock pulses with CS and MOSI high */
@@ -133,9 +140,9 @@ bool_t MySpiSubmitCallbackStartSdCard(struct spi_periph *p, struct spi_transacti
 void test_StartSdCard(void)
 {
   // Main start function
-  spi_submit_StubWithCallback(MySpiSubmitCallbackStartSdCard);
+  spi_submit_StubWithCallback(SpiSubmitCallStartSdCard);
   sd_logger_start();
-  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackStartSdCardNrCalls, "spi_submit called too often.");
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallStartSdCardNrCalls, "spi_submit called too often.");
 }
 
 void test_StartSdCardSpiSubmitFails(void)
@@ -154,10 +161,10 @@ void test_StartSdCardSpiSubmitFails(void)
 }
 
 
-bool_t MySpiSubmitCallbackSendCMD0(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+bool_t SpiSubmitCallSendCMD0(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
 {
   (void) p; (void) cmock_num_calls; // ignore unused
-  MySpiSubmitCallbackSendCMD0NrCalls++;
+  SpiSubmitCallSendCMD0NrCalls++;
 
   TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
   TEST_ASSERT_EQUAL(6+8+1, t->output_length);
@@ -193,15 +200,15 @@ bool_t MySpiSubmitCallbackSendCMD0(struct spi_periph *p, struct spi_transaction 
 void test_SendCMD0(void)
 {
   // From callback:
-  spi_submit_StubWithCallback(MySpiSubmitCallbackSendCMD0);
+  spi_submit_StubWithCallback(SpiSubmitCallSendCMD0);
   sd_logger_send_CMD0(&sd_logger.spi_t);
-  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackSendCMD0NrCalls, "spi_submit called too often.");
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallSendCMD0NrCalls, "spi_submit called too often.");
 }
 
-bool_t MySpiSubmitCallbackReceiveCorrectResponseCMD0(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+bool_t SpiSubmitCallReceiveCorrectResponseCMD0(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
 {
   (void) p; (void) cmock_num_calls; // ignore unused
-  MySpiSubmitCallbackReceiveCorrectResponseCMD0NrCalls++;
+  SpiSubmitCallReceiveCorrectResponseCMD0NrCalls++;
   /* Next step is to send CMD8.
    * Response type is R7 (R1 + 32bit) = 5 bytes
    */
@@ -239,10 +246,10 @@ void test_ReceiveResponseCMD0Case1(void)
   sd_logger.input_buf[10] = 0xFF;
   sd_logger.input_buf[11] = 0xFF;
 
-  spi_submit_StubWithCallback(MySpiSubmitCallbackReceiveCorrectResponseCMD0);
+  spi_submit_StubWithCallback(SpiSubmitCallReceiveCorrectResponseCMD0);
   // Function call:
   sd_logger_get_CMD0_response(&sd_logger.spi_t);
-  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackReceiveCorrectResponseCMD0NrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallReceiveCorrectResponseCMD0NrCalls, "spi_submit call count mismatch.");
 }
 
 /* Changed Ncr (response time) */
@@ -259,9 +266,9 @@ void test_ReceiveResponseCMD0Case2(void)
   sd_logger.input_buf[13] = 0xFF;
   sd_logger.input_buf[14] = 0x01; // more delay
 
-  spi_submit_StubWithCallback(MySpiSubmitCallbackReceiveCorrectResponseCMD0);
+  spi_submit_StubWithCallback(SpiSubmitCallReceiveCorrectResponseCMD0);
   sd_logger_get_CMD0_response(&sd_logger.spi_t);
-  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackReceiveCorrectResponseCMD0NrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallReceiveCorrectResponseCMD0NrCalls, "spi_submit call count mismatch.");
 }
 
 /* No response at all */
@@ -303,10 +310,10 @@ void test_ReceiveResponseCMD0Case4(void)
   TEST_ASSERT_EQUAL(SdLoggerStateFailed, sd_logger.state);
 }
 
-bool_t MySpiSubmitCallbackProcessCmd8CorrectResponse(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+bool_t SpiSubmitCallProcessCmd8CorrectResponse(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
 {
   (void) p; (void) cmock_num_calls;// ignore unused
-  MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls++;
+  SpiSubmitCallProcessCmd8CorrectResponseNrCalls++;
 
   // Perform ACMD41 call with argument 0x40000000
   TEST_ASSERT_EQUAL(6+8+1+6+8+1, t->output_length); // CMD55 + Ncr (max 8) + R1 + CMD41
@@ -342,10 +349,10 @@ bool_t MySpiSubmitCallbackProcessCmd8CorrectResponse(struct spi_periph *p, struc
   return TRUE;
 }
 
-bool_t MySpiSubmitCallbackProcessCmd8ErrorOrNoResponse(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+bool_t SpiSubmitCallProcessCmd8ErrorOrNoResponse(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
 {
   (void) p; (void) cmock_num_calls;// ignore unused
-  MySpiSubmitCallbackProcessCmd8ErrorOrNoResponseNrCalls++;
+  SpiSubmitCallProcessCmd8ErrorOrNoResponseNrCalls++;
 
   // Perform ACMD41 call with argument 0x40000000
   TEST_ASSERT_EQUAL(6+8+1+6+8+1, t->output_length); // CMD55 + Ncr (max 8) + R1 + CMD41
@@ -404,9 +411,9 @@ void test_ProcessResponseToCMD8CaseMatched(void)
   // But this is done only during the next sd_logger_periodic()!!
   sd_logger_process_CMD8(&sd_logger.spi_t);
 
-  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd8CorrectResponse);
+  spi_submit_StubWithCallback(SpiSubmitCallProcessCmd8CorrectResponse);
   sd_logger_periodic();
-  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallProcessCmd8CorrectResponseNrCalls, "spi_submit call count mismatch.");
 }
 
 void test_ProcessResponseToCMD8CaseMismatch(void)
@@ -442,9 +449,9 @@ void test_ProcessResponseToCMD8Error(void){
   sd_logger_process_CMD8(&sd_logger.spi_t);
 
   // Expect call to ACMD41 with argument 0x00000000 in first periodic cycle
-  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd8ErrorOrNoResponse);
+  spi_submit_StubWithCallback(SpiSubmitCallProcessCmd8ErrorOrNoResponse);
   sd_logger_periodic();
-  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackProcessCmd8ErrorOrNoResponseNrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallProcessCmd8ErrorOrNoResponseNrCalls, "spi_submit call count mismatch.");
 }
 
 void test_ProcessResponseToCMD8NoResponse(void){
@@ -460,9 +467,9 @@ void test_ProcessResponseToCMD8NoResponse(void){
   sd_logger_process_CMD8(&sd_logger.spi_t);
 
   // Expect call to ACMD41 with argument 0x00000000 in first periodic cycle
-  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd8ErrorOrNoResponse);
+  spi_submit_StubWithCallback(SpiSubmitCallProcessCmd8ErrorOrNoResponse);
   sd_logger_periodic();
-  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackProcessCmd8ErrorOrNoResponseNrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallProcessCmd8ErrorOrNoResponseNrCalls, "spi_submit call count mismatch.");
 }
 
 
@@ -473,11 +480,11 @@ void test_ProcessResponseToCMD8NoResponse(void){
  */
 void test_InitializeACMD41_SDv2_ErrorAndOrTimeout(void){
   sd_logger.state = SdLoggerStateInitializing;
-  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd8CorrectResponse);
+  spi_submit_StubWithCallback(SpiSubmitCallProcessCmd8CorrectResponse);
   for (uint8_t i=0; i<12; i++){
     sd_logger_periodic();
   }
-  TEST_ASSERT_EQUAL_MESSAGE(10, MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL_MESSAGE(10, SpiSubmitCallProcessCmd8CorrectResponseNrCalls, "spi_submit call count mismatch.");
 }
 
 //! Try ACMD41 until initialization flag is set (by the callback function)
@@ -487,13 +494,13 @@ void test_InitializeACMD41_SDv2_ErrorAndOrTimeout(void){
  */
 void test_InitializeACMD41_SDv2_StopWhenInitialized(void){
   sd_logger.state = SdLoggerStateInitializing;
-  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd8CorrectResponse);
+  spi_submit_StubWithCallback(SpiSubmitCallProcessCmd8CorrectResponse);
   sd_logger_periodic();
   sd_logger_periodic();
   sd_logger_periodic();
   sd_logger.state = SdLoggerStateInitialized;
   sd_logger_periodic();
-  TEST_ASSERT_EQUAL_MESSAGE(3, MySpiSubmitCallbackProcessCmd8CorrectResponseNrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL_MESSAGE(3, SpiSubmitCallProcessCmd8CorrectResponseNrCalls, "spi_submit call count mismatch.");
 }
 
 //! Do not execute any code when there is an unusable card
@@ -558,10 +565,10 @@ void test_ProcessResponseToACMD41_SDv2_0x01(void)
   sd_logger_process_ACMD41_SDv2(&sd_logger.spi_t);
 }
 
-bool_t MySpiSubmitCallbackContinueCmd58(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+bool_t SpiSubmitCallContinueCmd58(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
 {
   (void) p; (void) cmock_num_calls; // ignore unused
-  MySpiSubmitCallbackContinueCmd58NrCalls++;
+  SpiSubmitCallContinueCmd58NrCalls++;
 
   TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
   TEST_ASSERT_EQUAL(6+8+1+4, t->output_length);
@@ -597,10 +604,10 @@ void test_ProcessResponseToACMD41_SDv2_0x00(void)
   sd_logger.spi_t.input_buf[29] = 0xFF;
 
   // Immediately continue with CMD58
-  spi_submit_StubWithCallback(MySpiSubmitCallbackContinueCmd58);
+  spi_submit_StubWithCallback(SpiSubmitCallContinueCmd58);
 
   sd_logger_process_ACMD41_SDv2(&sd_logger.spi_t);
-  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackContinueCmd58NrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallContinueCmd58NrCalls, "spi_submit call count mismatch.");
 
   // Abort the loop
   TEST_ASSERT_EQUAL(SdLoggerStateInitialized, sd_logger.state);
@@ -627,10 +634,10 @@ void test_ProcessResponseToCMD58_Case1(void)
   TEST_ASSERT_EQUAL(SdLoggerStateReady, sd_logger.state);
 }
 
-bool_t MySpiSubmitCallbackContinueCmd16(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+bool_t SpiSubmitCallContinueCmd16(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
 {
   (void) p; (void) cmock_num_calls;
-  MySpiSubmitCallbackContinueCmd16NrCalls++;
+  SpiSubmitCallContinueCmd16NrCalls++;
 
   TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
   TEST_ASSERT_EQUAL(6+8+1, t->output_length);
@@ -664,9 +671,9 @@ void test_ProcessResponseToCMD58_Case2(void)
   sd_logger.input_buf[13] = 0xFF;
   sd_logger.input_buf[14] = 0xFF;
 
-  spi_submit_StubWithCallback(MySpiSubmitCallbackContinueCmd16);
+  spi_submit_StubWithCallback(SpiSubmitCallContinueCmd16);
   sd_logger_process_CMD58(&sd_logger.spi_t);
-  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackContinueCmd16NrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallContinueCmd16NrCalls, "spi_submit call count mismatch.");
   TEST_ASSERT_EQUAL(CardSdV2byte, sd_logger.card_type);
 }
 
@@ -733,10 +740,10 @@ void test_ProcessResponseToACMD41_SDv1_0x00(void)
   sd_logger.spi_t.input_buf[29] = 0xFF;
 
   // Immediately continue with CMD16
-  spi_submit_StubWithCallback(MySpiSubmitCallbackContinueCmd16);
+  spi_submit_StubWithCallback(SpiSubmitCallContinueCmd16);
 
   sd_logger_process_ACMD41_SDv1(&sd_logger.spi_t);
-  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackContinueCmd16NrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallContinueCmd16NrCalls, "spi_submit call count mismatch.");
 
   // Abort the loop
   TEST_ASSERT_EQUAL(SdLoggerStateInitialized, sd_logger.state);
@@ -851,10 +858,10 @@ void test_StateIdleNoUartCharsAvailable(void)
   TEST_ASSERT_EQUAL(SdLoggerStateIdle, sd_logger.state);
 }
 
-bool_t MySpiSubmitCallbackSendCMD17(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+bool_t SpiSubmitCallSendCMD17(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
 {
   (void) p; (void) cmock_num_calls; // ignore unused warning
-  MySpiSubmitCallbackSendCMD17NrCalls++;
+  SpiSubmitCallSendCMD17NrCalls++;
   TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
   TEST_ASSERT_EQUAL(6, t->output_length);
   TEST_ASSERT_EQUAL(6, t->input_length);  // reading response later
@@ -882,7 +889,7 @@ bool_t MySpiSubmitCallbackSendCMD17(struct spi_periph *p, struct spi_transaction
 
 
   // spi callback
-  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_CMD17_request_single_byte, sd_logger.spi_t.after_cb);
+  TEST_ASSERT_EQUAL_PTR(&sd_logger_request_single_byte, sd_logger.spi_t.after_cb);
 
   // Reset number of tries to read its response
   TEST_ASSERT_EQUAL(0, sd_logger.try_counter);
@@ -893,14 +900,14 @@ bool_t MySpiSubmitCallbackSendCMD17(struct spi_periph *p, struct spi_transaction
 void test_StateRequestingDataWhenSpiAvailableSendCmd17(void)
 {
   sd_logger.state = SdLoggerStateRequestingData;
-  spi_submit_StubWithCallback(MySpiSubmitCallbackSendCMD17);
+  spi_submit_StubWithCallback(SpiSubmitCallSendCMD17);
   sd_logger.card_type = CardSdV2block;
   sd_logger.spi_t.status = SPITransDone;
   sd_logger_periodic();
   sd_logger.spi_t.status = SPITransSuccess;
   sd_logger_periodic();
 
-  TEST_ASSERT_EQUAL_MESSAGE(2, MySpiSubmitCallbackSendCMD17NrCalls, "spi_submit call count mismatch");
+  TEST_ASSERT_EQUAL_MESSAGE(2, SpiSubmitCallSendCMD17NrCalls, "spi_submit call count mismatch");
 }
 
 void test_StateRequestingDataWhenSpiAvailableSendCmd17UsingByteAddresses(void)
@@ -928,10 +935,10 @@ void test_StateRequestingDataWhenSpiUnavailableDoNothing(void)
   // expect no calls
 }
 
-bool_t MySpiSubmitCallbackProcessCmd17ReqSingleByte(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+bool_t SpiSubmitCallProcessCmd17ReqSingleByte(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
 {
   (void) p; (void) cmock_num_calls;
-  MySpiSubmitCallbackProcessCmd17ReqSingleByteNrCalls++;
+  SpiSubmitCallProcessCmd17ReqSingleByteNrCalls++;
   TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
   TEST_ASSERT_EQUAL(1, t->output_length);
   TEST_ASSERT_EQUAL(1, t->input_length);  // reading response later
@@ -939,70 +946,74 @@ bool_t MySpiSubmitCallbackProcessCmd17ReqSingleByte(struct spi_periph *p, struct
   TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[0]); // CMD byte
 
   // spi callback
-  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_CMD17_single_byte, sd_logger.spi_t.after_cb);
+  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_single_byte, sd_logger.spi_t.after_cb);
 
   return TRUE;
 }
 
 void test_StateRequestingDataProcessingCmd17Byte(void)
 {
-//  sd_logger.state = SdLoggerStateRequestingData;
-  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd17ReqSingleByte);
-  sd_logger_process_CMD17_request_single_byte(&sd_logger.spi_t);
+  sd_logger.state = SdLoggerStateRequestingData;
+  spi_submit_StubWithCallback(SpiSubmitCallProcessCmd17ReqSingleByte);
+  sd_logger_request_single_byte(&sd_logger.spi_t);
 
-  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackProcessCmd17ReqSingleByteNrCalls, "spi_submit call count mismatch");
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallProcessCmd17ReqSingleByteNrCalls, "spi_submit call count mismatch");
 }
 
 void test_StateRequestingData_ReadByteResponse_0xFF_ReadNextByte(void)
 {
+  sd_logger.state = SdLoggerStateRequestingData;
   sd_logger.spi_t.input_buf[0] = 0xFF;
-  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd17ReqSingleByte);
-  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
+  spi_submit_StubWithCallback(SpiSubmitCallProcessCmd17ReqSingleByte);
+  sd_logger_process_single_byte(&sd_logger.spi_t);
 
-  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackProcessCmd17ReqSingleByteNrCalls, "spi_submit call count mismatch");
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallProcessCmd17ReqSingleByteNrCalls, "spi_submit call count mismatch");
 }
 
 //! maximum number of retries reached. Nr of tries = 9
 //! Send uart error message
 void test_StateRequestingData_ReadByteResponse_0xFF_NcrExceeded(void)
 {
+  sd_logger.state = SdLoggerStateRequestingData;
   sd_logger.spi_t.input_buf[0] = 0xFF;
-  spi_submit_StubWithCallback(MySpiSubmitCallbackProcessCmd17ReqSingleByte);
-  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
-  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
-  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
-  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
-  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
-  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
-  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
-  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
-  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
+  spi_submit_StubWithCallback(SpiSubmitCallProcessCmd17ReqSingleByte);
+  sd_logger_process_single_byte(&sd_logger.spi_t);
+  sd_logger_process_single_byte(&sd_logger.spi_t);
+  sd_logger_process_single_byte(&sd_logger.spi_t);
+  sd_logger_process_single_byte(&sd_logger.spi_t);
+  sd_logger_process_single_byte(&sd_logger.spi_t);
+  sd_logger_process_single_byte(&sd_logger.spi_t);
+  sd_logger_process_single_byte(&sd_logger.spi_t);
+  sd_logger_process_single_byte(&sd_logger.spi_t);
+  sd_logger_process_single_byte(&sd_logger.spi_t);
 
   helper_ExpectSerialMessage("CMD17 no response.");
-  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t); // 10th call
+  sd_logger_process_single_byte(&sd_logger.spi_t); // 10th call
 
-  TEST_ASSERT_EQUAL_MESSAGE(9, MySpiSubmitCallbackProcessCmd17ReqSingleByteNrCalls, "spi_submit call count mismatch");
+  TEST_ASSERT_EQUAL_MESSAGE(9, SpiSubmitCallProcessCmd17ReqSingleByteNrCalls, "spi_submit call count mismatch");
 
 }
 
 void test_StateRequestingData_ReadWrongResponse(void)
 {
+  sd_logger.state = SdLoggerStateRequestingData;
   sd_logger.spi_t.input_buf[0] = 0x02; // unexpected or error response
   helper_ExpectSerialMessage("CMD17 wrong response.");
-  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
+  sd_logger_process_single_byte(&sd_logger.spi_t);
 }
 
 void test_StateRequestingData_ReadCorrectResponse_0x00(void)
 {
+  sd_logger.state = SdLoggerStateRequestingData;
   sd_logger.spi_t.input_buf[0] = 0x00; // Correct response, continue with reading data from SDCard
-  sd_logger_process_CMD17_single_byte(&sd_logger.spi_t);
+  sd_logger_process_single_byte(&sd_logger.spi_t);
   TEST_ASSERT_EQUAL(SdLoggerStateReadingData, sd_logger.state);
 }
 
-bool_t MySpiSubmitCallbackReadingDataReqSingleByte(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+bool_t SpiSubmitCallReadingDataReqSingleByte(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
 {
   (void) p; (void) cmock_num_calls;
-  MySpiSubmitCallbackReadingDataReqSingleByteNrCalls++;
+  SpiSubmitCallReadingDataReqSingleByteNrCalls++;
   TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
   TEST_ASSERT_EQUAL(1, t->output_length);
   TEST_ASSERT_EQUAL(1, t->input_length);  // reading response later
@@ -1018,14 +1029,14 @@ bool_t MySpiSubmitCallbackReadingDataReqSingleByte(struct spi_periph *p, struct 
 void test_StateReadingData_SpiAvailable_ReadByte(void)
 {
   sd_logger.state = SdLoggerStateReadingData;
-  spi_submit_StubWithCallback(MySpiSubmitCallbackReadingDataReqSingleByte);
+  spi_submit_StubWithCallback(SpiSubmitCallReadingDataReqSingleByte);
 
   sd_logger.spi_t.status = SPITransDone;
   sd_logger_periodic();
   sd_logger.spi_t.status = SPITransSuccess;
   sd_logger_periodic();
 
-  TEST_ASSERT_EQUAL_MESSAGE(2, MySpiSubmitCallbackReadingDataReqSingleByteNrCalls, "spi_submit different call count");
+  TEST_ASSERT_EQUAL_MESSAGE(2, SpiSubmitCallReadingDataReqSingleByteNrCalls, "spi_submit different call count");
 }
 
 void test_StateReadingData_SpiUnavailable_DoNothing(void)
@@ -1036,10 +1047,10 @@ void test_StateReadingData_SpiUnavailable_DoNothing(void)
   // test fails if mock function gets called
 }
 
-bool_t MySpiSubmitCallbackReadingDataReqSdDataBlock(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+bool_t SpiSubmitCallReadingDataReqSdDataBlock(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
 {
   (void) p; (void) cmock_num_calls;
-  MySpiSubmitCallbackReadingDataReqSdDataBlockNrCalls++;
+  SpiSubmitCallReadingDataReqSdDataBlockNrCalls++;
   TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
   TEST_ASSERT_EQUAL(512+2, t->output_length);
   TEST_ASSERT_EQUAL(512+2, t->input_length);  // reading response later
@@ -1058,9 +1069,9 @@ void test_StateReadingData_ProcessResponseIsCorrect(void)
 {
   // callback from read data byte command
   sd_logger.spi_t.input_buf[0] = 0xFE; // DATA TOKEN
-  spi_submit_StubWithCallback(MySpiSubmitCallbackReadingDataReqSdDataBlock);
+  spi_submit_StubWithCallback(SpiSubmitCallReadingDataReqSdDataBlock);
   sd_logger_process_datarequest_single_byte(&sd_logger.spi_t);
-  TEST_ASSERT_EQUAL_MESSAGE(1, MySpiSubmitCallbackReadingDataReqSdDataBlockNrCalls, "spi_submit different call count.");
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallReadingDataReqSdDataBlockNrCalls, "spi_submit different call count.");
 }
 
 void test_StateReadingData_ProcessResponseIs0xFF(void)
@@ -1133,4 +1144,108 @@ void test_StateSendingBlock_WriteToUartInMultipleCycles(void)
   sd_logger_periodic();
   TEST_ASSERT_EQUAL(SdLoggerStateIdle, sd_logger.state);
 
+}
+
+void test_StateRecordingWriteImuDataToBuffer(void)
+{
+  sd_logger.state = SdLoggerStateRecording;
+  sd_logger.imu_buffer_idx = 6;
+
+  imu.gyro_unscaled.p = 1;
+  imu.gyro_unscaled.q = 2;
+  imu.gyro_unscaled.r = 3;
+  imu.accel_unscaled.x = 4;
+  imu.accel_unscaled.y = 5;
+  imu.accel_unscaled.z = 6;
+  imu.mag_unscaled.x = 7;
+  imu.mag_unscaled.y = 8;
+  imu.mag_unscaled.z = 9;
+
+  sd_logger_periodic();
+
+  TEST_ASSERT_EQUAL(1, sd_logger.spi_t.output_buf[6]);
+  TEST_ASSERT_EQUAL(2, sd_logger.spi_t.output_buf[7]);
+  TEST_ASSERT_EQUAL(3, sd_logger.spi_t.output_buf[8]);
+  TEST_ASSERT_EQUAL(4, sd_logger.spi_t.output_buf[9]);
+  TEST_ASSERT_EQUAL(5, sd_logger.spi_t.output_buf[10]);
+  TEST_ASSERT_EQUAL(6, sd_logger.spi_t.output_buf[11]);
+  TEST_ASSERT_EQUAL(7, sd_logger.spi_t.output_buf[12]);
+  TEST_ASSERT_EQUAL(8, sd_logger.spi_t.output_buf[13]);
+  TEST_ASSERT_EQUAL(9, sd_logger.spi_t.output_buf[14]);
+
+  imu.gyro_unscaled.p = 11;
+  imu.gyro_unscaled.q = 12;
+  imu.gyro_unscaled.r = 13;
+  imu.accel_unscaled.x = 14;
+  imu.accel_unscaled.y = 15;
+  imu.accel_unscaled.z = 16;
+  imu.mag_unscaled.x = 17;
+  imu.mag_unscaled.y = 18;
+  imu.mag_unscaled.z = 19;
+
+  sd_logger_periodic();
+
+  TEST_ASSERT_EQUAL(11, sd_logger.spi_t.output_buf[15]);
+  TEST_ASSERT_EQUAL(12, sd_logger.spi_t.output_buf[16]);
+  TEST_ASSERT_EQUAL(13, sd_logger.spi_t.output_buf[17]);
+  TEST_ASSERT_EQUAL(14, sd_logger.spi_t.output_buf[18]);
+  TEST_ASSERT_EQUAL(15, sd_logger.spi_t.output_buf[19]);
+  TEST_ASSERT_EQUAL(16, sd_logger.spi_t.output_buf[20]);
+  TEST_ASSERT_EQUAL(17, sd_logger.spi_t.output_buf[21]);
+  TEST_ASSERT_EQUAL(18, sd_logger.spi_t.output_buf[22]);
+  TEST_ASSERT_EQUAL(19, sd_logger.spi_t.output_buf[23]);
+
+}
+
+bool_t SpiSubmitCallSendCMD24(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) cmock_num_calls; // ignore unused warning
+  SpiSubmitCallSendCMD24NrCalls++;
+  TEST_ASSERT_EQUAL_PTR(sd_logger.spi_p, p);
+  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
+  TEST_ASSERT_EQUAL(6, t->output_length);
+  TEST_ASSERT_EQUAL(6, t->input_length);
+
+  TEST_ASSERT_EQUAL_HEX8(0x58, t->output_buf[0]); // CMD24
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[1]); // Read address
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[2]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[3]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
+  TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]);
+
+  return TRUE;
+}
+
+void test_StateRecordingWriteImuDataTillBufferIsFull(void)
+{
+  sd_logger.state = SdLoggerStateRecording;
+  sd_logger.imu_buffer_idx = 501;
+
+  imu.gyro_unscaled.p = 111;
+  imu.gyro_unscaled.q = 112;
+  imu.gyro_unscaled.r = 113;
+  imu.accel_unscaled.x = 114;
+  imu.accel_unscaled.y = 115;
+  imu.accel_unscaled.z = 116;
+  imu.mag_unscaled.x = 117;
+  imu.mag_unscaled.y = 118;
+  imu.mag_unscaled.z = 119;
+
+  spi_submit_StubWithCallback(SpiSubmitCallSendCMD24);
+  sd_logger_periodic();
+
+  TEST_ASSERT_EQUAL(111, sd_logger.spi_t.output_buf[501]);
+  TEST_ASSERT_EQUAL(112, sd_logger.spi_t.output_buf[502]);
+  TEST_ASSERT_EQUAL(113, sd_logger.spi_t.output_buf[503]);
+  TEST_ASSERT_EQUAL(114, sd_logger.spi_t.output_buf[504]);
+  TEST_ASSERT_EQUAL(115, sd_logger.spi_t.output_buf[505]);
+  TEST_ASSERT_EQUAL(116, sd_logger.spi_t.output_buf[506]);
+  TEST_ASSERT_EQUAL(117, sd_logger.spi_t.output_buf[507]);
+  TEST_ASSERT_EQUAL(118, sd_logger.spi_t.output_buf[508]);
+  TEST_ASSERT_EQUAL(119, sd_logger.spi_t.output_buf[509]);
+
+  // An extra IMU cycle does not fit anymore
+  TEST_ASSERT_EQUAL(SdLoggerStateSpiBusy, sd_logger.state);
+  TEST_ASSERT_EQUAL(0, sd_logger.try_counter);
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallSendCMD24NrCalls, "spi_submit call count different.");
 }
