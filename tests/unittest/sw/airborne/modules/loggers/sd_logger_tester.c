@@ -31,6 +31,7 @@ uint8_t SpiSubmitCallReadingDataReqSingleByteNrCalls;
 uint8_t SpiSubmitCallReadingDataReqSdDataBlockNrCalls;
 uint8_t SpiSubmitCallSendCMD24NrCalls;
 uint8_t SpiSubmitCallWriteDataBlockNrCalls;
+uint8_t SpiSubmitCallPollSdStillBusyNrCalls;
 
 void setUp(void)
 {
@@ -51,6 +52,7 @@ void setUp(void)
   SpiSubmitCallReadingDataReqSdDataBlockNrCalls    = 0;
   SpiSubmitCallSendCMD24NrCalls                    = 0;
   SpiSubmitCallWriteDataBlockNrCalls               = 0;
+  SpiSubmitCallPollSdStillBusyNrCalls              = 0;
   imu_original = imu;
   Mockuart_Init();
   Mockspi_Init();
@@ -828,6 +830,7 @@ void test_SendAppCmdSpiSubmitFails(void)
 
 void test_WhenStateReadySwitchToIdle(void)
 {
+  TEST_IGNORE();
   sd_logger.state = SdLoggerStateReady;
   sd_logger_periodic();
   TEST_ASSERT_EQUAL(SdLoggerStateIdle, sd_logger.state);
@@ -1256,10 +1259,66 @@ void test_StateRecordingWriteImuDataTillBufferIsFull(void)
   helper_CompareInt32FromAddress(44419, &sd_logger.output_buf[506]);
 
   // An extra IMU cycle does not fit anymore
-  TEST_ASSERT_EQUAL(SdLoggerStateSpiBusyCMD24, sd_logger.state);
+  TEST_ASSERT_TRUE(sd_logger.sd_busy & SdWriting);
   TEST_ASSERT_EQUAL(0, sd_logger.try_counter);
   TEST_ASSERT_EQUAL(6, sd_logger.imu_buffer_idx);
   TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallSendCMD24NrCalls, "spi_submit call count different.");
+}
+
+bool_t SpiSubmitCallPollSdStillBusy(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) p; (void) cmock_num_calls;
+  SpiSubmitCallPollSdStillBusyNrCalls++;
+
+  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
+  TEST_ASSERT_EQUAL(1, t->output_length);
+  TEST_ASSERT_EQUAL(1, t->input_length);  // reading response later
+
+  TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[0]); // CMD byte
+
+  // spi callback
+  TEST_ASSERT_EQUAL_PTR(&sd_logger_process_single_byte, sd_logger.spi_t.after_cb);
+
+  return TRUE;
+
+}
+
+void test_StateRecordingDataIfBusyFlagThenRequestByte(void)
+{
+  sd_logger.state = SdLoggerStateRecording;
+  sd_logger.sd_busy = SdBusy;
+  spi_submit_StubWithCallback(SpiSubmitCallPollSdStillBusy);
+  sd_logger_periodic();
+  TEST_ASSERT_EQUAL(0, sd_logger.try_counter);
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallPollSdStillBusyNrCalls, "spi_submit different call count.");
+}
+
+void test_StateRecordingDataIfBusyThenRemainBusy(void)
+{
+  sd_logger.state = SdLoggerStateRecording;
+  sd_logger.sd_busy = SdBusy;
+  sd_logger.input_buf[0] = 0x00; // BUSY!
+  sd_logger_process_single_byte(&sd_logger.spi_t);
+
+  TEST_ASSERT_TRUE(sd_logger.sd_busy &= SdBusy);
+}
+
+void test_StateRecordingDataIfLastBitHighThenNoLongerBusy(void)
+{
+  sd_logger.state = SdLoggerStateRecording;
+  sd_logger.sd_busy = SdBusy;
+  sd_logger.input_buf[0] = 0x01; // LSB high!
+  sd_logger_process_single_byte(&sd_logger.spi_t);
+
+  TEST_ASSERT_EQUAL(0, sd_logger.sd_busy);
+}
+
+void test_DoNotSendDataWhenSdBusy(void)
+{
+  sd_logger.state = SdLoggerStateRecording;
+  sd_logger.imu_buffer_idx = 6 + (512/SD_LOGGER_SINGLE_RECORD_SIZE-1)*SD_LOGGER_SINGLE_RECORD_SIZE; // One more block fits
+  sd_logger.sd_busy = 0x10; // fail at any value >0
+  sd_logger_periodic();
 }
 
 bool_t SpiSubmitCallWriteDataBlock(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
@@ -1269,8 +1328,8 @@ bool_t SpiSubmitCallWriteDataBlock(struct spi_periph *p, struct spi_transaction 
 
   TEST_ASSERT_EQUAL_PTR(sd_logger.spi_p, p);
 
-  TEST_ASSERT_EQUAL(520, t->output_length);
-  TEST_ASSERT_EQUAL(520, t->input_length);
+  TEST_ASSERT_EQUAL(522, t->output_length);
+  TEST_ASSERT_EQUAL(522, t->input_length);
 
   // First 6 bytes were used for CMD24, first 5 now replaced by ones
   // At least one of this is needed according to sdcard interface
@@ -1290,6 +1349,12 @@ bool_t SpiSubmitCallWriteDataBlock(struct spi_periph *p, struct spi_transaction 
   TEST_ASSERT_EQUAL(0x01, t->output_buf[518]);
   TEST_ASSERT_EQUAL(0x01, t->output_buf[519]);
 
+  // Get data response
+  TEST_ASSERT_EQUAL(0xFF, t->output_buf[520]);
+
+  // Initiate internal write with 8 clock pulses
+  TEST_ASSERT_EQUAL(0xFF, t->output_buf[521]);
+
   // Callback to restore state to recording
   TEST_ASSERT_EQUAL_PTR(&sd_logger_continue_recording, t->after_cb);
   return TRUE;
@@ -1297,7 +1362,8 @@ bool_t SpiSubmitCallWriteDataBlock(struct spi_periph *p, struct spi_transaction 
 
 void test_StateSpiBusyCMD24ReadyToWriteToSD(void)
 {
-  sd_logger.state = SdLoggerStateSpiBusyCMD24;
+  sd_logger.state = SdLoggerStateRecording;
+  sd_logger.sd_busy |= SdWriting;
   sd_logger.spi_t.input_buf[0] = 0x00; // Awesome, we can now write the block to SD card
   spi_submit_StubWithCallback(SpiSubmitCallWriteDataBlock);
   sd_logger.output_buf[509] = 0xAB; // make sure gets not overwritten
@@ -1307,6 +1373,8 @@ void test_StateSpiBusyCMD24ReadyToWriteToSD(void)
 
 void test_StateSpiBusyAfterWritingToSdContinueWithRecording(void)
 {
+  sd_logger.sd_busy = SdWriting;
   sd_logger_continue_recording(&sd_logger.spi_t);
-  TEST_ASSERT_EQUAL(SdLoggerStateRecording, sd_logger.state);
+  TEST_ASSERT_FALSE(sd_logger.sd_busy & SdWriting);
+  TEST_ASSERT_TRUE(sd_logger.sd_busy & SdBusy);
 }
