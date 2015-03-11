@@ -35,6 +35,7 @@
 #include "subsystems/imu.h"
 
 #define SD_LOGGER_UART_CHUNKSIZE 32
+#define SD_LOGGER_SINGLE_RECORD_SIZE 36
 
 enum SdCardType{
   CardUnknown,
@@ -68,7 +69,7 @@ enum SdLoggerState{
   SdLoggerStateReadingData,
   SdLoggerStateSendingBlock,
   SdLoggerStateRecording,
-  SdLoggerStateSpiBusyCMD17
+  SdLoggerStateSpiBusyCMD24
 };
 
 struct SdLogger{
@@ -102,6 +103,7 @@ extern uint8_t sd_logger_get_R1(void);
 extern uint32_t sd_logger_get_R7(void);
 extern uint32_t sd_logger_get_R3(void);
 extern uint8_t sd_logger_get_ACMD_R1(void);
+extern void sd_logger_write_int32_in_buffer(int32_t value, uint8_t *ptr);
 
 /* SPI callback functions */
 extern void sd_logger_send_CMD0(struct spi_transaction *t);
@@ -116,6 +118,7 @@ extern void sd_logger_process_single_byte(struct spi_transaction *t);
 extern void sd_logger_process_CMD17_byte(uint8_t byte);
 extern void sd_logger_process_datarequest_single_byte(struct spi_transaction *t);
 extern void sd_logger_process_SD_datablock(struct spi_transaction *t);
+extern void sd_logger_continue_recording(struct spi_transaction *t);
 
 extern void sd_logger_serial_println(const char text[]);
 extern void sd_logger_spi_init(struct SdLogger *sdlog, struct spi_periph *spi_p, uint8_t slave_idx);

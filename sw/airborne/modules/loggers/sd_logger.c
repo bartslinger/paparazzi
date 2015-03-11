@@ -121,19 +121,21 @@ void sd_logger_periodic(void)
       }
       break;
     case SdLoggerStateRecording:
-      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+0] = imu.gyro_unscaled.p;
-      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+1] = imu.gyro_unscaled.q;
-      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+2] = imu.gyro_unscaled.r;
-      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+3] = imu.accel_unscaled.x;
-      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+4] = imu.accel_unscaled.y;
-      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+5] = imu.accel_unscaled.z;
-      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+6] = imu.mag_unscaled.x;
-      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+7] = imu.mag_unscaled.y;
-      sd_logger.spi_t.output_buf[sd_logger.imu_buffer_idx+8] = imu.mag_unscaled.z;
-      sd_logger.imu_buffer_idx += 9;
-      if (sd_logger.imu_buffer_idx >= 510) {
-        sd_logger.state = SdLoggerStateSpiBusyCMD17;
+      sd_logger_write_int32_in_buffer(imu.gyro_unscaled.p, &sd_logger.output_buf[sd_logger.imu_buffer_idx+0]);
+      sd_logger_write_int32_in_buffer(imu.gyro_unscaled.q, &sd_logger.output_buf[sd_logger.imu_buffer_idx+4]);
+      sd_logger_write_int32_in_buffer(imu.gyro_unscaled.r, &sd_logger.output_buf[sd_logger.imu_buffer_idx+8]);
+      sd_logger_write_int32_in_buffer(imu.accel_unscaled.x, &sd_logger.output_buf[sd_logger.imu_buffer_idx+12]);
+      sd_logger_write_int32_in_buffer(imu.accel_unscaled.y, &sd_logger.output_buf[sd_logger.imu_buffer_idx+16]);
+      sd_logger_write_int32_in_buffer(imu.accel_unscaled.z, &sd_logger.output_buf[sd_logger.imu_buffer_idx+20]);
+      sd_logger_write_int32_in_buffer(imu.mag_unscaled.x, &sd_logger.output_buf[sd_logger.imu_buffer_idx+24]);
+      sd_logger_write_int32_in_buffer(imu.mag_unscaled.y, &sd_logger.output_buf[sd_logger.imu_buffer_idx+28]);
+      sd_logger_write_int32_in_buffer(imu.mag_unscaled.z, &sd_logger.output_buf[sd_logger.imu_buffer_idx+32]);
+
+      sd_logger.imu_buffer_idx += SD_LOGGER_SINGLE_RECORD_SIZE;
+      if (sd_logger.imu_buffer_idx >= 6+(512/SD_LOGGER_SINGLE_RECORD_SIZE)*SD_LOGGER_SINGLE_RECORD_SIZE) {
+        sd_logger.state = SdLoggerStateSpiBusyCMD24;
         sd_logger.try_counter = 0;
+        sd_logger.imu_buffer_idx = 6;
         sd_logger_send_cmd(24, 0x00000000, SdResponseNone, &sd_logger_request_single_byte);
       }
       break;
@@ -315,6 +317,14 @@ uint8_t sd_logger_get_ACMD_R1(void)
   return response;
 }
 
+void sd_logger_write_int32_in_buffer(int32_t value, uint8_t *ptr)
+{
+  ptr[0] = value >> 24;
+  ptr[1] = value >> 16;
+  ptr[2] = value >> 8;
+  ptr[3] = value;
+}
+
 void sd_logger_send_CMD0(struct spi_transaction *t)
 {
   (void) t; // ignore unused warning
@@ -439,8 +449,22 @@ void sd_logger_process_single_byte(struct spi_transaction *t)
     case SdLoggerStateRequestingData:
       sd_logger_process_CMD17_byte(t->input_buf[0]);
       break;
-    case SdLoggerStateSpiBusyCMD17:
-
+    case SdLoggerStateSpiBusyCMD24:
+      sd_logger.spi_t.output_length = 520;
+      sd_logger.spi_t.input_length = 520;
+      sd_logger.spi_t.output_buf[0] = 0xFF;
+      sd_logger.spi_t.output_buf[1] = 0xFF;
+      sd_logger.spi_t.output_buf[2] = 0xFF;
+      sd_logger.spi_t.output_buf[3] = 0xFF;
+      sd_logger.spi_t.output_buf[4] = 0xFF;
+      sd_logger.spi_t.output_buf[5] = 0xFE; // data token
+      for (uint16_t i=6+(512/SD_LOGGER_SINGLE_RECORD_SIZE)*SD_LOGGER_SINGLE_RECORD_SIZE; i<518; i++) {
+        sd_logger.output_buf[i] = 0xFF;
+      }
+      sd_logger.spi_t.output_buf[518] = 0x01; // CRC
+      sd_logger.spi_t.output_buf[519] = 0x01;
+      sd_logger.spi_t.after_cb = &sd_logger_continue_recording;
+      spi_submit(sd_logger.spi_p, &sd_logger.spi_t);
     default:
       // do nothing
       break;
@@ -489,6 +513,12 @@ void sd_logger_process_SD_datablock(struct spi_transaction *t)
 {
   (void) t; // ignore unused warning
   sd_logger.state = SdLoggerStateSendingBlock;
+}
+
+void sd_logger_continue_recording(struct spi_transaction *t)
+{
+  (void) t; // ignore unused warning
+  sd_logger.state = SdLoggerStateRecording;
 }
 
 void sd_logger_serial_println(const char text[])

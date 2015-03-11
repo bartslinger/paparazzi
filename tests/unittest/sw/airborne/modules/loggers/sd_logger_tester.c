@@ -1148,55 +1148,62 @@ void test_StateSendingBlock_WriteToUartInMultipleCycles(void)
 
 }
 
+void helper_CompareInt32FromAddress(int32_t value, uint8_t *ptr)
+{
+  TEST_ASSERT_EQUAL_UINT8(value >> 24, ptr[0]);
+  TEST_ASSERT_EQUAL_UINT8(value >> 16, ptr[1]);
+  TEST_ASSERT_EQUAL_UINT8(value >> 8, ptr[2]);
+  TEST_ASSERT_EQUAL_UINT8(value >> 0, ptr[3]);
+}
+
 void test_StateRecordingWriteImuDataToBuffer(void)
 {
   sd_logger.state = SdLoggerStateRecording;
   sd_logger.imu_buffer_idx = 6;
 
-  imu.gyro_unscaled.p = 1;
-  imu.gyro_unscaled.q = 2;
-  imu.gyro_unscaled.r = 3;
-  imu.accel_unscaled.x = 4;
-  imu.accel_unscaled.y = 5;
-  imu.accel_unscaled.z = 6;
-  imu.mag_unscaled.x = 7;
-  imu.mag_unscaled.y = 8;
-  imu.mag_unscaled.z = 9;
+  imu.gyro_unscaled.p = 1111;
+  imu.gyro_unscaled.q = -1112;
+  imu.gyro_unscaled.r = 1113;
+  imu.accel_unscaled.x = 1114;
+  imu.accel_unscaled.y = 1115;
+  imu.accel_unscaled.z = 1116;
+  imu.mag_unscaled.x = 1117;
+  imu.mag_unscaled.y = 1118;
+  imu.mag_unscaled.z = 1119;
 
   sd_logger_periodic();
 
-  TEST_ASSERT_EQUAL(1, sd_logger.spi_t.output_buf[6]);
-  TEST_ASSERT_EQUAL(2, sd_logger.spi_t.output_buf[7]);
-  TEST_ASSERT_EQUAL(3, sd_logger.spi_t.output_buf[8]);
-  TEST_ASSERT_EQUAL(4, sd_logger.spi_t.output_buf[9]);
-  TEST_ASSERT_EQUAL(5, sd_logger.spi_t.output_buf[10]);
-  TEST_ASSERT_EQUAL(6, sd_logger.spi_t.output_buf[11]);
-  TEST_ASSERT_EQUAL(7, sd_logger.spi_t.output_buf[12]);
-  TEST_ASSERT_EQUAL(8, sd_logger.spi_t.output_buf[13]);
-  TEST_ASSERT_EQUAL(9, sd_logger.spi_t.output_buf[14]);
+  helper_CompareInt32FromAddress(1111, &sd_logger.output_buf[6]);
+  helper_CompareInt32FromAddress(-1112, &sd_logger.output_buf[10]);
+  helper_CompareInt32FromAddress(1113, &sd_logger.output_buf[14]);
+  helper_CompareInt32FromAddress(1114, &sd_logger.output_buf[18]);
+  helper_CompareInt32FromAddress(1115, &sd_logger.output_buf[22]);
+  helper_CompareInt32FromAddress(1116, &sd_logger.output_buf[26]);
+  helper_CompareInt32FromAddress(1117, &sd_logger.output_buf[30]);
+  helper_CompareInt32FromAddress(1118, &sd_logger.output_buf[34]);
+  helper_CompareInt32FromAddress(1119, &sd_logger.output_buf[38]);
 
-  imu.gyro_unscaled.p = 11;
-  imu.gyro_unscaled.q = 12;
-  imu.gyro_unscaled.r = 13;
-  imu.accel_unscaled.x = 14;
-  imu.accel_unscaled.y = 15;
-  imu.accel_unscaled.z = 16;
-  imu.mag_unscaled.x = 17;
-  imu.mag_unscaled.y = 18;
-  imu.mag_unscaled.z = 19;
+  imu.gyro_unscaled.p = 22211;
+  imu.gyro_unscaled.q = 22212;
+  imu.gyro_unscaled.r = 22213;
+  imu.accel_unscaled.x = -22214;
+  imu.accel_unscaled.y = 22215;
+  imu.accel_unscaled.z = 22216;
+  imu.mag_unscaled.x = 22217;
+  imu.mag_unscaled.y = 22218;
+  imu.mag_unscaled.z = 22219;
 
   sd_logger_periodic();
 
-  TEST_ASSERT_EQUAL(11, sd_logger.spi_t.output_buf[15]);
-  TEST_ASSERT_EQUAL(12, sd_logger.spi_t.output_buf[16]);
-  TEST_ASSERT_EQUAL(13, sd_logger.spi_t.output_buf[17]);
-  TEST_ASSERT_EQUAL(14, sd_logger.spi_t.output_buf[18]);
-  TEST_ASSERT_EQUAL(15, sd_logger.spi_t.output_buf[19]);
-  TEST_ASSERT_EQUAL(16, sd_logger.spi_t.output_buf[20]);
-  TEST_ASSERT_EQUAL(17, sd_logger.spi_t.output_buf[21]);
-  TEST_ASSERT_EQUAL(18, sd_logger.spi_t.output_buf[22]);
-  TEST_ASSERT_EQUAL(19, sd_logger.spi_t.output_buf[23]);
-
+  helper_CompareInt32FromAddress(22211, &sd_logger.output_buf[42]);
+  helper_CompareInt32FromAddress(22212, &sd_logger.output_buf[46]);
+  helper_CompareInt32FromAddress(22213, &sd_logger.output_buf[50]);
+  helper_CompareInt32FromAddress(-22214, &sd_logger.output_buf[54]);
+  helper_CompareInt32FromAddress(22215, &sd_logger.output_buf[58]);
+  helper_CompareInt32FromAddress(22216, &sd_logger.output_buf[62]);
+  helper_CompareInt32FromAddress(22217, &sd_logger.output_buf[66]);
+  helper_CompareInt32FromAddress(22218, &sd_logger.output_buf[70]);
+  helper_CompareInt32FromAddress(22219, &sd_logger.output_buf[74]);
 }
 
 bool_t SpiSubmitCallSendCMD24(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
@@ -1223,34 +1230,35 @@ bool_t SpiSubmitCallSendCMD24(struct spi_periph *p, struct spi_transaction *t, i
 void test_StateRecordingWriteImuDataTillBufferIsFull(void)
 {
   sd_logger.state = SdLoggerStateRecording;
-  sd_logger.imu_buffer_idx = 501;
-
-  imu.gyro_unscaled.p = 111;
-  imu.gyro_unscaled.q = 112;
-  imu.gyro_unscaled.r = 113;
-  imu.accel_unscaled.x = 114;
-  imu.accel_unscaled.y = 115;
-  imu.accel_unscaled.z = 116;
-  imu.mag_unscaled.x = 117;
-  imu.mag_unscaled.y = 118;
-  imu.mag_unscaled.z = 119;
+  sd_logger.imu_buffer_idx = 6 + (512/SD_LOGGER_SINGLE_RECORD_SIZE-1)*SD_LOGGER_SINGLE_RECORD_SIZE; // One more block fits
+  TEST_ASSERT_EQUAL(474, sd_logger.imu_buffer_idx);
+  imu.gyro_unscaled.p = 44411;
+  imu.gyro_unscaled.q = 44412;
+  imu.gyro_unscaled.r = 44413;
+  imu.accel_unscaled.x = -44414;
+  imu.accel_unscaled.y = 44415;
+  imu.accel_unscaled.z = 44416;
+  imu.mag_unscaled.x = 44417;
+  imu.mag_unscaled.y = 44418;
+  imu.mag_unscaled.z = 44419;
 
   spi_submit_StubWithCallback(SpiSubmitCallSendCMD24);
   sd_logger_periodic();
 
-  TEST_ASSERT_EQUAL(111, sd_logger.spi_t.output_buf[501]);
-  TEST_ASSERT_EQUAL(112, sd_logger.spi_t.output_buf[502]);
-  TEST_ASSERT_EQUAL(113, sd_logger.spi_t.output_buf[503]);
-  TEST_ASSERT_EQUAL(114, sd_logger.spi_t.output_buf[504]);
-  TEST_ASSERT_EQUAL(115, sd_logger.spi_t.output_buf[505]);
-  TEST_ASSERT_EQUAL(116, sd_logger.spi_t.output_buf[506]);
-  TEST_ASSERT_EQUAL(117, sd_logger.spi_t.output_buf[507]);
-  TEST_ASSERT_EQUAL(118, sd_logger.spi_t.output_buf[508]);
-  TEST_ASSERT_EQUAL(119, sd_logger.spi_t.output_buf[509]);
+  helper_CompareInt32FromAddress(44411, &sd_logger.output_buf[474]);
+  helper_CompareInt32FromAddress(44412, &sd_logger.output_buf[478]);
+  helper_CompareInt32FromAddress(44413, &sd_logger.output_buf[482]);
+  helper_CompareInt32FromAddress(-44414, &sd_logger.output_buf[486]);
+  helper_CompareInt32FromAddress(44415, &sd_logger.output_buf[490]);
+  helper_CompareInt32FromAddress(44416, &sd_logger.output_buf[494]);
+  helper_CompareInt32FromAddress(44417, &sd_logger.output_buf[498]);
+  helper_CompareInt32FromAddress(44418, &sd_logger.output_buf[502]);
+  helper_CompareInt32FromAddress(44419, &sd_logger.output_buf[506]);
 
   // An extra IMU cycle does not fit anymore
-  TEST_ASSERT_EQUAL(SdLoggerStateSpiBusyCMD17, sd_logger.state);
+  TEST_ASSERT_EQUAL(SdLoggerStateSpiBusyCMD24, sd_logger.state);
   TEST_ASSERT_EQUAL(0, sd_logger.try_counter);
+  TEST_ASSERT_EQUAL(6, sd_logger.imu_buffer_idx);
   TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallSendCMD24NrCalls, "spi_submit call count different.");
 }
 
@@ -1261,6 +1269,9 @@ bool_t SpiSubmitCallWriteDataBlock(struct spi_periph *p, struct spi_transaction 
 
   TEST_ASSERT_EQUAL_PTR(sd_logger.spi_p, p);
 
+  TEST_ASSERT_EQUAL(520, t->output_length);
+  TEST_ASSERT_EQUAL(520, t->input_length);
+
   // First 6 bytes were used for CMD24, first 5 now replaced by ones
   // At least one of this is needed according to sdcard interface
   for (uint8_t i=0; i<5; i++) {
@@ -1268,21 +1279,34 @@ bool_t SpiSubmitCallWriteDataBlock(struct spi_periph *p, struct spi_transaction 
   }
   // Sixth byte is the data packet token
   TEST_ASSERT_EQUAL(0xFE, t->output_buf[5]);
+
+  // Make sure last byte is not overwritten
+  TEST_ASSERT_EQUAL_HEX8(0xAB, t->output_buf[509]);
   // Last 8 bytes given zeros
   for (uint16_t i=510; i<518; i++) {
-    TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[i]);
+    TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[i]);
   }
   // CRC (not used now)
-  TEST_ASSERT_EQUAL(0x00, t->output_buf[518]);
-  TEST_ASSERT_EQUAL(0x00, t->output_buf[519]);
+  TEST_ASSERT_EQUAL(0x01, t->output_buf[518]);
+  TEST_ASSERT_EQUAL(0x01, t->output_buf[519]);
+
+  // Callback to restore state to recording
+  TEST_ASSERT_EQUAL_PTR(&sd_logger_continue_recording, t->after_cb);
   return TRUE;
 }
 
-void test_StateSpiBusyCMD17ReadyToWriteToSD(void)
+void test_StateSpiBusyCMD24ReadyToWriteToSD(void)
 {
-  sd_logger.state = SdLoggerStateSpiBusyCMD17;
+  sd_logger.state = SdLoggerStateSpiBusyCMD24;
   sd_logger.spi_t.input_buf[0] = 0x00; // Awesome, we can now write the block to SD card
   spi_submit_StubWithCallback(SpiSubmitCallWriteDataBlock);
+  sd_logger.output_buf[509] = 0xAB; // make sure gets not overwritten
   sd_logger_process_single_byte(&sd_logger.spi_t);
   TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCallWriteDataBlockNrCalls, "spi_submit call count different.");
+}
+
+void test_StateSpiBusyAfterWritingToSdContinueWithRecording(void)
+{
+  sd_logger_continue_recording(&sd_logger.spi_t);
+  TEST_ASSERT_EQUAL(SdLoggerStateRecording, sd_logger.state);
 }
