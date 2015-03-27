@@ -25,5 +25,6 @@
     <define name="USE_SPI_SLAVE3" value="1" />
     <define name="SD_LOGGER_SPI_LINK_SLAVE_NUMBER" value="SPI_SLAVE3" />
     <file name="sd_logger.c"/>
+    <file name="sdcard.c" dir="peripherals"/>
   </makefile>
 </module>

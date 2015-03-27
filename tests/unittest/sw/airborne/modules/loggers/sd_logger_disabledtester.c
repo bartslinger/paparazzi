@@ -13,7 +13,7 @@ struct uart_periph SD_LOG_UART; // struct uart_periph uart1;
 // Externs normally defined in imu.c
 
 // Externs normally defined in spi.c
-struct spi_periph spi2;
+struct spi_periph SD_LOGGER_SPI_LINK_DEVICE;
 
 struct Imu imu;
 
@@ -812,7 +812,7 @@ void test_SendCmdSpiSubmitFails(void)
     uart_transmit_Expect(&SD_LOG_UART, message[i]);
   }
   uart_transmit_Expect(&SD_LOG_UART, 0x0A);
-  sd_logger_send_cmd(0, 0x00000000, SdResponseR1, NULL);
+  sdcard_send_cmd(0, 0x00000000, SdResponseR1, NULL);
 }
 
 void test_SendAppCmdSpiSubmitFails(void)

@@ -29,7 +29,7 @@ module RakefileHelpers
     #path = Dir.glob("#{$cfg['compiler']['unit_tests_path']}**/*_tester#{C_EXTENSION}".gsub!(/\\/, '/'))#.join(' ')
     #\print "DISCOVERED TESTFILES:\n" + path + "\n\n"
     #path.gsub!(/\\/, '/')
-    FileList.new("#{$cfg['compiler']['unit_tests_path']}**/*sd*_tester#{C_EXTENSION}") # <<<================================================================================================ HIER
+    FileList.new("#{$cfg['compiler']['unit_tests_path']}**/*_tester#{C_EXTENSION}") # <<<================================================================================================ HIER
   end
 
   def get_local_include_dirs
@@ -148,7 +148,7 @@ module RakefileHelpers
   end
 
   def execute(command_string, verbose=true)
-    report command_string
+    #report command_string
     output = `#{command_string}`.chomp
     report(output) if (verbose && !output.nil? && (output.length > 0))
     if $?.exitstatus != 0
