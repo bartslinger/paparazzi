@@ -51,6 +51,6 @@ linker:
     destination: *build_path
 :cmock:
   :treat_externs: :include
-  :plugins: ["ignore_arg"]
+  :plugins: ["ignore_arg", "callback"]
 
 colour: true

@@ -4,6 +4,9 @@
 #include "subsystems/Mockimu.h"
 #include "loggers/sd_logger.h"
 
+#define S(x) #x
+#define S_(x) S(x)
+#define S__LINE__ S_(__LINE__)
 
 // Externs normally defined in uart.c (not included in this test)
 struct uart_periph SD_LOG_UART; // struct uart_periph uart1;
@@ -485,10 +488,10 @@ void test_ProcessResponseToCMD8NoResponse(void){
 void test_InitializeACMD41_SDv2_ErrorAndOrTimeout(void){
   sd_logger.state = SdLoggerStateInitializing;
   spi_submit_StubWithCallback(SpiSubmitCallProcessCmd8CorrectResponse);
-  for (uint8_t i=0; i<12; i++){
+  for (uint8_t i=0; i<102; i++){
     sd_logger_periodic();
   }
-  TEST_ASSERT_EQUAL_MESSAGE(10, SpiSubmitCallProcessCmd8CorrectResponseNrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL_MESSAGE(100, SpiSubmitCallProcessCmd8CorrectResponseNrCalls, "spi_submit call count mismatch.");
 }
 
 //! Try ACMD41 until initialization flag is set (by the callback function)
@@ -1151,12 +1154,12 @@ void test_StateSendingBlock_WriteToUartInMultipleCycles(void)
 
 }
 
-void helper_CompareInt32FromAddress(int32_t value, uint8_t *ptr)
+void helper_CompareInt32FromAddress(int32_t value, uint8_t *ptr, const char *line)
 {
-  TEST_ASSERT_EQUAL_UINT8(value >> 24, ptr[0]);
-  TEST_ASSERT_EQUAL_UINT8(value >> 16, ptr[1]);
-  TEST_ASSERT_EQUAL_UINT8(value >> 8, ptr[2]);
-  TEST_ASSERT_EQUAL_UINT8(value >> 0, ptr[3]);
+  TEST_ASSERT_EQUAL_UINT8_MESSAGE(value >> 24, ptr[0], line);
+  TEST_ASSERT_EQUAL_UINT8_MESSAGE(value >> 16, ptr[1], line);
+  TEST_ASSERT_EQUAL_UINT8_MESSAGE(value >> 8, ptr[2], line);
+  TEST_ASSERT_EQUAL_UINT8_MESSAGE(value >> 0, ptr[3], line);
 }
 
 void test_StateRecordingWriteImuDataToBuffer(void)
@@ -1176,15 +1179,15 @@ void test_StateRecordingWriteImuDataToBuffer(void)
 
   sd_logger_periodic();
 
-  helper_CompareInt32FromAddress(1111, &sd_logger.output_buf[6]);
-  helper_CompareInt32FromAddress(-1112, &sd_logger.output_buf[10]);
-  helper_CompareInt32FromAddress(1113, &sd_logger.output_buf[14]);
-  helper_CompareInt32FromAddress(1114, &sd_logger.output_buf[18]);
-  helper_CompareInt32FromAddress(1115, &sd_logger.output_buf[22]);
-  helper_CompareInt32FromAddress(1116, &sd_logger.output_buf[26]);
-  helper_CompareInt32FromAddress(1117, &sd_logger.output_buf[30]);
-  helper_CompareInt32FromAddress(1118, &sd_logger.output_buf[34]);
-  helper_CompareInt32FromAddress(1119, &sd_logger.output_buf[38]);
+  helper_CompareInt32FromAddress(1111, &sd_logger.output_buf[6], S__LINE__);
+  helper_CompareInt32FromAddress(-1112, &sd_logger.output_buf[10], S__LINE__);
+  helper_CompareInt32FromAddress(1113, &sd_logger.output_buf[14], S__LINE__);
+  helper_CompareInt32FromAddress(1114, &sd_logger.output_buf[18], S__LINE__);
+  helper_CompareInt32FromAddress(1115, &sd_logger.output_buf[22], S__LINE__);
+  helper_CompareInt32FromAddress(1116, &sd_logger.output_buf[26], S__LINE__);
+  helper_CompareInt32FromAddress(1117, &sd_logger.output_buf[30], S__LINE__);
+  helper_CompareInt32FromAddress(1118, &sd_logger.output_buf[34], S__LINE__);
+  helper_CompareInt32FromAddress(1119, &sd_logger.output_buf[38], S__LINE__);
 
   imu.gyro_unscaled.p = 22211;
   imu.gyro_unscaled.q = 22212;
@@ -1198,15 +1201,15 @@ void test_StateRecordingWriteImuDataToBuffer(void)
 
   sd_logger_periodic();
 
-  helper_CompareInt32FromAddress(22211, &sd_logger.output_buf[42]);
-  helper_CompareInt32FromAddress(22212, &sd_logger.output_buf[46]);
-  helper_CompareInt32FromAddress(22213, &sd_logger.output_buf[50]);
-  helper_CompareInt32FromAddress(-22214, &sd_logger.output_buf[54]);
-  helper_CompareInt32FromAddress(22215, &sd_logger.output_buf[58]);
-  helper_CompareInt32FromAddress(22216, &sd_logger.output_buf[62]);
-  helper_CompareInt32FromAddress(22217, &sd_logger.output_buf[66]);
-  helper_CompareInt32FromAddress(22218, &sd_logger.output_buf[70]);
-  helper_CompareInt32FromAddress(22219, &sd_logger.output_buf[74]);
+  helper_CompareInt32FromAddress(22211, &sd_logger.output_buf[42], S__LINE__);
+  helper_CompareInt32FromAddress(22212, &sd_logger.output_buf[46], S__LINE__);
+  helper_CompareInt32FromAddress(22213, &sd_logger.output_buf[50], S__LINE__);
+  helper_CompareInt32FromAddress(-22214, &sd_logger.output_buf[54], S__LINE__);
+  helper_CompareInt32FromAddress(22215, &sd_logger.output_buf[58], S__LINE__);
+  helper_CompareInt32FromAddress(22216, &sd_logger.output_buf[62], S__LINE__);
+  helper_CompareInt32FromAddress(22217, &sd_logger.output_buf[66], S__LINE__);
+  helper_CompareInt32FromAddress(22218, &sd_logger.output_buf[70], S__LINE__);
+  helper_CompareInt32FromAddress(22219, &sd_logger.output_buf[74], S__LINE__);
 }
 
 bool_t SpiSubmitCallSendCMD24(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
@@ -1248,15 +1251,15 @@ void test_StateRecordingWriteImuDataTillBufferIsFull(void)
   spi_submit_StubWithCallback(SpiSubmitCallSendCMD24);
   sd_logger_periodic();
 
-  helper_CompareInt32FromAddress(44411, &sd_logger.output_buf[474]);
-  helper_CompareInt32FromAddress(44412, &sd_logger.output_buf[478]);
-  helper_CompareInt32FromAddress(44413, &sd_logger.output_buf[482]);
-  helper_CompareInt32FromAddress(-44414, &sd_logger.output_buf[486]);
-  helper_CompareInt32FromAddress(44415, &sd_logger.output_buf[490]);
-  helper_CompareInt32FromAddress(44416, &sd_logger.output_buf[494]);
-  helper_CompareInt32FromAddress(44417, &sd_logger.output_buf[498]);
-  helper_CompareInt32FromAddress(44418, &sd_logger.output_buf[502]);
-  helper_CompareInt32FromAddress(44419, &sd_logger.output_buf[506]);
+  helper_CompareInt32FromAddress(44411, &sd_logger.output_buf[474], S__LINE__);
+  helper_CompareInt32FromAddress(44412, &sd_logger.output_buf[478], S__LINE__);
+  helper_CompareInt32FromAddress(44413, &sd_logger.output_buf[482], S__LINE__);
+  helper_CompareInt32FromAddress(-44414, &sd_logger.output_buf[486], S__LINE__);
+  helper_CompareInt32FromAddress(44415, &sd_logger.output_buf[490], S__LINE__);
+  helper_CompareInt32FromAddress(44416, &sd_logger.output_buf[494], S__LINE__);
+  helper_CompareInt32FromAddress(44417, &sd_logger.output_buf[498], S__LINE__);
+  helper_CompareInt32FromAddress(44418, &sd_logger.output_buf[502], S__LINE__);
+  helper_CompareInt32FromAddress(44419, &sd_logger.output_buf[506], S__LINE__);
 
   // An extra IMU cycle does not fit anymore
   TEST_ASSERT_TRUE(sd_logger.sd_busy & SdWriting);

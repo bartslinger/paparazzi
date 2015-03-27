@@ -60,8 +60,7 @@ void sd_logger_periodic(void)
 {
   switch(sd_logger.state) {
     case SdLoggerStateInitializing:
-      sd_logger_serial_println("test");
-      if (sd_logger.initialization_counter < 10){
+      if (sd_logger.initialization_counter < 100){
         sd_logger.initialization_counter++;
 
         switch(sd_logger.try_card_type) {
@@ -122,6 +121,7 @@ void sd_logger_periodic(void)
       }
       break;
     case SdLoggerStateRecording:
+      //sd_logger_serial_println("rec");
       sd_logger_write_int32_in_buffer(imu.gyro_unscaled.p, &sd_logger.output_buf[sd_logger.imu_buffer_idx+0]);
       sd_logger_write_int32_in_buffer(imu.gyro_unscaled.q, &sd_logger.output_buf[sd_logger.imu_buffer_idx+4]);
       sd_logger_write_int32_in_buffer(imu.gyro_unscaled.r, &sd_logger.output_buf[sd_logger.imu_buffer_idx+8]);
@@ -283,7 +283,7 @@ void sd_logger_send_app_cmd(uint8_t cmd, uint32_t arg, enum SdResponseType respo
 uint8_t sd_logger_get_response_idx(void)
 {
   for(uint8_t i=6; i<15; i++){
-    if(sd_logger.spi_t.input_buf[i] != 0xFF){
+    if((sd_logger.spi_t.input_buf[i] & 0x0F) != 0x0F){ //if(sd_logger.spi_t.input_buf[i] != 0xFF){
       return i;
       break;
     }
@@ -333,7 +333,6 @@ void sd_logger_write_int32_in_buffer(int32_t value, uint8_t *ptr)
 void sd_logger_send_CMD0(struct spi_transaction *t)
 {
   (void) t; // ignore unused warning
-  sd_logger_serial_println("sd CMD0");
   sd_logger_send_cmd(0, 0x00000000, SdResponseR1, &sd_logger_get_CMD0_response);
 }
 
@@ -341,14 +340,10 @@ void sd_logger_get_CMD0_response(struct spi_transaction *t)
 {
   (void) t; // ignore unused warning
   if(sd_logger_get_R1() == 0x01){
-    sd_logger_serial_println("rcv 0x01");
     // Correct response from CMD0, continue with CMD8
     sd_logger_send_cmd(8, 0x000001AA, SdResponseR7, &sd_logger_process_CMD8);
   }
   else {
-    for (uint8_t i=0; i<8; i++) {
-      uart_transmit(&SD_LOG_UART, sd_logger.input_buf[i]+65);
-    }
     sd_logger.state = SdLoggerStateFailed;
   }
 }
@@ -465,7 +460,7 @@ void sd_logger_process_single_byte(struct spi_transaction *t)
       }
       else if (sd_logger.sd_busy == SdBusy && (t->input_buf[0] & 0x01)) {
         sd_logger.sd_busy &= ~SdBusy;
-        sd_logger.state = SdLoggerStateIdle;
+        //sd_logger.state = SdLoggerStateIdle;
       } else {
         sd_logger.try_counter = 0;
       }
