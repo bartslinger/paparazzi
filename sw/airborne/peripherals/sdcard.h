@@ -38,11 +38,11 @@ enum SdResponseType {
 };
 
 enum SdCardType {
-  CardUnknown,
-  CardMmcV3,
-  CardSdV1,
-  CardSdV2byte,
-  CardSdV2block
+  SdCardType_Unknown,
+  SdCardType_MmcV3,
+  SdCardType_SdV1,
+  SdCardType_SdV2byte,
+  SdCardType_SdV2block
 };
 
 enum SdTryCardInitialize {
@@ -61,7 +61,14 @@ enum SdCardStatus {
   SdCard_SendingCMD8,                       /**< Busy sending CMD8 */
   SdCard_ReadingCMD8Resp,                   /**< Reading R7 response to CMD8 byte by byte */
   SdCard_ReadingCMD8Parameter,              /**< Reading the 32-bit parameter after receiving 0x01 */
-  SdCard_SendingACMD41v2                      /**< Busy sending ACMD41 */
+  SdCard_SendingACMD41v2,                   /**< Busy sending ACMD41 */
+  SdCard_ReadingACMD41v2Resp,               /**< Reading R1 response to ACMD41 byte by byte */
+  SdCard_SendingCMD58,                      /**< Busy sending CMD58 */
+  SdCard_ReadingCMD58Resp,                  /**< Reading R3 response to CMD58 byte by byte */
+  SdCard_ReadingCMD58Parameter,             /**< Reading the 32-bit parameter after receiving 0x00 from CMD58 */
+  SdCard_Idle,                              /**< Initialization sequence succesful */
+  SdCard_SendingCMD16,                      /**< Busy sending CMD16 */
+  bla
 };
 
 struct SdCard{
@@ -71,9 +78,10 @@ struct SdCard{
   uint8_t input_buf[522];                   /**< The input buffer for the SPI transaction */
   uint8_t output_buf[522];                  /**< The output buffer for the SPI transaction */
   uint8_t response_counter;                 /**< Response counter used at various locations */
+  uint32_t timeout_counter;                 /**< Timeout counter used for initializatino checks with ACMD41 */
+  enum SdCardType card_type;                /**< Type of SD card */
 //  enum SdTryCardInitialize try_card_type;
 //  uint8_t sd_response;
-//  enum SdCardType card_type;
 //  uint8_t initialization_counter;
 //  uint8_t try_counter;
 //  uint16_t buffer_to_uart_idx;

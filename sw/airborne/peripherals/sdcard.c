@@ -45,6 +45,7 @@ void sdcard_init(struct SdCard *sdcard, struct spi_periph *spi_p, const uint8_t 
   sdcard->spi_t.output_length = 0;
 
   sdcard->status = SdCard_BeforeDummyClock;
+  sdcard->card_type = SdCardType_Unknown;
 }
 
 
@@ -74,6 +75,7 @@ void sdcard_periodic(struct SdCard *sdcard)
     /* Sending ACMD41 */
     case SdCard_SendingACMD41v2:
       sdcard_send_app_cmd(sdcard, 41, 0x40000000);
+      sdcard->timeout_counter++;
       break;
 
     /* Should not reach this */
@@ -142,8 +144,77 @@ void sdcard_spicallback(struct spi_transaction *t)
     case SdCard_ReadingCMD8Parameter:
       if (sdcard.input_buf[0] == 0x00 && sdcard.input_buf[1] == 0x00 && sdcard.input_buf[2] == 0x01 && sdcard.input_buf[3] == 0xAA) {
         sdcard.status = SdCard_SendingACMD41v2;
+        sdcard.timeout_counter = 0;
       }
       else {
+        sdcard.status = SdCard_Error;
+      }
+      break;
+
+    /* Ready sending the ACMDv2 command, start polling bytes for response */
+    case SdCard_SendingACMD41v2:
+      sdcard.response_counter = 0;
+      sdcard_request_bytes(&sdcard, 1);
+      sdcard.status = SdCard_ReadingACMD41v2Resp;
+      break;
+
+    /* Grabbing bytes in response to the ACMD41v2 command */
+    case SdCard_ReadingACMD41v2Resp:
+      if (t->input_buf[0] == 0x01) {
+        if (sdcard.timeout_counter < 500-1) {
+          sdcard.status = SdCard_SendingACMD41v2;
+        }
+        else {
+          sdcard.status = SdCard_Error;
+        }
+      }
+      else if (t->input_buf[0] == 0x00) {
+        sdcard_send_cmd(&sdcard, 58, 0x00000000);
+        sdcard.status = SdCard_SendingCMD58;
+      }
+      else if (sdcard.response_counter >= 9) {
+        sdcard.status = SdCard_Error;
+      }
+      else {
+        sdcard_request_bytes(&sdcard, 1);
+      }
+      break;
+
+    /* Ready sending CMD58, request the first byte of R3 response */
+    case SdCard_SendingCMD58:
+      sdcard.response_counter = 0;
+      sdcard_request_bytes(&sdcard, 1);
+      sdcard.status = SdCard_ReadingCMD58Resp;
+      break;
+
+    /* Continue polling bytes until there is a response to CMD58 */
+    case SdCard_ReadingCMD58Resp:
+      if (sdcard.response_counter >= 9) {
+        sdcard.status = SdCard_Error;
+      }
+      else if (sdcard.input_buf[0] == 0x00){
+        sdcard_request_bytes(&sdcard, 4);
+        sdcard.status = SdCard_ReadingCMD58Parameter;
+      }
+      else{
+        sdcard_request_bytes(&sdcard, 1);
+      }
+      break;
+
+    /* Parameter of CMD58 ready, processing it */
+    case SdCard_ReadingCMD58Parameter:
+      if (sdcard.input_buf[0] & 0x80) { // bit 31 set, CCS bit is valid
+        if (sdcard.input_buf[0] & 0x40) { // bit 30 set
+          sdcard.card_type = SdCardType_SdV2block;
+          sdcard.status = SdCard_Idle;
+        }
+        else { // bit 30 not set
+          sdcard_send_cmd(&sdcard, 16, 0x00000200);
+          sdcard.card_type = SdCardType_SdV1;
+          sdcard.status = SdCard_SendingCMD16;
+        }
+      }
+      else { // bit 31 not set, CCS bit is unvalid
         sdcard.status = SdCard_Error;
       }
       break;

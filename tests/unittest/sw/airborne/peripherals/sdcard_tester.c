@@ -8,6 +8,8 @@ uint8_t SpiSubmitCall_SendDummyClockNrCalls;
 uint8_t SpiSubmitCall_RequestNBytesNrCalls;
 uint8_t SpiSubmitCall_SendCMD8NrCalls;
 uint8_t SpiSubmitCall_SendACMDNrCalls;
+uint8_t SpiSubmitCall_SendCMD58NrCalls;
+uint8_t SpiSubmitCall_SendCMD16NrCalls;
 
 uint8_t NBytesToRequest;
 uint8_t ACMD_CMD;
@@ -29,6 +31,8 @@ void setUp(void)
   SpiSubmitCall_RequestNBytesNrCalls                = 0;
   SpiSubmitCall_SendCMD8NrCalls                     = 0;
   SpiSubmitCall_SendACMDNrCalls                     = 0;
+  SpiSubmitCall_SendCMD58NrCalls                    = 0;
+  SpiSubmitCall_SendCMD16NrCalls                    = 0;
 
   NBytesToRequest = 1;
   ACMD_CMD = 57;
@@ -39,6 +43,7 @@ void setUp(void)
   // The init function should called before use of any other function
   sdcard_init(&sdcard, &spi2, SPI_SLAVE3); // works also with other peripheral or slave
   sdcard.response_counter = 57; // To make sure this gets set to zero everywhere
+  sdcard.timeout_counter = 5700; // To make sure this gets set to zero everywhere
 }
 
 void tearDown(void)
@@ -66,6 +71,7 @@ void test_SdCardInitializeStructInitialValues(void)
   sdcard.spi_t.output_buf = NULL;
   sdcard.spi_t.input_length = 57;
   sdcard.spi_t.output_length = 57;
+  sdcard.card_type = 57;
 
 
   // Call the function
@@ -85,6 +91,7 @@ void test_SdCardInitializeStructInitialValues(void)
   TEST_ASSERT_EQUAL_PTR(&sdcard.output_buf, sdcard.spi_t.output_buf);
   TEST_ASSERT_EQUAL(0, sdcard.spi_t.input_length);
   TEST_ASSERT_EQUAL(0, sdcard.spi_t.output_length);
+  TEST_ASSERT_EQUAL(SdCardType_Unknown, sdcard.card_type);
 
   // Also, the state for upcoming periodic loop is set
   TEST_ASSERT_EQUAL(SdCard_BeforeDummyClock, sdcard.status);
@@ -253,16 +260,28 @@ void test_PollingCMD0ResponseDataReady(void)
   TEST_ASSERT_EQUAL(SdCard_SendingCMD8, sdcard.status);
 }
 
-void test_PollingCMD0ResponseLater(void)
+void helper_RequestFirstResponseByte(void)
 {
-  sdcard.status = SdCard_ReadingCMD0Resp;
-  sdcard.response_counter = 1;
+  spi_submit_StubWithCallback(SpiSubmitCall_RequestNBytes);
+
+  // Run the callback function
+  sdcard_spicallback(&sdcard.spi_t);
+
+  TEST_ASSERT_EQUAL(1, sdcard.response_counter); // Is already one because first byte has been requested
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_RequestNBytesNrCalls, "spi_submit call count mismatch.");
+
+}
+
+void helper_ResponseLater(void)
+{
+  sdcard.response_counter = 3; // random
   sdcard.input_buf[0] = 0xFF; // Not ready
   spi_submit_StubWithCallback(SpiSubmitCall_RequestNBytes);
 
   // Run the callback function
   sdcard_spicallback(&sdcard.spi_t);
 
+  TEST_ASSERT_EQUAL(4, sdcard.response_counter);
   TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_RequestNBytesNrCalls, "spi_submit call count mismatch.");
 }
 
@@ -281,6 +300,12 @@ void helper_ResponseTimeout(uint8_t limit)
   // The last time, don't call spi_submit again. (therefore expect 8 instead of 9)
   TEST_ASSERT_EQUAL_MESSAGE(limit-1, SpiSubmitCall_RequestNBytesNrCalls, "spi_submit call count mismatch.");
   TEST_ASSERT_EQUAL(SdCard_Error, sdcard.status);
+}
+
+void test_PollingCMD0ResponseLater(void)
+{
+  sdcard.status = SdCard_ReadingCMD0Resp;
+  helper_ResponseLater();
 }
 
 void test_PollingCMD0ResponseTimeout(void)
@@ -309,14 +334,7 @@ void test_ReadySendingCMD8(void)
 void test_PollingCMD8ResponseLater(void)
 {
   sdcard.status = SdCard_ReadingCMD8Resp;
-  spi_submit_StubWithCallback(SpiSubmitCall_RequestNBytes);
-  sdcard.response_counter = 5; // somewhat random
-  sdcard.input_buf[0] = 0xFF;
-
-  // Run the callback function
-  sdcard_spicallback(&sdcard.spi_t);
-  TEST_ASSERT_EQUAL(6, sdcard.response_counter);
-  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_RequestNBytesNrCalls, "spi_submit call count mismatch.");
+  helper_ResponseLater();
 }
 
 //! When 0x01 received, the next four bytes is the 32bit parameter value
@@ -366,6 +384,7 @@ void test_ReadCMD8ParameterMatch(void)
   sdcard_spicallback(&sdcard.spi_t);
 
   TEST_ASSERT_EQUAL(SdCard_SendingACMD41v2, sdcard.status);
+  TEST_ASSERT_EQUAL(0, sdcard.timeout_counter); // reset the timout counter for ACMD41
 }
 
 bool_t SpiSubmitCall_SendACMD(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
@@ -407,6 +426,7 @@ bool_t SpiSubmitCall_SendACMD(struct spi_periph *p, struct spi_transaction *t, i
 void test_SendACMD41NextPeriodicLoop(void)
 {
   sdcard.status = SdCard_SendingACMD41v2;
+  sdcard.timeout_counter = 0;
   ACMD_CMD = 41;
   ACMD_ARG = 0x40000000;
   spi_submit_StubWithCallback(SpiSubmitCall_SendACMD);
@@ -414,15 +434,205 @@ void test_SendACMD41NextPeriodicLoop(void)
   // Function is called in the periodic loop
   sdcard_periodic(&sdcard);
   TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_SendACMDNrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL(1, sdcard.timeout_counter);
   // No need to change state to capture event
 }
 
 void test_ReadySendingACMD41v2(void)
 {
   sdcard.status = SdCard_SendingACMD41v2;
+  spi_submit_StubWithCallback(SpiSubmitCall_RequestNBytes);
 
   // Run the callback function
   sdcard_spicallback(&sdcard.spi_t);
+
+  TEST_ASSERT_EQUAL(1, sdcard.response_counter); // Is already one because first byte has been requested
+  TEST_ASSERT_EQUAL(SdCard_ReadingACMD41v2Resp, sdcard.status);
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_RequestNBytesNrCalls, "spi_submit call count mismatch.");
+}
+
+void test_PollingACMD41v2ResponseLater(void)
+{
+  sdcard.status = SdCard_ReadingACMD41v2Resp;
+  helper_ResponseLater();
+}
+
+void test_PollingACMD41v2ResponseTimeout(void)
+{
+  sdcard.status = SdCard_ReadingACMD41v2Resp;
+  helper_ResponseTimeout(9);
+}
+
+//! ACMD41 response is 0x01, try again next periodic loop
+void test_PollingACMD41v2Response0x01(void)
+{
+  sdcard.timeout_counter = 0;
+  sdcard.status = SdCard_ReadingACMD41v2Resp;
+  sdcard.input_buf[0] = 0x01;
+
+  // Run the callback function
+  sdcard_spicallback(&sdcard.spi_t);
+
+  TEST_ASSERT_EQUAL(SdCard_SendingACMD41v2, sdcard.status);
+}
+
+//! ACMD41 command try only 500 times (this command checks status until it is initialized (or not))
+void test_TryACMD41OnlyLimitedNumberOfTimes(void)
+{
+  sdcard.status = SdCard_ReadingACMD41v2Resp;
+  sdcard.timeout_counter = 499; // Already tried 499 times
+  sdcard.input_buf[0] = 0x01; // Response is still not 0x00
+
+  // Run the callback function
+  sdcard_spicallback(&sdcard.spi_t);
+
+  TEST_ASSERT_EQUAL(SdCard_Error, sdcard.status);
+}
+
+bool_t SpiSubmitCall_SendCMD58(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) p; (void) cmock_num_calls; // ignore unused
+  SpiSubmitCall_SendCMD58NrCalls++;
+
+  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
+  TEST_ASSERT_EQUAL(6, t->output_length);
+  TEST_ASSERT_EQUAL(6, t->input_length);  // R3 response
+  TEST_ASSERT_EQUAL(SPITransDone, t->status);
+
+  TEST_ASSERT_EQUAL_HEX8(0x7A, t->output_buf[0]); // CMD byte
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[1]); // paramter bytes (ignored)
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[2]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[3]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
+  TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]); // Stop bit
+
+  // Callback
+  TEST_ASSERT_EQUAL_PTR(&sdcard_spicallback, t->after_cb);
+
+
+  return TRUE;
+}
+
+//! Sd card ready with initialization, start CMD58
+void test_PollingACMD41v2Response0x00(void)
+{
+  sdcard.status = SdCard_ReadingACMD41v2Resp;
+  sdcard.timeout_counter = 57; // Tried limited number of times, not exceeded timeout
+  sdcard.input_buf[0] = 0x00;
+  spi_submit_StubWithCallback(SpiSubmitCall_SendCMD58);
+
+  // Run the callback function
+  sdcard_spicallback(&sdcard.spi_t);
+
+  TEST_ASSERT_EQUAL(SdCard_SendingCMD58, sdcard.status);
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_SendCMD58NrCalls, "spi_submit call count mismatch.");
+}
+
+void test_ReadySendingCMD58(void)
+{
+  sdcard.status = SdCard_SendingCMD58;
+  helper_RequestFirstResponseByte();
+  TEST_ASSERT_EQUAL(SdCard_ReadingCMD58Resp, sdcard.status);
+}
+
+void test_PollingCMD58ResponseLater(void)
+{
+  sdcard.status = SdCard_ReadingCMD58Resp;
+  helper_ResponseLater();
+}
+
+void test_PollingCMD58Timeout(void)
+{
+  sdcard.status = SdCard_ReadingCMD58Resp;
+  helper_ResponseTimeout(9);
+}
+
+//! CMD58 has responded with 0x00, then read the next 4 bytes (OCR register)
+void test_PollingCMD58DataReady(void)
+{
+  sdcard.status = SdCard_ReadingCMD58Resp;
+  sdcard.input_buf[0] = 0x00;
+  sdcard.response_counter = 3;
+  spi_submit_StubWithCallback(SpiSubmitCall_RequestNBytes); NBytesToRequest = 4;
+
+  // Run the callback function
+  sdcard_spicallback(&sdcard.spi_t);
+
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_RequestNBytesNrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL(SdCard_ReadingCMD58Parameter, sdcard.status);
+}
+
+bool_t SpiSubmitCall_SendCMD16(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) p; (void) cmock_num_calls;
+  SpiSubmitCall_SendCMD16NrCalls++;
+
+  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
+  TEST_ASSERT_EQUAL(6, t->output_length);
+  TEST_ASSERT_EQUAL(6, t->input_length);  // R1 response
+  TEST_ASSERT_EQUAL(SPITransDone, t->status);
+
+  TEST_ASSERT_EQUAL_HEX8(0x50, t->output_buf[0]); // CMD byte
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[1]); // paramter bytes
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[2]);
+  TEST_ASSERT_EQUAL_HEX8(0x02, t->output_buf[3]); // force blocksize 512 bytes.
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
+  TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]); // Stop bit
+
+  // Callback
+  TEST_ASSERT_EQUAL_PTR(&sdcard_spicallback, t->after_cb);
+
+  return TRUE;
+}
+
+//! Check 32-bit OCR register for CCS bit
+void test_ReadCMD58ParameterCCSBitSet(void)
+{
+  sdcard.status = SdCard_ReadingCMD58Parameter;
+  sdcard.input_buf[0] = 0xCF; // bit 30 and 31 set
+  sdcard.input_buf[1] = 0xFF;
+  sdcard.input_buf[2] = 0xFF;
+  sdcard.input_buf[3] = 0xFF; // last byte
+
+  // Run the callback function
+  sdcard_spicallback(&sdcard.spi_t);
+
+  TEST_ASSERT_EQUAL(SdCard_Idle, sdcard.status);
+  TEST_ASSERT_EQUAL(SdCardType_SdV2block, sdcard.card_type);
+
+}
+
+void test_ReadCMD58ParameterCCSBitUnSet(void)
+{
+  sdcard.status = SdCard_ReadingCMD58Parameter;
+  sdcard.input_buf[0] = 0x8F; // bit 30 (CCS) not set, bit 31 set
+  sdcard.input_buf[1] = 0xFF;
+  sdcard.input_buf[2] = 0xFF;
+  sdcard.input_buf[3] = 0xFF; // last byte
+  spi_submit_StubWithCallback(SpiSubmitCall_SendCMD16);
+
+  // Run the callback function
+  sdcard_spicallback(&sdcard.spi_t);
+
+  TEST_ASSERT_EQUAL(SdCard_SendingCMD16, sdcard.status);
+  TEST_ASSERT_EQUAL(SdCardType_SdV1, sdcard.card_type);
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_SendCMD16NrCalls, "spi_submit call count mismatch.");
+}
+
+//! If bit 31 is not set, the CCS bit is not valid. Abort initialization
+void test_ReadCMD58ParameterBit31NotSet(void)
+{
+  sdcard.status = SdCard_ReadingCMD58Parameter;
+  sdcard.input_buf[0] = 0x4F; // bit 31 not set (then bit 30 is not valid)
+  sdcard.input_buf[1] = 0xFF;
+  sdcard.input_buf[2] = 0xFF;
+  sdcard.input_buf[3] = 0xFF; // last byte
+
+  // Run the callback function
+  sdcard_spicallback(&sdcard.spi_t);
+
+  TEST_ASSERT_EQUAL(SdCard_Error, sdcard.status);
+  TEST_ASSERT_EQUAL(SdCardType_Unknown, sdcard.card_type);
 
 }
 
