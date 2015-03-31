@@ -24,16 +24,29 @@
  *  @brief Basic sd logger.
  */
 
+#include "peripherals/sdcard.h"
 #include "sd_logger.h"
+
+extern struct SdCard sdcard_logger;
+
+bool_t uglyGlobalVariable = FALSE;
 
 void sd_logger_start(void)
 {
-
+  sdcard_init(&sdcard_logger, &spi2, SPI_SLAVE3);
 }
 
 void sd_logger_periodic(void)
 {
+  sdcard_periodic(&sdcard_logger);
 
+  if (sdcard_logger.status == SdCard_Idle && uglyGlobalVariable == FALSE) {
+    uglyGlobalVariable = TRUE;
+    for (uint16_t i=0; i<512; i++) {
+      sdcard_logger.output_buf[i+1] = i;
+    }
+    sdcard_write_block(&sdcard_logger, 0x00000020);
+  }
 }
 
 void sd_logger_stop(void)

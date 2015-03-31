@@ -54,6 +54,8 @@ enum SdTryCardInitialize {
 enum SdCardStatus {
   SdCard_UnInit,                            /**< SD card is not initialized */
   SdCard_Error,                             /**< An error has occured, sending debug message */
+  SdCard_Idle,                              /**< Initialization sequence succesful */
+  SdCard_Busy,                              /**< SD card is busy with internal process */
   SdCard_BeforeDummyClock,                  /**< About to send dummy clock cycles to initialize spi mode */
   SdCard_SendingDummyClock,                 /**< Busy sending dummy clock cycles */
   SdCard_SendingCMD0,                       /**< Busy sending CMD0 */
@@ -66,8 +68,12 @@ enum SdCardStatus {
   SdCard_SendingCMD58,                      /**< Busy sending CMD58 */
   SdCard_ReadingCMD58Resp,                  /**< Reading R3 response to CMD58 byte by byte */
   SdCard_ReadingCMD58Parameter,             /**< Reading the 32-bit parameter after receiving 0x00 from CMD58 */
-  SdCard_Idle,                              /**< Initialization sequence succesful */
   SdCard_SendingCMD16,                      /**< Busy sending CMD16 */
+  SdCard_ReadingCMD16Resp,                  /**< Reading R1 response to CMD16 byte by byte */
+  SdCard_SendingCMD24,                      /**< Busy sending CMD24 */
+  SdCard_ReadingCMD24Resp,                  /**< Reading R1 response to CMD24 byte by byte */
+  SdCard_BeforeSendingDataBlock,            /**< Start data block transfer */
+  SdCard_SendingDataBlock,                  /**< Busy sending data block */
   bla
 };
 
@@ -90,11 +96,17 @@ struct SdCard{
 //  uint8_t sd_busy;                          /**< Flags defined in enum SdLoggerSdBusyFlags */
 };
 
+//! Public functions
 extern void sdcard_init(struct SdCard *sdcard, struct spi_periph *spi_p, const uint8_t slave_idx);
 extern void sdcard_periodic(struct SdCard *sdcard);
+extern void sdcard_write_block(struct SdCard *sdcard, uint32_t addr);
+
+//! Private functions
 extern void sdcard_spicallback(struct spi_transaction *t);
 extern void sdcard_process_callback(struct SdCard *sdcard, struct spi_transaction *t);
 extern void sdcard_send_cmd(struct SdCard *sdcard, uint8_t cmd, uint32_t arg);
 extern void sdcard_send_app_cmd(struct SdCard *sdcard, uint8_t cmd, uint32_t arg);
 extern void sdcard_request_bytes(struct SdCard *sdcard, uint8_t len);
+
+
 #endif // SDCARD_H_

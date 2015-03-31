@@ -27,7 +27,6 @@
 #ifndef SD_LOGGER_H_
 #define SD_LOGGER_H_
 
-#include "peripherals/sdcard.h"
 
 #define SD_LOGGER_UART_CHUNKSIZE 32
 #define SD_LOGGER_SINGLE_RECORD_SIZE 36
