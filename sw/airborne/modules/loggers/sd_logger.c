@@ -25,32 +25,45 @@
  */
 
 #include "peripherals/sdcard.h"
+#include "subsystems/datalink/telemetry.h"
+#include "subsystems/imu.h"
 #include "sd_logger.h"
 
-extern struct SdCard sdcard_logger;
+// defined in sdcard.c
+extern struct SdCard sdcard1;
 
-bool_t uglyGlobalVariable = FALSE;
+uint8_t uglyGlobalVariable = 0;
 
 void sd_logger_start(void)
 {
-  sdcard_init(&sdcard_logger, &spi2, SPI_SLAVE3);
+  sdcard_init(&sdcard1, &spi2, SPI_SLAVE3);
 }
 
 void sd_logger_periodic(void)
 {
-  sdcard_periodic(&sdcard_logger);
+  sdcard_periodic(&sdcard1);
 
-  if (sdcard_logger.status == SdCard_Idle && uglyGlobalVariable == FALSE) {
-    uglyGlobalVariable = TRUE;
+  if (sdcard1.status == SdCard_Idle && uglyGlobalVariable == 0) {
+    uglyGlobalVariable++;
     for (uint16_t i=0; i<512; i++) {
-      sdcard_logger.output_buf[i+1] = i;
+      sdcard1.output_buf[i+1] = i;
     }
-    sdcard_write_block(&sdcard_logger, 0x00000020);
+    sdcard_write_block(&sdcard1, 0x00000020);
   }
+  if (sdcard1.status == SdCard_Idle && uglyGlobalVariable == 1) {
+    uglyGlobalVariable++;
+
+    sdcard_read_block(&sdcard1, 0x00000020);
+  }
+  if (sdcard1.status == SdCard_Idle && uglyGlobalVariable == 2) {
+    uglyGlobalVariable++;
+
+    sdcard_read_block(&sdcard1, 0x00000020);
+  }
+  RunOnceEvery(30, DOWNLINK_SEND_IMU_GYRO_RAW(DefaultChannel, DefaultDevice, &imu.gyro_unscaled.p, &imu.gyro_unscaled.q, &imu.gyro_unscaled.r));
 }
 
 void sd_logger_stop(void)
 {
-
 }
 

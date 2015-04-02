@@ -26,7 +26,7 @@
 
 #include "sdcard.h"
 
-struct SdCard sdcard_logger;
+struct SdCard sdcard1;
 
 void sdcard_init(struct SdCard *sdcard, struct spi_periph *spi_p, const uint8_t slave_idx)
 {
@@ -83,6 +83,12 @@ void sdcard_periodic(struct SdCard *sdcard)
       sdcard_request_bytes(sdcard, 1);
       break;
 
+    /* While waiting for data token, keep polling */
+    case SdCard_WaitingForDataToken:
+      sdcard_request_bytes(sdcard, 1);
+      sdcard->timeout_counter++;
+      break;
+
     /* Should not reach this */
     default:
       break;
@@ -95,203 +101,248 @@ void sdcard_spicallback(struct spi_transaction *t)
 {
   (void) t; // ignore unused warning
 
-  switch (sdcard_logger.status) {
+  switch (sdcard1.status) {
 
     /* Ready with dummy clock, proceed with CMD0 */
     case SdCard_SendingDummyClock:
-      sdcard_logger.spi_t.select = SPISelectUnselect;
-      sdcard_send_cmd(&sdcard_logger, 0, 0x00000000);
-      sdcard_logger.status = SdCard_SendingCMD0;
+      sdcard1.spi_t.select = SPISelectUnselect;
+      sdcard_send_cmd(&sdcard1, 0, 0x00000000);
+      sdcard1.status = SdCard_SendingCMD0;
       break;
 
     /* Ready sending CMD0, start polling result */
     case SdCard_SendingCMD0:
-      sdcard_logger.response_counter = 0;
-      sdcard_request_bytes(&sdcard_logger, 1);
-      sdcard_logger.status = SdCard_ReadingCMD0Resp;
+      sdcard1.response_counter = 0;
+      sdcard_request_bytes(&sdcard1, 1);
+      sdcard1.status = SdCard_ReadingCMD0Resp;
       break;
 
     /* Continue polling bytes until there is a response or not */
     case SdCard_ReadingCMD0Resp:
       if (t->input_buf[0] == 0x01) {
-        sdcard_send_cmd(&sdcard_logger, 8, 0x000001AA);
-        sdcard_logger.status = SdCard_SendingCMD8;
+        sdcard_send_cmd(&sdcard1, 8, 0x000001AA);
+        sdcard1.status = SdCard_SendingCMD8;
       }
-      else if (sdcard_logger.response_counter >= 9) {
-        sdcard_logger.status = SdCard_Error;
+      else if (sdcard1.response_counter >= 9) {
+        sdcard1.status = SdCard_Error;
       }
       else{
-        sdcard_request_bytes(&sdcard_logger, 1);
+        sdcard_request_bytes(&sdcard1, 1);
       }
       break;
 
     /* Ready sending CMD8, start polling result */
     case SdCard_SendingCMD8:
-      sdcard_logger.response_counter = 0;
-      sdcard_request_bytes(&sdcard_logger, 1);
-      sdcard_logger.status = SdCard_ReadingCMD8Resp;
+      sdcard1.response_counter = 0;
+      sdcard_request_bytes(&sdcard1, 1);
+      sdcard1.status = SdCard_ReadingCMD8Resp;
       break;
 
     /* Continue polling bytes until there is a response or not */
     case SdCard_ReadingCMD8Resp:
       if (t->input_buf[0] == 0x01) {
-        sdcard_request_bytes(&sdcard_logger, 4);
-        sdcard_logger.status = SdCard_ReadingCMD8Parameter;
+        sdcard_request_bytes(&sdcard1, 4);
+        sdcard1.status = SdCard_ReadingCMD8Parameter;
       }
-      else if (sdcard_logger.response_counter >= 9) {
-        sdcard_logger.status = SdCard_Error;
+      else if (sdcard1.response_counter >= 9) {
+        sdcard1.status = SdCard_Error;
       }
       else {
-        sdcard_request_bytes(&sdcard_logger, 1);
+        sdcard_request_bytes(&sdcard1, 1);
       }
       break;
 
     /* Process parameter from CMD8 response (after 0x01 was received) */
     case SdCard_ReadingCMD8Parameter:
-      if (sdcard_logger.input_buf[0] == 0x00 && sdcard_logger.input_buf[1] == 0x00 && sdcard_logger.input_buf[2] == 0x01 && sdcard_logger.input_buf[3] == 0xAA) {
-        sdcard_logger.status = SdCard_SendingACMD41v2;
-        sdcard_logger.timeout_counter = 0;
+      if (sdcard1.input_buf[0] == 0x00 && sdcard1.input_buf[1] == 0x00 && sdcard1.input_buf[2] == 0x01 && sdcard1.input_buf[3] == 0xAA) {
+        sdcard1.status = SdCard_SendingACMD41v2;
+        sdcard1.timeout_counter = 0;
       }
       else {
-        sdcard_logger.status = SdCard_Error;
+        sdcard1.status = SdCard_Error;
       }
       break;
 
     /* Ready sending the ACMDv2 command, start polling bytes for response */
     case SdCard_SendingACMD41v2:
-      sdcard_logger.response_counter = 0;
-      sdcard_request_bytes(&sdcard_logger, 1);
-      sdcard_logger.status = SdCard_ReadingACMD41v2Resp;
+      sdcard1.response_counter = 0;
+      sdcard_request_bytes(&sdcard1, 1);
+      sdcard1.status = SdCard_ReadingACMD41v2Resp;
       break;
 
     /* Grabbing bytes in response to the ACMD41v2 command */
     case SdCard_ReadingACMD41v2Resp:
       if (t->input_buf[0] == 0x01) {
-        if (sdcard_logger.timeout_counter < 500-1) {
-          sdcard_logger.status = SdCard_SendingACMD41v2;
+        if (sdcard1.timeout_counter < 500-1) {
+          sdcard1.status = SdCard_SendingACMD41v2;
         }
         else {
-          sdcard_logger.status = SdCard_Error;
+          sdcard1.status = SdCard_Error;
         }
       }
       else if (t->input_buf[0] == 0x00) {
-        sdcard_send_cmd(&sdcard_logger, 58, 0x00000000);
-        sdcard_logger.status = SdCard_SendingCMD58;
+        sdcard_send_cmd(&sdcard1, 58, 0x00000000);
+        sdcard1.status = SdCard_SendingCMD58;
       }
-      else if (sdcard_logger.response_counter >= 9) {
-        sdcard_logger.status = SdCard_Error;
+      else if (sdcard1.response_counter >= 9) {
+        sdcard1.status = SdCard_Error;
       }
       else {
-        sdcard_request_bytes(&sdcard_logger, 1);
+        sdcard_request_bytes(&sdcard1, 1);
       }
       break;
 
     /* Ready sending CMD58, request the first byte of R3 response */
     case SdCard_SendingCMD58:
-      sdcard_logger.response_counter = 0;
-      sdcard_request_bytes(&sdcard_logger, 1);
-      sdcard_logger.status = SdCard_ReadingCMD58Resp;
+      sdcard1.response_counter = 0;
+      sdcard_request_bytes(&sdcard1, 1);
+      sdcard1.status = SdCard_ReadingCMD58Resp;
       break;
 
     /* Continue polling bytes until there is a response to CMD58 */
     case SdCard_ReadingCMD58Resp:
-      if (sdcard_logger.response_counter >= 9) {
-        sdcard_logger.status = SdCard_Error;
+      if (sdcard1.response_counter >= 9) {
+        sdcard1.status = SdCard_Error;
       }
-      else if (sdcard_logger.input_buf[0] == 0x00){
-        sdcard_request_bytes(&sdcard_logger, 4);
-        sdcard_logger.status = SdCard_ReadingCMD58Parameter;
+      else if (sdcard1.input_buf[0] == 0x00){
+        sdcard_request_bytes(&sdcard1, 4);
+        sdcard1.status = SdCard_ReadingCMD58Parameter;
       }
       else{
-        sdcard_request_bytes(&sdcard_logger, 1);
+        sdcard_request_bytes(&sdcard1, 1);
       }
       break;
 
     /* Parameter of CMD58 ready, processing it */
     case SdCard_ReadingCMD58Parameter:
-      if (sdcard_logger.input_buf[0] & 0x80) { // bit 31 set, CCS bit is valid
-        if (sdcard_logger.input_buf[0] & 0x40) { // bit 30 set
-          sdcard_logger.card_type = SdCardType_SdV2block;
-          sdcard_logger.status = SdCard_Idle;
+      if (sdcard1.input_buf[0] & 0x80) { // bit 31 set, CCS bit is valid
+        if (sdcard1.input_buf[0] & 0x40) { // bit 30 set
+          sdcard1.card_type = SdCardType_SdV2block;
+          sdcard1.status = SdCard_Idle;
         }
         else { // bit 30 not set
-          sdcard_send_cmd(&sdcard_logger, 16, 0x00000200);
-          sdcard_logger.card_type = SdCardType_SdV1;
-          sdcard_logger.status = SdCard_SendingCMD16;
+          sdcard_send_cmd(&sdcard1, 16, 0x00000200);
+          sdcard1.card_type = SdCardType_SdV1;
+          sdcard1.status = SdCard_SendingCMD16;
         }
       }
       else { // bit 31 not set, CCS bit is unvalid
-        sdcard_logger.status = SdCard_Error;
+        sdcard1.status = SdCard_Error;
       }
       break;
 
     /* Ready sending CMD16, request first byte */
     case SdCard_SendingCMD16:
-      sdcard_logger.response_counter = 0;
-      sdcard_request_bytes(&sdcard_logger, 1);
-      sdcard_logger.status = SdCard_ReadingCMD16Resp;
+      sdcard1.response_counter = 0;
+      sdcard_request_bytes(&sdcard1, 1);
+      sdcard1.status = SdCard_ReadingCMD16Resp;
       break;
 
     /* Continue polling bytes until there is a response to CMD16 */
     case SdCard_ReadingCMD16Resp:
-      if (sdcard_logger.input_buf[0] == 0x00) {
-        sdcard_logger.status = SdCard_Idle;
+      if (sdcard1.input_buf[0] == 0x00) {
+        sdcard1.status = SdCard_Idle;
       }
-      else if (sdcard_logger.response_counter >= 9) {
-        sdcard_logger.status = SdCard_Error;
+      else if (sdcard1.response_counter >= 9) {
+        sdcard1.status = SdCard_Error;
       } else {
-        sdcard_request_bytes(&sdcard_logger, 1);
+        sdcard_request_bytes(&sdcard1, 1);
       }
       break;
 
     /* Ready sending CMD24, request first response byte */
     case SdCard_SendingCMD24:
-      sdcard_logger.response_counter = 0;
-      sdcard_request_bytes(&sdcard_logger, 1);
-      sdcard_logger.status = SdCard_ReadingCMD24Resp;
+      sdcard1.response_counter = 0;
+      sdcard_request_bytes(&sdcard1, 1);
+      sdcard1.status = SdCard_ReadingCMD24Resp;
       break;
 
     /* Request additional bytes until response or timeout */
     case SdCard_ReadingCMD24Resp:
-      if (sdcard_logger.input_buf[0] == 0x00) {
-        sdcard_request_bytes(&sdcard_logger, 1);
-        sdcard_logger.status = SdCard_BeforeSendingDataBlock;
+      if (sdcard1.input_buf[0] == 0x00) {
+        sdcard_request_bytes(&sdcard1, 1);
+        sdcard1.status = SdCard_BeforeSendingDataBlock;
       }
-      else if (sdcard_logger.response_counter >= 9) {
-        sdcard_logger.status = SdCard_Error;
+      else if (sdcard1.response_counter >= 9) {
+        sdcard1.status = SdCard_Error;
       }
       else {
-        sdcard_request_bytes(&sdcard_logger, 1);
+        sdcard_request_bytes(&sdcard1, 1);
       }
       break;
 
     /* Send the data block */
     case SdCard_BeforeSendingDataBlock:
-      sdcard_logger.spi_t.input_length = 516;
-      sdcard_logger.spi_t.output_length = 516;
-      sdcard_logger.output_buf[0] = 0xFE; // data token
-      sdcard_logger.output_buf[513] = 0xFF; // CRC byte 1
-      sdcard_logger.output_buf[514] = 0xFF; // CRC byte 2
-      sdcard_logger.output_buf[515] = 0xFF; // to request data response
-      sdcard_logger.spi_t.after_cb = &sdcard_spicallback;
-      spi_submit(sdcard_logger.spi_p, &sdcard_logger.spi_t);
-      sdcard_logger.status = SdCard_SendingDataBlock;
+      sdcard1.spi_t.input_length = 516;
+      sdcard1.spi_t.output_length = 516;
+      sdcard1.output_buf[0] = 0xFE; // data token
+      sdcard1.output_buf[513] = 0xFF; // CRC byte 1
+      sdcard1.output_buf[514] = 0xFF; // CRC byte 2
+      sdcard1.output_buf[515] = 0xFF; // to request data response
+      sdcard1.spi_t.after_cb = &sdcard_spicallback;
+      spi_submit(sdcard1.spi_p, &sdcard1.spi_t);
+      sdcard1.status = SdCard_SendingDataBlock;
       break;
 
     /* Finished sending the data block */
     case SdCard_SendingDataBlock:
-      if ((sdcard_logger.input_buf[515] & 0x0F) == 0x05) {
-        sdcard_logger.status = SdCard_Busy;
+      if ((sdcard1.input_buf[515] & 0x0F) == 0x05) {
+        sdcard1.status = SdCard_Busy;
       }
       else {
-        sdcard_logger.status = SdCard_Error;
+        sdcard1.status = SdCard_Error;
       }
       break;
 
     case SdCard_Busy:
-      if (sdcard_logger.input_buf[0] == 0xFF) {
-        sdcard_logger.status = SdCard_Idle;
+      if (sdcard1.input_buf[0] != 0x00) {
+        sdcard1.status = SdCard_Idle;
       }
+      break;
+
+    /* Ready sending CMD17, request first response byte */
+    case SdCard_SendingCMD17:
+      sdcard1.response_counter = 0;
+      sdcard_request_bytes(&sdcard1, 1);
+      sdcard1.status = SdCard_ReadingCMD17Resp;
+      break;
+
+    /* Read response to CMD17 until response or timeout/error */
+    case SdCard_ReadingCMD17Resp:
+      if (sdcard1.input_buf[0] == 0x00) {
+        sdcard_request_bytes(&sdcard1, 1);
+        sdcard1.timeout_counter = 0;
+        sdcard1.status = SdCard_WaitingForDataToken;
+      }
+      else if (sdcard1.response_counter >= 9) {
+        sdcard1.status = SdCard_Error;
+      }
+      else {
+        sdcard_request_bytes(&sdcard1, 1);
+      }
+      break;
+
+    /* Processing byte to see if it is a data token */
+    case SdCard_WaitingForDataToken:
+      if (sdcard1.input_buf[0] == 0xFE) { // Data token received
+        sdcard1.status = SdCard_Idle;
+        sdcard1.spi_t.input_length = 514;
+        sdcard1.spi_t.output_length = 514;
+        sdcard1.spi_t.cdiv = SPIDiv8;
+        for (uint16_t i=0; i<514; i++) {
+          sdcard1.output_buf[i] = 0xFF;
+        }
+        sdcard1.spi_t.after_cb = &sdcard_spicallback;
+        spi_submit(sdcard1.spi_p, &sdcard1.spi_t);
+        sdcard1.status = SdCard_ReadingDataBlock;
+      } else if (sdcard1.timeout_counter > 498){
+        sdcard1.status = SdCard_Error;
+      }
+      break;
+
+    /* Data block received in buffer, process data */
+    case SdCard_ReadingDataBlock:
+      sdcard1.status = SdCard_Idle;
       break;
 
     /* Should not reach this */
@@ -377,13 +428,32 @@ void sdcard_write_block(struct SdCard *sdcard, uint32_t addr)
     return;
   }
 
-  sdcard->spi_t.cdiv = SPIDiv2;
+  sdcard->spi_t.cdiv = SPIDiv8;
 
   /* Translate block address to byte address */
   if (sdcard->card_type != SdCardType_SdV2block) {
     addr = addr * 512;
   }
 
-  sdcard_send_cmd(&sdcard_logger, 24, addr);
+  sdcard_send_cmd(sdcard, 24, addr);
   sdcard->status = SdCard_SendingCMD24;
 }
+
+void sdcard_read_block(struct SdCard *sdcard, uint32_t addr)
+{
+  /* Do not read data if not in idle state */
+  if (sdcard->status != SdCard_Idle) {
+    return;
+  }
+
+  sdcard->spi_t.cdiv = SPIDiv8;
+
+  /* Translate block address to byte address */
+  if (sdcard->card_type != SdCardType_SdV2block) {
+    addr = addr * 512;
+  }
+
+  sdcard_send_cmd(sdcard, 17, addr);
+  sdcard->status = SdCard_SendingCMD17;
+}
+

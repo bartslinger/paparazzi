@@ -74,6 +74,10 @@ enum SdCardStatus {
   SdCard_ReadingCMD24Resp,                  /**< Reading R1 response to CMD24 byte by byte */
   SdCard_BeforeSendingDataBlock,            /**< Start data block transfer */
   SdCard_SendingDataBlock,                  /**< Busy sending data block */
+  SdCard_SendingCMD17,                      /**< Busy sending CMD17 (block read request) */
+  SdCard_ReadingCMD17Resp,                  /**< Reading R1 response to CMD17 byte by byte */
+  SdCard_WaitingForDataToken,               /**< Reading a byte each period until there is a data token or error */
+  SdCard_ReadingDataBlock,                  /**< Busy reading data block */
   bla
 };
 
@@ -86,20 +90,13 @@ struct SdCard{
   uint8_t response_counter;                 /**< Response counter used at various locations */
   uint32_t timeout_counter;                 /**< Timeout counter used for initializatino checks with ACMD41 */
   enum SdCardType card_type;                /**< Type of SD card */
-//  enum SdTryCardInitialize try_card_type;
-//  uint8_t sd_response;
-//  uint8_t initialization_counter;
-//  uint8_t try_counter;
-//  uint16_t buffer_to_uart_idx;
-//  uint32_t read_address;
-//  uint16_t imu_buffer_idx;
-//  uint8_t sd_busy;                          /**< Flags defined in enum SdLoggerSdBusyFlags */
 };
 
 //! Public functions
 extern void sdcard_init(struct SdCard *sdcard, struct spi_periph *spi_p, const uint8_t slave_idx);
 extern void sdcard_periodic(struct SdCard *sdcard);
 extern void sdcard_write_block(struct SdCard *sdcard, uint32_t addr);
+extern void sdcard_read_block(struct SdCard *sdcard, uint32_t addr);
 
 //! Private functions
 extern void sdcard_spicallback(struct spi_transaction *t);
