@@ -27,12 +27,76 @@
 #ifndef SD_LOGGER_H_
 #define SD_LOGGER_H_
 
+#include "peripherals/sdcard.h"
 
-#define SD_LOGGER_UART_CHUNKSIZE 32
-#define SD_LOGGER_SINGLE_RECORD_SIZE 36
+#define SD_LOGGER_BUFFER_OFFSET 6
+#define SD_LOGGER_PACKET_SIZE 40
+#define SD_LOGGER_BLOCK_SIZE 512
+#define SD_LOGGER_PACKETS_PER_BLOCK 12
+#define SD_LOGGER_BLOCK_PREAMBLE_SIZE 4
 
+enum SdLoggerStatus{
+  SdLogger_UnInit,                          /**< SD logger is not initialized */
+  SdLogger_Initializing,                    /**< Initializing the SD Card */
+  SdLogger_Idle,                            /**< Idle state, ready to accept commands */
+  SdLogger_Error,                           /**< Something failed */
+  SdLogger_BeforeLogging,                   /**< Clear status block before start with logging */
+  SdLogger_Logging,                         /**< Recording data */
+  SdLogger_WriteStatusPacket,               /**< Stop logging, writing summary info to block 0 */
+  SdLogger_DataAvailable,                   /**< In this state, the sdcard input buffer has data from address block_addr */
+  SdLogger_ReadingBlock,                    /**< Temporary status when reading block until the callback */
+  blabla
+};
+
+enum SdLoggerCommand{
+  SdLoggerCmd_Nothing,                      /**< Do nothing */
+  SdLoggerCmd_StartLogging,                 /**< Start logging data */
+  SdLoggerCmd_StopLogging,                  /**< Stop logging data */
+  SdLoggerCmd_RequestStatusPacket,          /**< Requesting the status packet (first packet on block 0) */
+  bla
+};
+
+struct LogPacket {
+  uint32_t time;
+  int32_t data_1;
+  int32_t data_2;
+  int32_t data_3;
+  int32_t data_4;
+  int32_t data_5;
+  int32_t data_6;
+  int32_t data_7;
+  int32_t data_8;
+  int32_t data_9;
+};
+
+struct SdLogger {
+  enum SdLoggerStatus status;               /**< Status of the sd logger */
+  enum SdLoggerCommand cmd;                 /**< Command set by remote application */
+  struct LogPacket packet;                  /**< Packet to sent to groundstation */
+  uint32_t unique_id;                       /**< Unique number to identify written (and missing!) blocks */
+  uint32_t block_addr;                      /**< Block address of the SD card where data is being logged to or being read from*/
+  uint16_t buffer_addr;                     /**< Logging location in sd output buffer */
+  uint32_t packet_count;                    /**< Number of packets saved */
+  uint32_t error_count;                     /**< Count number of errors during logging phase */
+  uint32_t request_id;                      /**< Setable from external application to request log packet */
+  uint8_t timeout_counter;                  /**< Number of attempts to read a data block */
+};
+
+extern struct SdLogger sdlogger;
+
+//! Public functions
 extern void sd_logger_start(void);
 extern void sd_logger_periodic(void);
+extern void sd_logger_command(void);
 extern void sd_logger_stop(void);
+
+//! Private functions
+extern void sd_logger_statusblock_ready(void);
+extern void sd_logger_packetblock_ready(void);
+extern void sd_logger_send_packet_from_buffer(uint16_t buffer_idx);
+extern void sd_logger_int32_to_buffer(const int32_t value, uint8_t *target);
+extern void sd_logger_uint32_to_buffer(const uint32_t value, uint8_t *target);
+extern int32_t sd_logger_get_int32(uint8_t *target);
+extern uint32_t sd_logger_get_uint32(uint8_t *target);
 
 #endif /* SD_LOGGER_H_ */

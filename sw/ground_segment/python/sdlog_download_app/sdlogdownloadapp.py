@@ -1,24 +1,16 @@
 #!/usr/bin/env python
-#Boa:App:BoaApp
 
 import wx
-import os
-import settingsframe
+import sdlogdownloadframe
 import getopt
 import sys
-
-
-PPRZ_SRC = os.getenv("PAPARAZZI_SRC", os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                                                      '../../../..')))
-sys.path.append(PPRZ_SRC + "/sw/lib/python")
-import settings_xml_parse
 
 def Usage(scmd):
     lpathitem = scmd.split('/')
     fmt = '''Usage: %s [-h | --help] [-a AC_ID | --ac_id=AC_ID]
 where
 \t-h | --help print this message
-\t-a AC_ID | --ac_id=AC_ID where AC_ID is an aircraft ID to use for settings (multiple IDs may passed)
+\t-a AC_ID | --ac_id=AC_ID where AC_ID is an aircraft ID to use for downloading log data
 '''
     print(fmt % lpathitem[-1])
 
@@ -39,20 +31,20 @@ def GetOptions():
 
     return options
 
-class SettingsApp(wx.App):
+class SDLogDownloadApp(wx.App):
     def OnInit(self):
         options = GetOptions()
         if not options['ac_id']:
             Usage(sys.argv[0])
             sys.exit("Error: Please specify at least one aircraft ID.")
-        self.main = settingsframe.create(None, options['ac_id'])
+        self.main = sdlogdownloadframe.SDLogDownloadFrame(options['ac_id'])
         self.main.Show()
         self.SetTopWindow(self.main)
-
         return True
 
+
 def main():
-    application = SettingsApp(0)
+    application = SDLogDownloadApp(0)
     application.MainLoop()
 
 if __name__ == '__main__':

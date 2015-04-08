@@ -14,6 +14,7 @@ uint8_t SpiSubmitCall_SendCMD24NrCalls;
 uint8_t SpiSubmitCall_SendDataBlockNrCalls;
 uint8_t SpiSubmitCall_SendCMD17NrCalls;
 uint8_t SpiSubmitCall_ReadDataBlockNrCalls;
+bool_t CallbackWasCalled;
 
 uint8_t NBytesToRequest;
 uint8_t ACMD_CMD;
@@ -41,6 +42,7 @@ void setUp(void)
   SpiSubmitCall_SendDataBlockNrCalls                = 0;
   SpiSubmitCall_SendCMD17NrCalls                    = 0;
   SpiSubmitCall_ReadDataBlockNrCalls                = 0;
+  CallbackWasCalled = FALSE;
 
   NBytesToRequest = 1;
   ACMD_CMD = 57;
@@ -781,6 +783,9 @@ bool_t SpiSubmitCall_SendDataBlock(struct spi_periph *p, struct spi_transaction 
   (void) p; (void) cmock_num_calls;
   SpiSubmitCall_SendDataBlockNrCalls++;
 
+  // Use a different offset for the output buffer
+  TEST_ASSERT_EQUAL_PTR(&sdcard1.output_buf[5], t->output_buf);
+
   TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
   TEST_ASSERT_EQUAL(516, t->output_length);
   TEST_ASSERT_EQUAL(516, t->input_length);
@@ -808,8 +813,8 @@ void test_SendDataBlock(void)
   spi_submit_StubWithCallback(SpiSubmitCall_SendDataBlock);
 
   for (uint16_t i=0; i<256; i++) {
-    sdcard1.output_buf[i+1] = 0x00;
-    sdcard1.output_buf[i+256+1] = i;
+    sdcard1.output_buf[6+i] = 0x00;
+    sdcard1.output_buf[6+i+256] = i;
   }
 
   // Run the callback function
@@ -828,6 +833,9 @@ void test_ReadySendingDataBlockAccepted(void)
   // Run the callback function
   sdcard_spicallback(&sdcard1.spi_t);
 
+  // Reset different offset for the output buffer
+  TEST_ASSERT_EQUAL_PTR(&sdcard1.output_buf, sdcard1.spi_t.output_buf);
+
   TEST_ASSERT_EQUAL(SdCard_Busy, sdcard1.status);
 }
 
@@ -839,6 +847,8 @@ void test_ReadySendingDataBlockRejected(void)
   // Run the callback function
   sdcard_spicallback(&sdcard1.spi_t);
 
+  // Reset different offset for the output buffer
+  TEST_ASSERT_EQUAL_PTR(&sdcard1.output_buf, sdcard1.spi_t.output_buf);
   TEST_ASSERT_EQUAL(SdCard_Error, sdcard1.status);
 }
 
@@ -898,14 +908,20 @@ bool_t SpiSubmitCall_SendCMD17(struct spi_periph *p, struct spi_transaction *t, 
   return TRUE;
 }
 
+void helper_ExampleCallbackFunction(void)
+{
+  CallbackWasCalled = TRUE;
+}
+
 void test_DoNotReadDataIfNotIdle(void)
 {
   sdcard1.status = SdCard_Busy;
 
   // Call the read data function
-  sdcard_read_block(&sdcard1, 0x00000000);
+  sdcard_read_block(&sdcard1, 0x00000000, &helper_ExampleCallbackFunction);
 
   // Expect zero calls to spi_submit
+  TEST_ASSERT_EQUAL(NULL, sdcard1.read_callback);
 }
 
 void test_ReadDataBlockWithBlockAddress(void)
@@ -915,8 +931,9 @@ void test_ReadDataBlockWithBlockAddress(void)
   spi_submit_StubWithCallback(SpiSubmitCall_SendCMD17);
 
   // Call the read data function
-  sdcard_read_block(&sdcard1, 0x00000014);
+  sdcard_read_block(&sdcard1, 0x00000014, &helper_ExampleCallbackFunction);
 
+  TEST_ASSERT_EQUAL_PTR(&helper_ExampleCallbackFunction, sdcard1.read_callback);
   TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_SendCMD17NrCalls, "spi_submit call count mismatch.");
   TEST_ASSERT_EQUAL(SdCard_SendingCMD17, sdcard1.status);
 }
@@ -929,8 +946,9 @@ void test_ReadDataBlockWithByteAddress(void)
   spi_submit_StubWithCallback(SpiSubmitCall_SendCMD17);
 
   // Call the read data function
-  sdcard_read_block(&sdcard1, 0x00000014);
+  sdcard_read_block(&sdcard1, 0x00000014, &helper_ExampleCallbackFunction);
 
+  TEST_ASSERT_EQUAL_PTR(&helper_ExampleCallbackFunction, sdcard1.read_callback);
   TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_SendCMD17NrCalls, "spi_submit call count mismatch.");
   TEST_ASSERT_EQUAL(SdCard_SendingCMD17, sdcard1.status);
 }
@@ -1043,12 +1061,26 @@ void test_PollingDataTokenReady(void)
 void test_ReadDataBlockContent(void)
 {
   sdcard1.status = SdCard_ReadingDataBlock;
+  sdcard1.read_callback = &helper_ExampleCallbackFunction;
 
   // Call the callback function
   sdcard_spicallback(&sdcard1.spi_t);
 
+  TEST_ASSERT_TRUE(CallbackWasCalled);
   TEST_ASSERT_EQUAL(SdCard_Idle, sdcard1.status);
 
+}
+
+void test_ReadDataBlockContentWithoutCallback(void)
+{
+  sdcard1.status = SdCard_ReadingDataBlock;
+  sdcard1.read_callback = NULL;
+
+  // Call the callback function
+  sdcard_spicallback(&sdcard1.spi_t);
+
+  TEST_ASSERT_FALSE(CallbackWasCalled);
+  TEST_ASSERT_EQUAL(SdCard_Idle, sdcard1.status);
 }
 
 void test_SendErrorMessage(void)

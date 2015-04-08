@@ -4,18 +4,23 @@
   <doc>
     <description>Write logdata directly to an sd card.</description>
   </doc>
-  <!--settings>
-    <dl_settings NAME="snav">
-      <dl_settings NAME="tow">
-        <dl_setting module="nav/nav_smooth" var="snav_desired_tow" min="0" max="604800" step="1"/>
+  <settings>
+    <dl_settings NAME="sdlogger">
+      <dl_settings NAME="SD Logger">
+        <dl_setting module="loggers/sd_logger" var="sdlogger.unique_id" min="0" max="10000000" step="1"/>
+        <dl_setting module="loggers/sd_logger" var="sdlogger.request_id" min="0" max="10000000" step="1"/>
+        <dl_setting module="loggers/sd_logger" var="sdlogger.cmd" min="0" max="255" step="1"/>
+        <dl_setting module="loggers/sd_logger" var="sdlogger.status" min="0" max="255" step="1" values="UnInit|Initializing|Idle|Error|BeforeLogging|Logging|WriteStatusPacket|DataAvailable|ReadingBlock"/>
+        <dl_setting module="loggers/sd_logger" var="sdcard1.status" min="0" max="255" step="1" values="UnInit|Error|Idle|Busy|BeforeDummyClock|SendingDummyClock|SendingCMD0|ReadingCMD0Resp|SendingCMD8|ReadingCMD8Resp|ReadingCMD8Parameter|SendingACMD41v2|ReadingACMD41v2Resp|SendingCMD58|ReadingCMD58Resp|ReadingCMD58Parameter|SendingCMD16|ReadingCMD16Resp|SendingCMD24|ReadingCMD24Resp|BeforeSendingDataBlock|SendingDataBlock|SendingCMD17|ReadingCMD17Resp|WaitingForDataToken|ReadingDataBlock"/>
       </dl_settings>
     </dl_settings>
-  </settings-->
+  </settings>
   <header>
     <file name="sd_logger.h"/>
   </header>
   <init fun="sd_logger_start()"/>
   <periodic fun="sd_logger_periodic()" autorun="TRUE"/>
+  <datalink message="SETTING" fun="sd_logger_command()"/>
   <makefile target="ap">
     <raw>
       SD_LOG_UART ?= uart1

@@ -275,10 +275,11 @@ void sdcard_spicallback(struct spi_transaction *t)
     case SdCard_BeforeSendingDataBlock:
       sdcard1.spi_t.input_length = 516;
       sdcard1.spi_t.output_length = 516;
-      sdcard1.output_buf[0] = 0xFE; // data token
-      sdcard1.output_buf[513] = 0xFF; // CRC byte 1
-      sdcard1.output_buf[514] = 0xFF; // CRC byte 2
-      sdcard1.output_buf[515] = 0xFF; // to request data response
+      sdcard1.spi_t.output_buf = &sdcard1.output_buf[5];
+      sdcard1.spi_t.output_buf[0] = 0xFE; // data token
+      sdcard1.spi_t.output_buf[513] = 0xFF; // CRC byte 1
+      sdcard1.spi_t.output_buf[514] = 0xFF; // CRC byte 2
+      sdcard1.spi_t.output_buf[515] = 0xFF; // to request data response
       sdcard1.spi_t.after_cb = &sdcard_spicallback;
       spi_submit(sdcard1.spi_p, &sdcard1.spi_t);
       sdcard1.status = SdCard_SendingDataBlock;
@@ -292,6 +293,7 @@ void sdcard_spicallback(struct spi_transaction *t)
       else {
         sdcard1.status = SdCard_Error;
       }
+      sdcard1.spi_t.output_buf = sdcard1.output_buf;
       break;
 
     case SdCard_Busy:
@@ -343,6 +345,9 @@ void sdcard_spicallback(struct spi_transaction *t)
     /* Data block received in buffer, process data */
     case SdCard_ReadingDataBlock:
       sdcard1.status = SdCard_Idle;
+      if (sdcard1.read_callback != NULL) {
+        sdcard1.read_callback();
+      }
       break;
 
     /* Should not reach this */
@@ -439,20 +444,20 @@ void sdcard_write_block(struct SdCard *sdcard, uint32_t addr)
   sdcard->status = SdCard_SendingCMD24;
 }
 
-void sdcard_read_block(struct SdCard *sdcard, uint32_t addr)
+void sdcard_read_block(struct SdCard *sdcard, uint32_t addr, SdCardCallback callback)
 {
   /* Do not read data if not in idle state */
   if (sdcard->status != SdCard_Idle) {
     return;
   }
 
-  sdcard->spi_t.cdiv = SPIDiv8;
+  sdcard->spi_t.cdiv = SPIDiv32;
 
   /* Translate block address to byte address */
   if (sdcard->card_type != SdCardType_SdV2block) {
     addr = addr * 512;
   }
-
+  sdcard->read_callback = callback;
   sdcard_send_cmd(sdcard, 17, addr);
   sdcard->status = SdCard_SendingCMD17;
 }

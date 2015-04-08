@@ -61,16 +61,12 @@ if not os.path.isfile(os.path.join(PAPARAZZI_HOME, AIRCRAFT + ".config")):
         # Look for flag include path
         matchObj = re.match(r'-I(.+)', argument)
         if(matchObj):
-            newInclude = os.path.normpath(os.path.join(PAPARAZZI_HOME,
-                                                       "sw",
-                                                       "airborne",
-                                                       matchObj.group(1)))
+            relPath = os.path.relpath(matchObj.group(1), PAPARAZZI_HOME)
+            newInclude = os.path.join(PAPARAZZI_HOME, relPath)
             includes.write(newInclude + "\n")
             if TEST_CONF:
                 test_includes.write(newInclude + "\n")
-                newInclude = os.path.normpath(
-                    os.path.join(TEST_HOME, "sw", "airborne",
-                                 matchObj.group(1)))
+                newInclude = os.path.join(TEST_HOME, relPath)
                 test_includes.write(newInclude + "\n")
     # end for loop
 

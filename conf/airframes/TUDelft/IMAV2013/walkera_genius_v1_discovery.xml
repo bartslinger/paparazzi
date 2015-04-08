@@ -168,7 +168,7 @@
    <load name="gps_ubx_ucenter.xml"/>
    <load name="send_imu_mag_current.xml"/>
    <!--load name="high_speed_logger_spi_link.xml"/-->
-   <!--load name="sd_logger.xml"/-->
+   <load name="sd_logger.xml"/>
  </modules>
 
   <firmware name="rotorcraft">
@@ -193,7 +193,7 @@
     </subsystem>
 
 	<subsystem name="telemetry" type="transparent">
-	  <configure name="MODEM_BAUD" value="B115200"/>
+	  <!--configure name="MODEM_BAUD" value="B115200"/-->
 	  <configure name="MODEM_PORT" value="UART1"/>
 	</subsystem>
     <!--subsystem name="telemetry" type="superbitrf" /-->
