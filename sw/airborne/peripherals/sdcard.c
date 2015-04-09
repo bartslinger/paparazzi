@@ -281,8 +281,12 @@ void sdcard_spicallback(struct spi_transaction *t)
       sdcard1.spi_t.output_buf[514] = 0xFF; // CRC byte 2
       sdcard1.spi_t.output_buf[515] = 0xFF; // to request data response
       sdcard1.spi_t.after_cb = &sdcard_spicallback;
-      spi_submit(sdcard1.spi_p, &sdcard1.spi_t);
-      sdcard1.status = SdCard_SendingDataBlock;
+      if(spi_submit(sdcard1.spi_p, &sdcard1.spi_t)) {
+        sdcard1.status = SdCard_SendingDataBlock;
+      }
+      else {
+        sdcard1.status = SdCard_Error;
+      }
       break;
 
     /* Finished sending the data block */
@@ -433,7 +437,7 @@ void sdcard_write_block(struct SdCard *sdcard, uint32_t addr)
     return;
   }
 
-  sdcard->spi_t.cdiv = SPIDiv8;
+  sdcard->spi_t.cdiv = SPIDiv64;
 
   /* Translate block address to byte address */
   if (sdcard->card_type != SdCardType_SdV2block) {
