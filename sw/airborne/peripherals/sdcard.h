@@ -35,6 +35,7 @@
  */
 typedef void (*SdCardCallback)(void);
 
+#define SD_BLOCK_SIZE 512
 
 enum SdResponseType {
   SdResponseNone,
@@ -84,14 +85,19 @@ enum SdCardStatus {
   SdCard_ReadingCMD17Resp,                  /**< Reading R1 response to CMD17 byte by byte */
   SdCard_WaitingForDataToken,               /**< Reading a byte each period until there is a data token or error */
   SdCard_ReadingDataBlock,                  /**< Busy reading data block */
+  SdCard_SendingCMD25,                      /**< Busy sending CMD25 (multiwrite start command) */
+  SdCard_ReadingCMD25Resp,                  /**< Reading R1 response to CMD25 byte by byte */
+  SdCard_MultiWriteIdle,                    /**< CMD25 complete, ready to sent blocks */
+  SdCard_MultiWriteBusy,                    /**< Busy sending data block in multiwrite */
+  bladiebla
 };
 
 struct SdCard{
   struct spi_periph *spi_p;                 /**< The SPI peripheral for the connection */
   struct spi_transaction spi_t;             /**< The SPI transaction used for the writing and reading of registers */
   volatile enum SdCardStatus status;        /**< The status of the SD card */
-  uint8_t input_buf[522];                   /**< The input buffer for the SPI transaction */
-  uint8_t output_buf[522];                  /**< The output buffer for the SPI transaction */
+  uint8_t input_buf[SD_BLOCK_SIZE+10];      /**< The input buffer for the SPI transaction */
+  uint8_t output_buf[SD_BLOCK_SIZE+10];     /**< The output buffer for the SPI transaction */
   uint8_t response_counter;                 /**< Response counter used at various locations */
   uint32_t timeout_counter;                 /**< Timeout counter used for initializatino checks with ACMD41 */
   enum SdCardType card_type;                /**< Type of SD card */
@@ -105,6 +111,9 @@ extern void sdcard_init(struct SdCard *sdcard, struct spi_periph *spi_p, const u
 extern void sdcard_periodic(struct SdCard *sdcard);
 extern void sdcard_write_block(struct SdCard *sdcard, uint32_t addr);
 extern void sdcard_read_block(struct SdCard *sdcard, uint32_t addr, SdCardCallback callback);
+extern void sdcard_multiwrite_start(struct SdCard *sdcard, uint32_t addr);
+extern void sdcard_multiwrite_next(struct SdCard *sdcard);
+extern void sdcard_multiwrite_stop(struct SdCard *sdcard);
 
 //! Private functions
 extern void sdcard_spicallback(struct spi_transaction *t);

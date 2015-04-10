@@ -182,7 +182,7 @@ void test_AcceptStopCommandIfLogging(void)
     TEST_ASSERT_EQUAL_HEX8(0xDD, sdcard1.output_buf[6+i]);
   }
   // Fill with trailing zeros
-  for (uint32_t i=sdlogger.buffer_addr; i<(SD_LOGGER_BUFFER_OFFSET + SD_LOGGER_BLOCK_SIZE); i++) {
+  for (uint32_t i=sdlogger.buffer_addr; i<(SD_LOGGER_BUFFER_OFFSET + SD_BLOCK_SIZE); i++) {
     TEST_ASSERT_EQUAL_HEX8(0x00, sdcard1.output_buf[6+i]);
   }
 
@@ -357,7 +357,7 @@ void test_WriteSummaryBlockSdCardReady(void)
   helper_CompareUInt32FromAddress(0xABBACAFE, &sdcard1.output_buf[6], S__LINE__);
   helper_CompareUInt32FromAddress(0xBEEFBEEF, &sdcard1.output_buf[6+4], S__LINE__);
   helper_CompareUInt32FromAddress(0xCAFEBEEF, &sdcard1.output_buf[6+8], S__LINE__);
-  for (uint16_t i=12; i<SD_LOGGER_BLOCK_SIZE; i++) {
+  for (uint16_t i=12; i<SD_BLOCK_SIZE; i++) {
     TEST_ASSERT_EQUAL_HEX8(0x00, sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+i]);
   }
 

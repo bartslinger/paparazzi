@@ -11,9 +11,12 @@ uint8_t SpiSubmitCall_SendACMDNrCalls;
 uint8_t SpiSubmitCall_SendCMD58NrCalls;
 uint8_t SpiSubmitCall_SendCMD16NrCalls;
 uint8_t SpiSubmitCall_SendCMD24NrCalls;
+uint8_t SpiSubmitCall_SendCMD25NrCalls;
 uint8_t SpiSubmitCall_SendDataBlockNrCalls;
 uint8_t SpiSubmitCall_SendCMD17NrCalls;
 uint8_t SpiSubmitCall_ReadDataBlockNrCalls;
+uint8_t SpiSubmitCall_SendMultiWriteDataBlockNrCalls;
+uint8_t SpiSubmitCall_SendStopMultiWriteNrCalls;
 bool_t CallbackWasCalled;
 
 uint8_t NBytesToRequest;
@@ -39,9 +42,12 @@ void setUp(void)
   SpiSubmitCall_SendCMD58NrCalls                    = 0;
   SpiSubmitCall_SendCMD16NrCalls                    = 0;
   SpiSubmitCall_SendCMD24NrCalls                    = 0;
+  SpiSubmitCall_SendCMD25NrCalls                    = 0;
   SpiSubmitCall_SendDataBlockNrCalls                = 0;
   SpiSubmitCall_SendCMD17NrCalls                    = 0;
   SpiSubmitCall_ReadDataBlockNrCalls                = 0;
+  SpiSubmitCall_SendMultiWriteDataBlockNrCalls      = 0;
+  SpiSubmitCall_SendStopMultiWriteNrCalls           = 0;
   CallbackWasCalled = FALSE;
 
   NBytesToRequest = 1;
@@ -692,7 +698,7 @@ bool_t SpiSubmitCall_SendCMD24(struct spi_periph *p, struct spi_transaction *t, 
   SpiSubmitCall_SendCMD24NrCalls++;
 
   TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
-  TEST_ASSERT_EQUAL(SPIDiv8, t->cdiv);
+  TEST_ASSERT_EQUAL(SPIDiv64, t->cdiv);
   TEST_ASSERT_EQUAL(6, t->output_length);
   TEST_ASSERT_EQUAL(6, t->input_length);  // R1 response
   TEST_ASSERT_EQUAL(SPITransDone, t->status);
@@ -882,7 +888,7 @@ bool_t SpiSubmitCall_SendCMD17(struct spi_periph *p, struct spi_transaction *t, 
   SpiSubmitCall_SendCMD17NrCalls++;
 
   TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
-  TEST_ASSERT_EQUAL(SPIDiv8, t->cdiv);
+  TEST_ASSERT_EQUAL(SPIDiv32, t->cdiv);
   TEST_ASSERT_EQUAL(6, t->output_length);
   TEST_ASSERT_EQUAL(6, t->input_length);  // R1 response
   TEST_ASSERT_EQUAL(SPITransDone, t->status);
@@ -1081,6 +1087,233 @@ void test_ReadDataBlockContentWithoutCallback(void)
 
   TEST_ASSERT_FALSE(CallbackWasCalled);
   TEST_ASSERT_EQUAL(SdCard_Idle, sdcard1.status);
+}
+
+bool_t SpiSubmitCall_SendCMD25(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) p; (void) cmock_num_calls;
+  SpiSubmitCall_SendCMD25NrCalls++;
+
+  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
+  TEST_ASSERT_EQUAL(SPIDiv64, t->cdiv);
+  TEST_ASSERT_EQUAL(6, t->output_length);
+  TEST_ASSERT_EQUAL(6, t->input_length);  // R1 response
+  TEST_ASSERT_EQUAL(SPITransDone, t->status);
+
+  TEST_ASSERT_EQUAL_HEX8(0x59, t->output_buf[0]); // CMD byte
+  if (sdcard1.card_type == SdCardType_SdV2block) {
+    TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[1]); // 4 bytes for the address
+    TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[2]);
+    TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[3]);
+    TEST_ASSERT_EQUAL_HEX8(0x14, t->output_buf[4]);
+  }
+  else {
+    TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[1]); // 4 bytes for the address
+    TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[2]);
+    TEST_ASSERT_EQUAL_HEX8(0x28, t->output_buf[3]);
+    TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[4]);
+  }
+  TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[5]); // Stop bit
+
+  // Callback
+  TEST_ASSERT_EQUAL_PTR(&sdcard_spicallback, t->after_cb);
+
+  return TRUE;
+}
+
+void test_StartMultiWriteStartWhenIdleWithBlockAddress(void)
+{
+  sdcard1.status = SdCard_Idle;
+  sdcard1.card_type = SdCardType_SdV2block;
+  spi_submit_StubWithCallback(SpiSubmitCall_SendCMD25);
+
+  // Call the multiwrite start function
+  sdcard_multiwrite_start(&sdcard1, 0x00000014); // is decimal 20 * 512
+
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_SendCMD25NrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL(SdCard_SendingCMD25, sdcard1.status);
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_SendCMD25NrCalls, "spi_submit call count mismatch.");
+
+}
+
+void test_StartMultiWriteStartWhenIdleWithByteAddress(void)
+{
+  sdcard1.status = SdCard_Idle;
+  sdcard1.card_type = SdCardType_SdV2byte;
+  spi_submit_StubWithCallback(SpiSubmitCall_SendCMD25);
+
+  // Call the write data function
+  sdcard_multiwrite_start(&sdcard1, 0x00000014); // = decimal 20
+
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_SendCMD25NrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL(SdCard_SendingCMD25, sdcard1.status);
+}
+
+void test_StartMultiWriteOnlyIfIdle(void)
+{
+  sdcard1.status = SdCard_Busy; // Not idle
+
+  sdcard_multiwrite_start(&sdcard1, 0x00000014);
+}
+
+
+void test_ReadySendingCMD25(void) {
+  sdcard1.status = SdCard_SendingCMD25;
+  helper_RequestFirstResponseByte();
+  TEST_ASSERT_EQUAL(SdCard_ReadingCMD25Resp, sdcard1.status);
+}
+
+void test_PollingCMD25ResponseLater(void)
+{
+  sdcard1.status = SdCard_ReadingCMD25Resp;
+  helper_ResponseLater();
+}
+
+void test_PollingCMD25Timeout(void)
+{
+  sdcard1.status = SdCard_ReadingCMD25Resp;
+  helper_ResponseTimeout(9);
+}
+
+//! When CMD25 responds, another dummy byte needs to be requested before the block with data is transferred
+void test_PollingCMD25DataReady(void)
+{
+  sdcard1.status = SdCard_ReadingCMD25Resp;
+  sdcard1.input_buf[0] = 0x00; // Ready
+  spi_submit_StubWithCallback(SpiSubmitCall_RequestNBytes);
+
+  // Run the callback function
+  sdcard_spicallback(&sdcard1.spi_t);
+
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_RequestNBytesNrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL(SdCard_MultiWriteIdle, sdcard1.status);
+  // Value of the response counter does not matter any more
+}
+
+bool_t SpiSubmitCall_SendMultiWriteDataBlock(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) p; (void) cmock_num_calls;
+  SpiSubmitCall_SendMultiWriteDataBlockNrCalls++;
+
+  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
+  TEST_ASSERT_EQUAL(516, t->output_length);
+  TEST_ASSERT_EQUAL(516, t->input_length);
+  TEST_ASSERT_EQUAL(SPITransDone, t->status);
+
+  TEST_ASSERT_EQUAL_HEX8(0xFC, t->output_buf[0]); // Data Token for CMD25
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[1]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[256]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, t->output_buf[257]);
+  TEST_ASSERT_EQUAL_HEX8(0x01, t->output_buf[258]);
+  TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[512]);
+  TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[513]); // CRC byte 1
+  TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[514]); // CRC byte 2
+  TEST_ASSERT_EQUAL_HEX8(0xFF, t->output_buf[515]); // Request data response
+
+  // Callback
+  TEST_ASSERT_EQUAL_PTR(&sdcard_spicallback, t->after_cb);
+
+  return TRUE;
+}
+
+void test_WriteMultiWriteBlockWhenIdle(void)
+{
+  sdcard1.status = SdCard_MultiWriteIdle;
+  spi_submit_StubWithCallback(SpiSubmitCall_SendMultiWriteDataBlock);
+
+  for (uint16_t i=0; i<256; i++) {
+    sdcard1.output_buf[1+i] = 0x00;
+    sdcard1.output_buf[1+i+256] = i;
+  }
+
+  // Call the write function
+  sdcard_multiwrite_next(&sdcard1);
+
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_SendMultiWriteDataBlockNrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL(SdCard_MultiWriteBusy, sdcard1.status);
+}
+
+void test_DoNotWriteMultiWriteBlockIfNotIdle(void)
+{
+  sdcard1.status = SdCard_MultiWriteBusy;
+
+  // Multiwrite write command
+  sdcard_multiwrite_next(&sdcard1);
+
+  // Should not do anything
+}
+
+void test_RequestBytePeriodicallyWhileMultiWriteBusy(void)
+{
+  sdcard1.status = SdCard_MultiWriteBusy;
+  sdcard1.input_buf[0] = 0x00; // LOW = busy
+  spi_submit_StubWithCallback(SpiSubmitCall_RequestNBytes);
+
+  // Run the periodic function
+  sdcard_periodic(&sdcard1);
+
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_RequestNBytesNrCalls, "spi_submit call count mismatch.");
+  TEST_ASSERT_EQUAL(SdCard_MultiWriteBusy, sdcard1.status);
+}
+
+void test_RevertToIdleWhenNoLongerMultiWriteBusy(void)
+{
+  sdcard1.status = SdCard_MultiWriteBusy;
+  sdcard1.input_buf[0] = 0xFF; // line = high = no longer busy
+
+  // Run the callback function
+  sdcard_spicallback(&sdcard1.spi_t);
+
+  TEST_ASSERT_EQUAL(SdCard_MultiWriteIdle, sdcard1.status);
+}
+
+void test_RemainMultiWriteBusy(void)
+{
+  sdcard1.status = SdCard_MultiWriteBusy;
+  sdcard1.input_buf[0] = 0x00; // line = low = busy
+
+  // Run the callback function
+  sdcard_spicallback(&sdcard1.spi_t);
+
+  TEST_ASSERT_EQUAL(SdCard_MultiWriteBusy, sdcard1.status);
+}
+
+bool_t SpiSubmitCall_SendStopMultiWrite(struct spi_periph *p, struct spi_transaction *t, int cmock_num_calls)
+{
+  (void) p; (void) cmock_num_calls;
+  SpiSubmitCall_SendStopMultiWriteNrCalls++;
+
+  TEST_ASSERT_EQUAL(SPISelectUnselect, t->select);
+  TEST_ASSERT_EQUAL(1, t->output_length);
+  TEST_ASSERT_EQUAL(1, t->input_length);
+  TEST_ASSERT_EQUAL(SPITransDone, t->status);
+
+  TEST_ASSERT_EQUAL_HEX8(0xFD, t->output_buf[0]); // Stop Token for CMD25
+
+  // Callback
+  TEST_ASSERT_EQUAL_PTR(&sdcard_spicallback, t->after_cb);
+
+  return TRUE;
+}
+
+void test_StopWithMultiWrite(void)
+{
+  sdcard1.status = SdCard_MultiWriteIdle;
+  spi_submit_StubWithCallback(SpiSubmitCall_SendStopMultiWrite);
+
+  // Stop command
+  sdcard_multiwrite_stop(&sdcard1);
+
+  TEST_ASSERT_EQUAL_MESSAGE(1, SpiSubmitCall_SendStopMultiWriteNrCalls, "spi_submit call count mismatch.");
+}
+
+void test_DoNotStopIfNotMultiWriteIdleOrBusy(void)
+{
+  sdcard1.status = SdCard_Idle;
+
+  // Stop command
+  sdcard_multiwrite_stop(&sdcard1);
+  // Expect nothing
 }
 
 void test_SendErrorMessage(void)

@@ -78,7 +78,7 @@ void sd_logger_periodic(void)
       sdlogger.buffer_addr += SD_LOGGER_PACKET_SIZE;
 
       // Check if the buffer is now full. If so, write to SD card
-      if ((SD_LOGGER_BLOCK_SIZE - sdlogger.buffer_addr) < SD_LOGGER_PACKET_SIZE ) {
+      if ((SD_BLOCK_SIZE - sdlogger.buffer_addr) < SD_LOGGER_PACKET_SIZE ) {
         if (sdcard1.status != SdCard_Idle) {
           sdlogger.error_count++;
         }
@@ -97,7 +97,7 @@ void sd_logger_periodic(void)
       sd_logger_uint32_to_buffer(sdlogger.packet_count, &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET]);
       sd_logger_uint32_to_buffer(sdlogger.error_count, &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+4]);
       sd_logger_uint32_to_buffer(sdlogger.unique_id, &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+8]);
-      for (uint16_t i=12; i<SD_LOGGER_BLOCK_SIZE; i++) {
+      for (uint16_t i=12; i<SD_BLOCK_SIZE; i++) {
         sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+i] = 0x00;
       }
       sdcard_write_block(&sdcard1, 0x00000000);
@@ -138,7 +138,7 @@ void sd_logger_command(void)
       if (sdcard1.status != SdCard_Idle) {
         break;
       }
-      for (uint16_t i=0; i<SD_LOGGER_BLOCK_SIZE; i++) {
+      for (uint16_t i=0; i<SD_BLOCK_SIZE; i++) {
         sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + i] = 0x00;
       }
       sdcard_write_block(&sdcard1, 0x00000000);
@@ -158,7 +158,7 @@ void sd_logger_command(void)
       }
 
       // Fill rest of block with trailing zeros
-      for (uint16_t i = sdlogger.buffer_addr; i< (SD_LOGGER_BUFFER_OFFSET + SD_LOGGER_BLOCK_SIZE); i++) {
+      for (uint16_t i = sdlogger.buffer_addr; i< (SD_LOGGER_BUFFER_OFFSET + SD_BLOCK_SIZE); i++) {
         sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+i] = 0x00;
       }
       sdcard_write_block(&sdcard1, sdlogger.block_addr);
