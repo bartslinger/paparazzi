@@ -195,6 +195,9 @@
     <field name="data_7" type="int32"/>
     <field name="data_8" type="int32"/>
     <field name="data_9" type="int32"/>
+    <field name="data_10" type="int32"/>
+    <field name="data_11" type="int32"/>
+    <field name="data_12" type="int32"/>
   </message>
 
   <!-- ID 24 is free -->

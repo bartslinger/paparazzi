@@ -30,7 +30,7 @@
 #include "peripherals/sdcard.h"
 
 #define SD_LOGGER_BUFFER_OFFSET 1
-#define SD_LOGGER_PACKET_SIZE 40            /**< Number of bytes in each block */
+#define SD_LOGGER_PACKET_SIZE 52            /**< Number of bytes in a LogPacket */
 #define SD_LOGGER_PACKETS_PER_BLOCK (SD_BLOCK_SIZE/SD_LOGGER_PACKET_SIZE)
                                             /**< Number of packets per block */
 #define SD_LOGGER_BLOCK_PREAMBLE_SIZE 4     /**< 1 byte that contains the unique_id in each block */
@@ -68,6 +68,9 @@ struct LogPacket {
   int32_t data_7;
   int32_t data_8;
   int32_t data_9;
+  int32_t data_10;
+  int32_t data_11;
+  int32_t data_12;
 };
 
 struct SdLogger {

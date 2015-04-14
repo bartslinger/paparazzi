@@ -3,6 +3,7 @@
 #include "Mockmessages_testable.h"
 #include "peripherals/Mocksdcard.h"
 #include "subsystems/Mockimu.h"
+#include "subsystems/actuators/Mockactuators_pwm_arch.h"
 #include "loggers/sd_logger.h"
 
 #define S(x) #x
@@ -17,6 +18,9 @@ struct spi_periph spi2;
 
 // Actually defined in imu.c
 struct Imu imu;
+
+// Actually defined in actuators_pwm_arch.c
+int32_t actuators_pwm_values[ACTUATORS_PWM_NB];
 
 // Actually defined in uart.c
 struct uart_periph uart1;
@@ -50,6 +54,9 @@ void setUp(void)
   sdlogger.packet.data_7 = 568686;
   sdlogger.packet.data_8 = 568686;
   sdlogger.packet.data_9 = 568686;
+  sdlogger.packet.data_10 = 23432;
+  sdlogger.packet.data_11 = 23432;
+  sdlogger.packet.data_12 =  23432;
   sdlogger.timeout_counter = 87;
   Mocksdcard_Init();
 }
@@ -249,15 +256,17 @@ void test_LoggingDataBufferNotFull(void)
   imu.gyro_unscaled.p = 123123123;
   imu.gyro_unscaled.q = 456456456;
   imu.gyro_unscaled.r = 789789789;
-  imu.mag_unscaled.x = 321321321;
-  imu.mag_unscaled.y = 654654654;
-  imu.mag_unscaled.z = 987987987;
+  actuators_pwm_values[0] = 321321321;
+  actuators_pwm_values[2] = 654654654;
+  actuators_pwm_values[3] = 987987987;
+  actuators_pwm_values[4] = 159159159;
+  actuators_pwm_values[5] = 753753753;
 
   // Call the periodic loop
   helper_ExpectSdLoggerPeriodic();
 
   TEST_ASSERT_EQUAL(21, sdlogger.packet_count); // Increment 1
-  TEST_ASSERT_EQUAL(87, sdlogger.buffer_addr); // Added 10*4 bytes
+  TEST_ASSERT_EQUAL(47+(13*4), sdlogger.buffer_addr); // Added 12*4 bytes
   helper_CompareUInt32FromAddress(21, &sdcard1.output_buf[1+47], S__LINE__);
   helper_CompareInt32FromAddress(111222333, &sdcard1.output_buf[1+47+4], S__LINE__);
   helper_CompareInt32FromAddress(444555666, &sdcard1.output_buf[1+47+8], S__LINE__);
@@ -268,6 +277,9 @@ void test_LoggingDataBufferNotFull(void)
   helper_CompareInt32FromAddress(321321321, &sdcard1.output_buf[1+47+28], S__LINE__);
   helper_CompareInt32FromAddress(654654654, &sdcard1.output_buf[1+47+32], S__LINE__);
   helper_CompareInt32FromAddress(987987987, &sdcard1.output_buf[1+47+36], S__LINE__);
+  helper_CompareInt32FromAddress(159159159, &sdcard1.output_buf[1+47+40], S__LINE__);
+  helper_CompareInt32FromAddress(753753753, &sdcard1.output_buf[1+47+44], S__LINE__);
+  helper_CompareInt32FromAddress(0, &sdcard1.output_buf[1+47+48], S__LINE__); // reserved
 }
 
 
@@ -288,9 +300,11 @@ void test_LoggingDataBufferFullWriteToSD(void)
   imu.gyro_unscaled.p = 123123123;
   imu.gyro_unscaled.q = 456456456;
   imu.gyro_unscaled.r = 789789789;
-  imu.mag_unscaled.x = 321321321;
-  imu.mag_unscaled.y = 654654654;
-  imu.mag_unscaled.z = 987987987;
+  actuators_pwm_values[0] = 321321321;
+  actuators_pwm_values[2] = 654654654;
+  actuators_pwm_values[3] = 987987987;
+  actuators_pwm_values[4] = 159159159;
+  actuators_pwm_values[5] = 753753753;
 
   // Expection a write action on the SD card since buffer will be full after this one.
   sdcard_multiwrite_next_Expect(&sdcard1);
@@ -319,6 +333,9 @@ void test_LoggingDataBufferFullWriteToSD(void)
   helper_CompareInt32FromAddress(321321321, &sdcard1.output_buf[1+440+28], S__LINE__);
   helper_CompareInt32FromAddress(654654654, &sdcard1.output_buf[1+440+32], S__LINE__);
   helper_CompareInt32FromAddress(987987987, &sdcard1.output_buf[1+440+36], S__LINE__);
+  helper_CompareInt32FromAddress(159159159, &sdcard1.output_buf[1+440+40], S__LINE__);
+  helper_CompareInt32FromAddress(753753753, &sdcard1.output_buf[1+440+44], S__LINE__);
+  helper_CompareInt32FromAddress(0, &sdcard1.output_buf[1+440+48], S__LINE__); // reserved
 }
 
 void test_IncrementErrorCountWhenWritingWhileSdBusy(void)
@@ -384,7 +401,7 @@ void test_WriteSummaryBlockSdCardReady(void)
 
 void helper_ExpectSendLogPacket(void)
 {
-  testable_pprz_msg_send_LOG_DATAPACKET_Expect(&pprz_tp.trans_tx, &uart1.device, 5, &sdlogger.packet.time, &sdlogger.packet.data_1, &sdlogger.packet.data_2, &sdlogger.packet.data_3, &sdlogger.packet.data_4, &sdlogger.packet.data_5, &sdlogger.packet.data_6, &sdlogger.packet.data_7, &sdlogger.packet.data_8, &sdlogger.packet.data_9);
+  testable_pprz_msg_send_LOG_DATAPACKET_Expect(&pprz_tp.trans_tx, &uart1.device, 5, &sdlogger.packet.time, &sdlogger.packet.data_1, &sdlogger.packet.data_2, &sdlogger.packet.data_3, &sdlogger.packet.data_4, &sdlogger.packet.data_5, &sdlogger.packet.data_6, &sdlogger.packet.data_7, &sdlogger.packet.data_8, &sdlogger.packet.data_9, &sdlogger.packet.data_10, &sdlogger.packet.data_11, &sdlogger.packet.data_12);
   testable_pprz_msg_send_LOG_DATAPACKET_IgnoreArg_ac_id();
 }
 
@@ -413,16 +430,19 @@ void test_RequestStatusPacket(void)
   sdlogger.cmd = SdLoggerCmd_RequestStatusPacket;
   helper_ExpectSendLogPacket();
 
-  helper_WriteInt32ToAddress(12341234, &sdcard1.input_buf[0]);
-  helper_WriteUInt32ToAddress(123123, &sdcard1.input_buf[4]);
-  helper_WriteUInt32ToAddress(456456, &sdcard1.input_buf[8]);
-  helper_WriteUInt32ToAddress(789789, &sdcard1.input_buf[12]);
-  helper_WriteUInt32ToAddress(112233, &sdcard1.input_buf[16]);
-  helper_WriteUInt32ToAddress(445566, &sdcard1.input_buf[20]);
-  helper_WriteUInt32ToAddress(778899, &sdcard1.input_buf[24]);
-  helper_WriteUInt32ToAddress(321321, &sdcard1.input_buf[28]);
-  helper_WriteUInt32ToAddress(654654, &sdcard1.input_buf[32]);
-  helper_WriteUInt32ToAddress(987987, &sdcard1.input_buf[36]);
+  helper_WriteUInt32ToAddress(12341234, &sdcard1.input_buf[0]);
+  helper_WriteInt32ToAddress(123123, &sdcard1.input_buf[4]);
+  helper_WriteInt32ToAddress(456456, &sdcard1.input_buf[8]);
+  helper_WriteInt32ToAddress(789789, &sdcard1.input_buf[12]);
+  helper_WriteInt32ToAddress(112233, &sdcard1.input_buf[16]);
+  helper_WriteInt32ToAddress(445566, &sdcard1.input_buf[20]);
+  helper_WriteInt32ToAddress(778899, &sdcard1.input_buf[24]);
+  helper_WriteInt32ToAddress(321321, &sdcard1.input_buf[28]);
+  helper_WriteInt32ToAddress(654654, &sdcard1.input_buf[32]);
+  helper_WriteInt32ToAddress(987987, &sdcard1.input_buf[36]);
+  helper_WriteInt32ToAddress(753753, &sdcard1.input_buf[40]);
+  helper_WriteInt32ToAddress(159159, &sdcard1.input_buf[44]);
+  helper_WriteInt32ToAddress(951951, &sdcard1.input_buf[48]);
 
   // Call the command function
   sd_logger_command();
@@ -437,6 +457,9 @@ void test_RequestStatusPacket(void)
   TEST_ASSERT_EQUAL(321321, sdlogger.packet.data_7);
   TEST_ASSERT_EQUAL(654654, sdlogger.packet.data_8);
   TEST_ASSERT_EQUAL(987987, sdlogger.packet.data_9);
+  TEST_ASSERT_EQUAL(753753, sdlogger.packet.data_10);
+  TEST_ASSERT_EQUAL(159159, sdlogger.packet.data_11);
+  TEST_ASSERT_EQUAL(951951, sdlogger.packet.data_12);
   TEST_ASSERT_EQUAL_HEX8(SdLoggerCmd_Nothing, sdlogger.cmd); // Always reset
 }
 
@@ -485,6 +508,9 @@ void test_SendStatusPacketByCallback(void)
   helper_WriteInt32ToAddress(321321, &sdcard1.input_buf[28]);
   helper_WriteInt32ToAddress(654654, &sdcard1.input_buf[32]);
   helper_WriteInt32ToAddress(987987, &sdcard1.input_buf[36]);
+  helper_WriteInt32ToAddress(753753, &sdcard1.input_buf[40]);
+  helper_WriteInt32ToAddress(159159, &sdcard1.input_buf[44]);
+  helper_WriteInt32ToAddress(951951, &sdcard1.input_buf[48]);
 
   // Call the command function
   sd_logger_statusblock_ready();
@@ -499,6 +525,9 @@ void test_SendStatusPacketByCallback(void)
   TEST_ASSERT_EQUAL(321321, sdlogger.packet.data_7);
   TEST_ASSERT_EQUAL(654654, sdlogger.packet.data_8);
   TEST_ASSERT_EQUAL(987987, sdlogger.packet.data_9);
+  TEST_ASSERT_EQUAL(753753, sdlogger.packet.data_10);
+  TEST_ASSERT_EQUAL(159159, sdlogger.packet.data_11);
+  TEST_ASSERT_EQUAL(951951, sdlogger.packet.data_12);
 
   TEST_ASSERT_EQUAL(0x00000000, sdlogger.block_addr);
   TEST_ASSERT_EQUAL(SdLogger_DataAvailable, sdlogger.status);
@@ -511,20 +540,23 @@ void test_RequestPacketFromBuffer(void)
   sdlogger.status = SdLogger_DataAvailable;
   sdlogger.block_addr = 0x00000002;
   sdlogger.cmd = SdLoggerCmd_Nothing;
-  sdlogger.request_id = 14; // 2nd packet at block address 2
+  sdlogger.request_id = 11; // 2nd packet at block address 2
   helper_ExpectSendLogPacket();
 
   helper_WriteUInt32ToAddress(0xCAFEBEEF, &sdcard1.input_buf[0]);
-  helper_WriteUInt32ToAddress(12341234, &sdcard1.input_buf[4+40+0]);
-  helper_WriteInt32ToAddress(123123, &sdcard1.input_buf[4+40+4]);
-  helper_WriteInt32ToAddress(456456, &sdcard1.input_buf[4+40+8]);
-  helper_WriteInt32ToAddress(789789, &sdcard1.input_buf[4+40+12]);
-  helper_WriteInt32ToAddress(112233, &sdcard1.input_buf[4+40+16]);
-  helper_WriteInt32ToAddress(445566, &sdcard1.input_buf[4+40+20]);
-  helper_WriteInt32ToAddress(778899, &sdcard1.input_buf[4+40+24]);
-  helper_WriteInt32ToAddress(321321, &sdcard1.input_buf[4+40+28]);
-  helper_WriteInt32ToAddress(654654, &sdcard1.input_buf[4+40+32]);
-  helper_WriteInt32ToAddress(987987, &sdcard1.input_buf[4+40+36]);
+  helper_WriteUInt32ToAddress(12341234, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+0]);
+  helper_WriteInt32ToAddress(123123, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+4]);
+  helper_WriteInt32ToAddress(456456, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+8]);
+  helper_WriteInt32ToAddress(789789, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+12]);
+  helper_WriteInt32ToAddress(112233, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+16]);
+  helper_WriteInt32ToAddress(445566, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+20]);
+  helper_WriteInt32ToAddress(778899, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+24]);
+  helper_WriteInt32ToAddress(321321, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+28]);
+  helper_WriteInt32ToAddress(654654, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+32]);
+  helper_WriteInt32ToAddress(987987, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+36]);
+  helper_WriteInt32ToAddress(753753, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+40]);
+  helper_WriteInt32ToAddress(159159, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+44]);
+  helper_WriteInt32ToAddress(951951, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+48]);
 
   // Command callback
   sd_logger_command();
@@ -539,6 +571,9 @@ void test_RequestPacketFromBuffer(void)
   TEST_ASSERT_EQUAL(321321, sdlogger.packet.data_7);
   TEST_ASSERT_EQUAL(654654, sdlogger.packet.data_8);
   TEST_ASSERT_EQUAL(987987, sdlogger.packet.data_9);
+  TEST_ASSERT_EQUAL(753753, sdlogger.packet.data_10);
+  TEST_ASSERT_EQUAL(159159, sdlogger.packet.data_11);
+  TEST_ASSERT_EQUAL(951951, sdlogger.packet.data_12);
 
 }
 
@@ -571,20 +606,23 @@ void test_RequestAnotherPacketFromBuffer(void)
   sdlogger.status = SdLogger_DataAvailable;
   sdlogger.block_addr = 0x00000002;
   sdlogger.cmd = SdLoggerCmd_Nothing;
-  sdlogger.request_id = 15; // 3nd packet at block 2
+  sdlogger.request_id = 12; // 3nd packet at block 2
   helper_ExpectSendLogPacket();
 
   helper_WriteUInt32ToAddress(0xCAFEBEEF, &sdcard1.input_buf[0]);
-  helper_WriteUInt32ToAddress(12341234, &sdcard1.input_buf[4+80+0]);
-  helper_WriteInt32ToAddress(123123, &sdcard1.input_buf[4+80+4]);
-  helper_WriteInt32ToAddress(456456, &sdcard1.input_buf[4+80+8]);
-  helper_WriteInt32ToAddress(789789, &sdcard1.input_buf[4+80+12]);
-  helper_WriteInt32ToAddress(112233, &sdcard1.input_buf[4+80+16]);
-  helper_WriteInt32ToAddress(445566, &sdcard1.input_buf[4+80+20]);
-  helper_WriteInt32ToAddress(778899, &sdcard1.input_buf[4+80+24]);
-  helper_WriteInt32ToAddress(321321, &sdcard1.input_buf[4+80+28]);
-  helper_WriteInt32ToAddress(654654, &sdcard1.input_buf[4+80+32]);
-  helper_WriteInt32ToAddress(987987, &sdcard1.input_buf[4+80+36]);
+  helper_WriteUInt32ToAddress(12341234, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+0]);
+  helper_WriteInt32ToAddress(123123, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+4]);
+  helper_WriteInt32ToAddress(456456, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+8]);
+  helper_WriteInt32ToAddress(789789, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+12]);
+  helper_WriteInt32ToAddress(112233, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+16]);
+  helper_WriteInt32ToAddress(445566, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+20]);
+  helper_WriteInt32ToAddress(778899, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+24]);
+  helper_WriteInt32ToAddress(321321, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+28]);
+  helper_WriteInt32ToAddress(654654, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+32]);
+  helper_WriteInt32ToAddress(987987, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+36]);
+  helper_WriteInt32ToAddress(159159, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+40]);
+  helper_WriteInt32ToAddress(951951, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+44]);
+  helper_WriteInt32ToAddress(753753, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+48]);
 
   // Command callback
   sd_logger_command();
@@ -599,6 +637,9 @@ void test_RequestAnotherPacketFromBuffer(void)
   TEST_ASSERT_EQUAL(321321, sdlogger.packet.data_7);
   TEST_ASSERT_EQUAL(654654, sdlogger.packet.data_8);
   TEST_ASSERT_EQUAL(987987, sdlogger.packet.data_9);
+  TEST_ASSERT_EQUAL(159159, sdlogger.packet.data_10);
+  TEST_ASSERT_EQUAL(951951, sdlogger.packet.data_11);
+  TEST_ASSERT_EQUAL(753753, sdlogger.packet.data_12);
 }
 
 void test_RequestLastPacketFromBuffer(void)
@@ -607,20 +648,23 @@ void test_RequestLastPacketFromBuffer(void)
   sdlogger.status = SdLogger_DataAvailable;
   sdlogger.block_addr = 0x00000001;
   sdlogger.cmd = SdLoggerCmd_Nothing;
-  sdlogger.request_id = 12; // last packet at block 1
+  sdlogger.request_id = 9; // last packet at block 1
   helper_ExpectSendLogPacket();
 
   helper_WriteUInt32ToAddress(0xCAFEBEEF, &sdcard1.input_buf[0]);
-  helper_WriteUInt32ToAddress(12341234, &sdcard1.input_buf[4+440+0]);
-  helper_WriteInt32ToAddress(123123, &sdcard1.input_buf[4+440+4]);
-  helper_WriteInt32ToAddress(456456, &sdcard1.input_buf[4+440+8]);
-  helper_WriteInt32ToAddress(789789, &sdcard1.input_buf[4+440+12]);
-  helper_WriteInt32ToAddress(112233, &sdcard1.input_buf[4+440+16]);
-  helper_WriteInt32ToAddress(445566, &sdcard1.input_buf[4+440+20]);
-  helper_WriteInt32ToAddress(778899, &sdcard1.input_buf[4+440+24]);
-  helper_WriteInt32ToAddress(321321, &sdcard1.input_buf[4+440+28]);
-  helper_WriteInt32ToAddress(654654, &sdcard1.input_buf[4+440+32]);
-  helper_WriteInt32ToAddress(987987, &sdcard1.input_buf[4+440+36]);
+  helper_WriteUInt32ToAddress(12341234, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+0]);
+  helper_WriteInt32ToAddress(123123, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+4]);
+  helper_WriteInt32ToAddress(456456, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+8]);
+  helper_WriteInt32ToAddress(789789, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+12]);
+  helper_WriteInt32ToAddress(112233, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+16]);
+  helper_WriteInt32ToAddress(445566, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+20]);
+  helper_WriteInt32ToAddress(778899, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+24]);
+  helper_WriteInt32ToAddress(321321, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+28]);
+  helper_WriteInt32ToAddress(654654, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+32]);
+  helper_WriteInt32ToAddress(987987, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+36]);
+  helper_WriteInt32ToAddress(159159, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+40]);
+  helper_WriteInt32ToAddress(951951, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+44]);
+  helper_WriteInt32ToAddress(753753, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+48]);
 
   // Command callback
   sd_logger_command();
@@ -635,6 +679,10 @@ void test_RequestLastPacketFromBuffer(void)
   TEST_ASSERT_EQUAL(321321, sdlogger.packet.data_7);
   TEST_ASSERT_EQUAL(654654, sdlogger.packet.data_8);
   TEST_ASSERT_EQUAL(987987, sdlogger.packet.data_9);
+  TEST_ASSERT_EQUAL(159159, sdlogger.packet.data_10);
+  TEST_ASSERT_EQUAL(951951, sdlogger.packet.data_11);
+  TEST_ASSERT_EQUAL(753753, sdlogger.packet.data_12);
+
 }
 
 void test_ReplyWithZerosIfUniqueIdMismatch(void)
@@ -643,7 +691,7 @@ void test_ReplyWithZerosIfUniqueIdMismatch(void)
   sdlogger.status = SdLogger_DataAvailable;
   sdlogger.block_addr = 0x00000001;
   sdlogger.cmd = SdLoggerCmd_Nothing;
-  sdlogger.request_id = 12; // last packet at block 1
+  sdlogger.request_id = 9; // last packet at block 1
   helper_ExpectSendLogPacket();
 
   helper_WriteUInt32ToAddress(0x0000BEEF, &sdcard1.input_buf[0]); // Not matching with unique_id
@@ -661,6 +709,9 @@ void test_ReplyWithZerosIfUniqueIdMismatch(void)
   TEST_ASSERT_EQUAL(0, sdlogger.packet.data_7);
   TEST_ASSERT_EQUAL(0, sdlogger.packet.data_8);
   TEST_ASSERT_EQUAL(0, sdlogger.packet.data_9);
+  TEST_ASSERT_EQUAL(0, sdlogger.packet.data_10);
+  TEST_ASSERT_EQUAL(0, sdlogger.packet.data_11);
+  TEST_ASSERT_EQUAL(0, sdlogger.packet.data_12);
 }
 
 void test_RequestPacketFromAnotherBlock(void)
@@ -668,7 +719,7 @@ void test_RequestPacketFromAnotherBlock(void)
   sdlogger.status = SdLogger_DataAvailable;
   sdlogger.block_addr = 0x00000001; // wrong block
   sdlogger.cmd = SdLoggerCmd_Nothing;
-  sdlogger.request_id = 13; // 1st packet at block 2
+  sdlogger.request_id = 10; // 1st packet at block 2
 
   // Using callback function to proceed when data is available
   sdcard_read_block_Expect(&sdcard1, 0x00000002, &sd_logger_packetblock_ready);
@@ -728,7 +779,7 @@ void test_CallbackProcessingPacketRequest(void)
 {
   sdlogger.unique_id = 0xCAFEBEEF;
   sdlogger.status = SdLogger_ReadingBlock;
-  sdlogger.request_id = 13; // 1st packet at block 2
+  sdlogger.request_id = 10; // 1st packet at block 2
 
   helper_WriteUInt32ToAddress(0xCAFEBEEF, &sdcard1.input_buf[0]);
   helper_WriteUInt32ToAddress(12341234, &sdcard1.input_buf[4+0]);
@@ -741,6 +792,10 @@ void test_CallbackProcessingPacketRequest(void)
   helper_WriteInt32ToAddress(321321, &sdcard1.input_buf[4+28]);
   helper_WriteInt32ToAddress(654654, &sdcard1.input_buf[4+32]);
   helper_WriteInt32ToAddress(987987, &sdcard1.input_buf[4+36]);
+  helper_WriteInt32ToAddress(753753, &sdcard1.input_buf[4+40]);
+  helper_WriteInt32ToAddress(159159, &sdcard1.input_buf[4+44]);
+  helper_WriteInt32ToAddress(951951, &sdcard1.input_buf[4+48]);
+
   helper_ExpectSendLogPacket();
 
   // The callback from sdcard read
@@ -756,6 +811,9 @@ void test_CallbackProcessingPacketRequest(void)
   TEST_ASSERT_EQUAL(321321, sdlogger.packet.data_7);
   TEST_ASSERT_EQUAL(654654, sdlogger.packet.data_8);
   TEST_ASSERT_EQUAL(987987, sdlogger.packet.data_9);
+  TEST_ASSERT_EQUAL(753753, sdlogger.packet.data_10);
+  TEST_ASSERT_EQUAL(159159, sdlogger.packet.data_11);
+  TEST_ASSERT_EQUAL(951951, sdlogger.packet.data_12);
   TEST_ASSERT_EQUAL(SdLogger_DataAvailable, sdlogger.status);
 
 }
@@ -764,19 +822,22 @@ void test_CallbackProcessingPacketRequestAnother(void)
 {
   sdlogger.unique_id = 0xCAFEBEEF;
   sdlogger.status = SdLogger_ReadingBlock;
-  sdlogger.request_id = 15; // 3rd packet at block 2
+  sdlogger.request_id = 12; // 3rd packet at block 2
 
   helper_WriteUInt32ToAddress(0xCAFEBEEF, &sdcard1.input_buf[0]);
-  helper_WriteUInt32ToAddress(12341234, &sdcard1.input_buf[4+80+0]);
-  helper_WriteInt32ToAddress(123123, &sdcard1.input_buf[4+80+4]);
-  helper_WriteInt32ToAddress(456456, &sdcard1.input_buf[4+80+8]);
-  helper_WriteInt32ToAddress(789789, &sdcard1.input_buf[4+80+12]);
-  helper_WriteInt32ToAddress(112233, &sdcard1.input_buf[4+80+16]);
-  helper_WriteInt32ToAddress(445566, &sdcard1.input_buf[4+80+20]);
-  helper_WriteInt32ToAddress(778899, &sdcard1.input_buf[4+80+24]);
-  helper_WriteInt32ToAddress(321321, &sdcard1.input_buf[4+80+28]);
-  helper_WriteInt32ToAddress(654654, &sdcard1.input_buf[4+80+32]);
-  helper_WriteInt32ToAddress(987987, &sdcard1.input_buf[4+80+36]);
+  helper_WriteUInt32ToAddress(12341234, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+0]);
+  helper_WriteInt32ToAddress(123123, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+4]);
+  helper_WriteInt32ToAddress(456456, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+8]);
+  helper_WriteInt32ToAddress(789789, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+12]);
+  helper_WriteInt32ToAddress(112233, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+16]);
+  helper_WriteInt32ToAddress(445566, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+20]);
+  helper_WriteInt32ToAddress(778899, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+24]);
+  helper_WriteInt32ToAddress(321321, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+28]);
+  helper_WriteInt32ToAddress(654654, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+32]);
+  helper_WriteInt32ToAddress(987987, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+36]);
+  helper_WriteInt32ToAddress(753753, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+40]);
+  helper_WriteInt32ToAddress(159159, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+44]);
+  helper_WriteInt32ToAddress(951951, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+48]);
   helper_ExpectSendLogPacket();
 
   // The callback from sdcard read
@@ -792,6 +853,9 @@ void test_CallbackProcessingPacketRequestAnother(void)
   TEST_ASSERT_EQUAL(321321, sdlogger.packet.data_7);
   TEST_ASSERT_EQUAL(654654, sdlogger.packet.data_8);
   TEST_ASSERT_EQUAL(987987, sdlogger.packet.data_9);
+  TEST_ASSERT_EQUAL(753753, sdlogger.packet.data_10);
+  TEST_ASSERT_EQUAL(159159, sdlogger.packet.data_11);
+  TEST_ASSERT_EQUAL(951951, sdlogger.packet.data_12);
   TEST_ASSERT_EQUAL(SdLogger_DataAvailable, sdlogger.status);
 
 }

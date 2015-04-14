@@ -32,6 +32,7 @@
 #endif // TEST
 
 #include "subsystems/imu.h"
+#include "subsystems/actuators/actuators_pwm_arch.h"
 #include "sd_logger.h"
 
 // defined in sdcard.c
@@ -72,9 +73,12 @@ void sd_logger_periodic(void)
       sd_logger_int32_to_buffer(imu.gyro_unscaled.p, &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+sdlogger.buffer_addr+16]);
       sd_logger_int32_to_buffer(imu.gyro_unscaled.q, &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+sdlogger.buffer_addr+20]);
       sd_logger_int32_to_buffer(imu.gyro_unscaled.r, &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+sdlogger.buffer_addr+24]);
-      sd_logger_int32_to_buffer(imu.mag_unscaled.x, &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+sdlogger.buffer_addr+28]);
-      sd_logger_int32_to_buffer(imu.mag_unscaled.y, &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+sdlogger.buffer_addr+32]);
-      sd_logger_int32_to_buffer(imu.mag_unscaled.z, &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+sdlogger.buffer_addr+36]);
+      sd_logger_int32_to_buffer(actuators_pwm_values[0], &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+sdlogger.buffer_addr+28]);
+      sd_logger_int32_to_buffer(actuators_pwm_values[2], &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+sdlogger.buffer_addr+32]);
+      sd_logger_int32_to_buffer(actuators_pwm_values[3], &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+sdlogger.buffer_addr+36]);
+      sd_logger_int32_to_buffer(actuators_pwm_values[4], &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+sdlogger.buffer_addr+40]);
+      sd_logger_int32_to_buffer(actuators_pwm_values[5], &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+sdlogger.buffer_addr+44]);
+      sd_logger_int32_to_buffer(0, &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+sdlogger.buffer_addr+48]); // reserved for something
       sdlogger.buffer_addr += SD_LOGGER_PACKET_SIZE;
 
       // Check if the buffer is now full. If so, write to SD card
@@ -238,7 +242,10 @@ void sd_logger_packetblock_ready(void)
     sdlogger.packet.data_7 = 0;
     sdlogger.packet.data_8 = 0;
     sdlogger.packet.data_9 = 0;
-    DOWNLINK_SEND_LOG_DATAPACKET(DefaultChannel, DefaultDevice, &sdlogger.packet.time, &sdlogger.packet.data_1, &sdlogger.packet.data_2, &sdlogger.packet.data_3, &sdlogger.packet.data_4, &sdlogger.packet.data_5, &sdlogger.packet.data_6, &sdlogger.packet.data_7, &sdlogger.packet.data_8, &sdlogger.packet.data_9);
+    sdlogger.packet.data_10 = 0;
+    sdlogger.packet.data_11 = 0;
+    sdlogger.packet.data_12 = 0;
+    DOWNLINK_SEND_LOG_DATAPACKET(DefaultChannel, DefaultDevice, &sdlogger.packet.time, &sdlogger.packet.data_1, &sdlogger.packet.data_2, &sdlogger.packet.data_3, &sdlogger.packet.data_4, &sdlogger.packet.data_5, &sdlogger.packet.data_6, &sdlogger.packet.data_7, &sdlogger.packet.data_8, &sdlogger.packet.data_9, &sdlogger.packet.data_10, &sdlogger.packet.data_11, &sdlogger.packet.data_12);
   }
   else {
     sd_logger_send_packet_from_buffer( ((sdlogger.request_id - 1) % SD_LOGGER_PACKETS_PER_BLOCK) * SD_LOGGER_PACKET_SIZE + SD_LOGGER_BLOCK_PREAMBLE_SIZE );
@@ -258,7 +265,10 @@ void sd_logger_send_packet_from_buffer(uint16_t buffer_idx)
   sdlogger.packet.data_7 = sd_logger_get_int32(&sdcard1.input_buf[buffer_idx+28]);
   sdlogger.packet.data_8 = sd_logger_get_int32(&sdcard1.input_buf[buffer_idx+32]);
   sdlogger.packet.data_9 = sd_logger_get_int32(&sdcard1.input_buf[buffer_idx+36]);
-  DOWNLINK_SEND_LOG_DATAPACKET(DefaultChannel, DefaultDevice, &sdlogger.packet.time, &sdlogger.packet.data_1, &sdlogger.packet.data_2, &sdlogger.packet.data_3, &sdlogger.packet.data_4, &sdlogger.packet.data_5, &sdlogger.packet.data_6, &sdlogger.packet.data_7, &sdlogger.packet.data_8, &sdlogger.packet.data_9);
+  sdlogger.packet.data_10 = sd_logger_get_int32(&sdcard1.input_buf[buffer_idx+40]);
+  sdlogger.packet.data_11 = sd_logger_get_int32(&sdcard1.input_buf[buffer_idx+44]);
+  sdlogger.packet.data_12 = sd_logger_get_int32(&sdcard1.input_buf[buffer_idx+48]);
+  DOWNLINK_SEND_LOG_DATAPACKET(DefaultChannel, DefaultDevice, &sdlogger.packet.time, &sdlogger.packet.data_1, &sdlogger.packet.data_2, &sdlogger.packet.data_3, &sdlogger.packet.data_4, &sdlogger.packet.data_5, &sdlogger.packet.data_6, &sdlogger.packet.data_7, &sdlogger.packet.data_8, &sdlogger.packet.data_9, &sdlogger.packet.data_10, &sdlogger.packet.data_11, &sdlogger.packet.data_12);
 }
 
 void sd_logger_int32_to_buffer(const int32_t value, uint8_t *target)
