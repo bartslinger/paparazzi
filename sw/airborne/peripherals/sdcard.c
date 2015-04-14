@@ -380,11 +380,25 @@ void sdcard_spicallback(struct spi_transaction *t)
       }
       break;
 
+    /*  */
+    case SdCard_MultiWriteWriting:
+      if ((sdcard1.input_buf[SD_BLOCK_SIZE+3] & 0x0F) == 0x05) {
+        sdcard1.status = SdCard_MultiWriteBusy;
+      }
+      else {
+        sdcard1.status = SdCard_Error;
+      }
+      break;
+
     /* Check if sd card is still busy after a packet during multiwrite */
     case SdCard_MultiWriteBusy:
       if (sdcard1.input_buf[0] != 0x00) {
         sdcard1.status = SdCard_MultiWriteIdle;
       }
+      break;
+
+    case SdCard_MultiWriteStopping:
+      sdcard1.status = SdCard_Busy;
       break;
 
     /* Should not reach this */
@@ -521,6 +535,7 @@ void sdcard_multiwrite_next(struct SdCard *sdcard)
   }
   sdcard->spi_t.input_length = 516;
   sdcard->spi_t.output_length = 516;
+  sdcard->spi_t.cdiv = SPIDiv32;
   sdcard->spi_t.output_buf[0] = 0xFC;
   sdcard->spi_t.output_buf[513] = 0xFF; // CRC byte 1
   sdcard->spi_t.output_buf[514] = 0xFF; // CRC byte 2
@@ -529,7 +544,7 @@ void sdcard_multiwrite_next(struct SdCard *sdcard)
 
   spi_submit(sdcard->spi_p, &sdcard->spi_t);
 
-  sdcard->status = SdCard_MultiWriteBusy;
+  sdcard->status = SdCard_MultiWriteWriting;
 }
 
 void sdcard_multiwrite_stop(struct SdCard *sdcard)
@@ -538,9 +553,12 @@ void sdcard_multiwrite_stop(struct SdCard *sdcard)
   {
     return;
   }
-  sdcard->spi_t.input_length = 1;
-  sdcard->spi_t.output_length = 1;
+  sdcard->spi_t.input_length = 2;
+  sdcard->spi_t.output_length = 2;
+  sdcard->spi_t.cdiv = SPIDiv8;
   sdcard->output_buf[0] = 0xFD;
+  sdcard->output_buf[1] = 0xFF;
   sdcard->spi_t.after_cb = &sdcard_spicallback;
   spi_submit(sdcard->spi_p, &sdcard->spi_t);
+  sdcard->status = SdCard_MultiWriteStopping;
 }

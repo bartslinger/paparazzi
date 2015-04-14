@@ -141,6 +141,9 @@ class SDLogDownloadFrame(wx.Frame):
         elif self.last_command == 57:
             self.download_timer.cancel()
             self.inDataLabel.SetLabel(message)
+            fh = open("/home/bart/test.txt", "a")
+            fh.write(message + "\n")
+            fh.close()
             percentage = (self.download_counter * 100)/self.download_available
             self.progressBar.SetValue(percentage)
             self.download_counter += 1

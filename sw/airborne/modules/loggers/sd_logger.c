@@ -79,11 +79,11 @@ void sd_logger_periodic(void)
 
       // Check if the buffer is now full. If so, write to SD card
       if ((SD_BLOCK_SIZE - sdlogger.buffer_addr) < SD_LOGGER_PACKET_SIZE ) {
-        if (sdcard1.status != SdCard_Idle) {
+        if (sdcard1.status != SdCard_MultiWriteIdle) {
           sdlogger.error_count++;
         }
         sd_logger_uint32_to_buffer(sdlogger.unique_id, &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET]);
-        sdcard_write_block(&sdcard1, sdlogger.block_addr);
+        sdcard_multiwrite_next(&sdcard1);
         sdlogger.buffer_addr = SD_LOGGER_BLOCK_PREAMBLE_SIZE;
         sdlogger.block_addr++;
       }
@@ -94,20 +94,28 @@ void sd_logger_periodic(void)
       if (sdcard1.status != SdCard_Idle) {
         break;
       }
-      sd_logger_uint32_to_buffer(sdlogger.packet_count, &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET]);
-      sd_logger_uint32_to_buffer(sdlogger.error_count, &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+4]);
-      sd_logger_uint32_to_buffer(sdlogger.unique_id, &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+8]);
+      sd_logger_uint32_to_buffer(sdlogger.packet_count, &sdcard1.output_buf[6]);
+      sd_logger_uint32_to_buffer(sdlogger.error_count, &sdcard1.output_buf[6+4]);
+      sd_logger_uint32_to_buffer(sdlogger.unique_id, &sdcard1.output_buf[6+8]);
       for (uint16_t i=12; i<SD_BLOCK_SIZE; i++) {
-        sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+i] = 0x00;
+        sdcard1.output_buf[6+i] = 0x00;
       }
       sdcard_write_block(&sdcard1, 0x00000000);
       sdlogger.status = SdLogger_Idle;
       break;
 
     case SdLogger_BeforeLogging:
-      if (sdcard1.status == SdCard_Idle) {
+      if (sdcard1.status == SdCard_MultiWriteIdle) {
           sdlogger.status = SdLogger_Logging;
       }
+      break;
+
+    case SdLogger_StopLogging:
+      if (sdcard1.status != SdCard_MultiWriteIdle) {
+        break;
+      }
+      sdcard_multiwrite_stop(&sdcard1);
+      sdlogger.status = SdLogger_WriteStatusPacket;
       break;
 
     case SdLogger_Idle:
@@ -138,12 +146,8 @@ void sd_logger_command(void)
       if (sdcard1.status != SdCard_Idle) {
         break;
       }
-      for (uint16_t i=0; i<SD_BLOCK_SIZE; i++) {
-        sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + i] = 0x00;
-      }
-      sdcard_write_block(&sdcard1, 0x00000000);
+      sdcard_multiwrite_start(&sdcard1, 0x00000001);
       sdlogger.status = SdLogger_BeforeLogging;
-      sdlogger.block_addr = 0x00000001;
       sdlogger.buffer_addr = SD_LOGGER_BLOCK_PREAMBLE_SIZE;
       sdlogger.packet_count = 0;
       sdlogger.error_count = 0;
@@ -161,8 +165,8 @@ void sd_logger_command(void)
       for (uint16_t i = sdlogger.buffer_addr; i< (SD_LOGGER_BUFFER_OFFSET + SD_BLOCK_SIZE); i++) {
         sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET+i] = 0x00;
       }
-      sdcard_write_block(&sdcard1, sdlogger.block_addr);
-      sdlogger.status = SdLogger_WriteStatusPacket;
+      sdcard_multiwrite_next(&sdcard1);
+      sdlogger.status = SdLogger_StopLogging;
       break;
 
     /* Request status byte */

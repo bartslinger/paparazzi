@@ -88,7 +88,9 @@ enum SdCardStatus {
   SdCard_SendingCMD25,                      /**< Busy sending CMD25 (multiwrite start command) */
   SdCard_ReadingCMD25Resp,                  /**< Reading R1 response to CMD25 byte by byte */
   SdCard_MultiWriteIdle,                    /**< CMD25 complete, ready to sent blocks */
-  SdCard_MultiWriteBusy,                    /**< Busy sending data block in multiwrite */
+  SdCard_MultiWriteWriting,                 /**< Busy with the SPI transfer in multiwrite */
+  SdCard_MultiWriteBusy,                    /**< Busy flag after sending data block in multiwrite */
+  SdCard_MultiWriteStopping,                /**< Busy sending the stop token */
   bladiebla
 };
 

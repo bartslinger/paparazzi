@@ -29,7 +29,7 @@
 
 #include "peripherals/sdcard.h"
 
-#define SD_LOGGER_BUFFER_OFFSET 6
+#define SD_LOGGER_BUFFER_OFFSET 1
 #define SD_LOGGER_PACKET_SIZE 40            /**< Number of bytes in each block */
 #define SD_LOGGER_PACKETS_PER_BLOCK (SD_BLOCK_SIZE/SD_LOGGER_PACKET_SIZE)
                                             /**< Number of packets per block */
@@ -42,7 +42,8 @@ enum SdLoggerStatus{
   SdLogger_Error,                           /**< Something failed */
   SdLogger_BeforeLogging,                   /**< Clear status block before start with logging */
   SdLogger_Logging,                         /**< Recording data */
-  SdLogger_WriteStatusPacket,               /**< Stop logging, writing summary info to block 0 */
+  SdLogger_StopLogging,                     /**< Stop multiwrite on the sd card with stop token */
+  SdLogger_WriteStatusPacket,               /**< After stopping, writing summary info to block 0 */
   SdLogger_DataAvailable,                   /**< In this state, the sdcard input buffer has data from address block_addr */
   SdLogger_ReadingBlock,                    /**< Temporary status when reading block until the callback */
   blabla
