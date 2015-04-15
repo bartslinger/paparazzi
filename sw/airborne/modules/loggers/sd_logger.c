@@ -36,7 +36,7 @@
 #include "sd_logger.h"
 
 // defined in sdcard.c
-extern struct SdCard sdcard1;
+//extern struct SdCard sdcard1;
 
 struct SdLogger sdlogger;
 

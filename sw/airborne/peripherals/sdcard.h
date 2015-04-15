@@ -91,7 +91,6 @@ enum SdCardStatus {
   SdCard_MultiWriteWriting,                 /**< Busy with the SPI transfer in multiwrite */
   SdCard_MultiWriteBusy,                    /**< Busy flag after sending data block in multiwrite */
   SdCard_MultiWriteStopping,                /**< Busy sending the stop token */
-  bladiebla
 };
 
 struct SdCard{
