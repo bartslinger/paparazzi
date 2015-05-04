@@ -10,8 +10,8 @@
         <dl_setting module="loggers/sd_logger" var="sdlogger.unique_id" min="0" max="10000000" step="1"/>
         <dl_setting module="loggers/sd_logger" var="sdlogger.request_id" min="0" max="10000000" step="1"/>
         <dl_setting module="loggers/sd_logger" var="sdlogger.cmd" min="0" max="255" step="1"/>
-        <dl_setting module="loggers/sd_logger" var="sdlogger.status" min="0" max="255" step="1" values="UnInit|Initializing|Idle|Error|BeforeLogging|Logging|WriteStatusPacket|DataAvailable|ReadingBlock"/>
-        <dl_setting module="loggers/sd_logger" var="sdcard1.status" min="0" max="255" step="1" values="UnInit|Error|Idle|Busy|BeforeDummyClock|SendingDummyClock|SendingCMD0|ReadingCMD0Resp|SendingCMD8|ReadingCMD8Resp|ReadingCMD8Parameter|SendingACMD41v2|ReadingACMD41v2Resp|SendingCMD58|ReadingCMD58Resp|ReadingCMD58Parameter|SendingCMD16|ReadingCMD16Resp|SendingCMD24|ReadingCMD24Resp|BeforeSendingDataBlock|SendingDataBlock|SendingCMD17|ReadingCMD17Resp|WaitingForDataToken|ReadingDataBlock"/>
+        <dl_setting module="loggers/sd_logger" var="sdlogger.status" min="0" max="255" step="1"/>
+        <dl_setting module="loggers/sd_logger" var="sdcard1.status" min="0" max="255" step="1"/>
       </dl_settings>
     </dl_settings>
   </settings>
@@ -28,6 +28,6 @@
     <define name="USE_SPI_SLAVE3" value="1" />
     <define name="SD_LOGGER_SPI_LINK_SLAVE_NUMBER" value="SPI_SLAVE3" />
     <file name="sd_logger.c"/>
-    <file name="sdcard.c" dir="peripherals"/>
+    <file name="sdcard_spi.c" dir="peripherals"/>
   </makefile>
 </module>

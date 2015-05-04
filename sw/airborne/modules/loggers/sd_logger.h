@@ -27,15 +27,15 @@
 #ifndef SD_LOGGER_H_
 #define SD_LOGGER_H_
 
-#include "peripherals/sdcard.h"
+#include "peripherals/sdcard_spi.h"
 
 #define SD_LOGGER_BUFFER_OFFSET 1
 #define SD_LOGGER_PACKET_SIZE 52            /**< Number of bytes in a LogPacket */
 #define SD_LOGGER_PACKETS_PER_BLOCK (SD_BLOCK_SIZE/SD_LOGGER_PACKET_SIZE)
-                                            /**< Number of packets per block */
+/**< Number of packets per block */
 #define SD_LOGGER_BLOCK_PREAMBLE_SIZE 4     /**< 1 byte that contains the unique_id in each block */
 
-enum SdLoggerStatus{
+enum SdLoggerStatus {
   SdLogger_UnInit,                          /**< SD logger is not initialized */
   SdLogger_Initializing,                    /**< Initializing the SD Card */
   SdLogger_Idle,                            /**< Idle state, ready to accept commands */
@@ -49,7 +49,7 @@ enum SdLoggerStatus{
   blabla
 };
 
-enum SdLoggerCommand{
+enum SdLoggerCommand {
   SdLoggerCmd_Nothing,                      /**< Do nothing */
   SdLoggerCmd_StartLogging,                 /**< Start logging data */
   SdLoggerCmd_StopLogging,                  /**< Stop logging data */

@@ -23,6 +23,8 @@ ifeq ($(ARCH),stm32)
       $(TARGET).CFLAGS += -DPPM_CONFIG=1
     else ifeq ($(RADIO_CONTROL_PPM_PIN),$(filter $(RADIO_CONTROL_PPM_PIN),PA_01 SERVO6))
       $(TARGET).CFLAGS += -DPPM_CONFIG=2
+    else ifeq ($(RADIO_CONTROL_PPM_PIN),$(filter $(RADIO_CONTROL_PPM_PIN),PB_09 SERVO4))
+      $(TARGET).CFLAGS += -DPPM_CONFIG=4
     endif
   endif
 endif

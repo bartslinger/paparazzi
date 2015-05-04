@@ -17,7 +17,7 @@
     <servo name="CIC_RIGHT" no="5" min="570" neutral="1400" max="2200"/>
     <servo name="CIC_LEFT" no="0" min="570" neutral="1600" max="2200"/>
     <servo name="TAIL" no="2" min="0" neutral="0" max="500"/>
-    <servo name="GAS" no="3" min="0" neutral="10" max="500"/>
+    <servo name="GAS" no="3" min="1900" neutral="1890" max="10"/>
   </servos>
 
   <commands>
@@ -34,6 +34,11 @@
     <let var="collective" value="@THRUST * 0.4 + (MAX_PPRZ*0.01)"/>
     <let var="gas" value="($hoverpower) + $halfway * (((@THRUST) - ($hoverstick)) * (MAX_PPRZ - ($hoverpower))) / (MAX_PPRZ - ($hoverstick))  + (1 - $halfway) * ((@THRUST - ($hoverstick)) * ($hoverpower)) / ($hoverstick)"/>
 
+    <!--set servo="CIC_LEFT" value="@PITCH" />
+    <set servo="CIC_RIGHT" value="@ROLL" />
+    <set servo="CIC_FRONT" value="0" />
+    <set servo="TAIL" value="0" />
+    <set servo="GAS" value="0" /-->
     <set servo="GAS" value="$gas"/>
     <set servo="CIC_LEFT" value="((@PITCH*0.5*0.5)-(@ROLL*0.5*0.73))-($collective)"/>
     <set servo="CIC_RIGHT" value="((-@PITCH*0.5*0.5)-(@ROLL*0.5*0.73))+($collective)"/>
@@ -192,7 +197,7 @@
     </subsystem>
 
 	<subsystem name="telemetry" type="transparent">
-	  <configure name="MODEM_BAUD" value="B57600"/>
+	  <configure name="MODEM_BAUD" value="B115200"/>
 	  <configure name="MODEM_PORT" value="UART1"/>
 	</subsystem>
     <!--subsystem name="telemetry" type="superbitrf" /-->

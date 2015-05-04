@@ -812,7 +812,7 @@ void test_SendCmdSpiSubmitFails(void)
     uart_transmit_Expect(&SD_LOG_UART, message[i]);
   }
   uart_transmit_Expect(&SD_LOG_UART, 0x0A);
-  sdcard_send_cmd(0, 0x00000000, SdResponseR1, NULL);
+  sdcard_spi_send_cmd(0, 0x00000000, SdResponseR1, NULL);
 }
 
 void test_SendAppCmdSpiSubmitFails(void)
