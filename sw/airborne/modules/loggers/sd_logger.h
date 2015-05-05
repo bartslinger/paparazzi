@@ -21,7 +21,7 @@
  */
 
 /** @file modules/loggers/sd_logger.h
- *  @brief Basic sd logger.
+ *  @brief Module for real time logging using an SD Card in SPI mode.
  */
 
 #ifndef SD_LOGGER_H_
@@ -29,11 +29,11 @@
 
 #include "peripherals/sdcard_spi.h"
 
-#define SD_LOGGER_BUFFER_OFFSET 1
-#define SD_LOGGER_PACKET_SIZE 52            /**< Number of bytes in a LogPacket */
+#define SD_LOGGER_BUFFER_OFFSET 1           /**< Byte reserved for the data token of a multiwrite packet, only applicable to output buffer */
+#define SD_LOGGER_PACKET_SIZE 52            /**< Number of bytes in the LogPacket struct */
 #define SD_LOGGER_PACKETS_PER_BLOCK (SD_BLOCK_SIZE/SD_LOGGER_PACKET_SIZE)
 /**< Number of packets per block */
-#define SD_LOGGER_BLOCK_PREAMBLE_SIZE 4     /**< 1 byte that contains the unique_id in each block */
+#define SD_LOGGER_BLOCK_PREAMBLE_SIZE 4     /**< 32-bit number that contains the unique_id in each block */
 
 enum SdLoggerStatus {
   SdLogger_UnInit,                          /**< SD logger is not initialized */
@@ -46,7 +46,6 @@ enum SdLoggerStatus {
   SdLogger_WriteStatusPacket,               /**< After stopping, writing summary info to block 0 */
   SdLogger_DataAvailable,                   /**< In this state, the sdcard input buffer has data from address block_addr */
   SdLogger_ReadingBlock,                    /**< Temporary status when reading block until the callback */
-  blabla
 };
 
 enum SdLoggerCommand {
@@ -54,9 +53,9 @@ enum SdLoggerCommand {
   SdLoggerCmd_StartLogging,                 /**< Start logging data */
   SdLoggerCmd_StopLogging,                  /**< Stop logging data */
   SdLoggerCmd_RequestStatusPacket,          /**< Requesting the status packet (first packet on block 0) */
-  bla
 };
 
+/* Size of this struct (in bytes) should be equal to SD_LOGGER_PACKET_SIZE */
 struct LogPacket {
   uint32_t time;
   int32_t data_1;
@@ -88,13 +87,13 @@ struct SdLogger {
 
 extern struct SdLogger sdlogger;
 
-//! Public functions
+/* Public functions */
 extern void sd_logger_start(void);
 extern void sd_logger_periodic(void);
 extern void sd_logger_command(void);
 extern void sd_logger_stop(void);
 
-//! Private functions
+/* Private functions */
 extern void sd_logger_statusblock_ready(void);
 extern void sd_logger_packetblock_ready(void);
 extern void sd_logger_send_packet_from_buffer(uint16_t buffer_idx);

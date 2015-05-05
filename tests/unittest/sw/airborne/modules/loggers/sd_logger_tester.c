@@ -10,31 +10,31 @@
 #define S_(x) S(x)
 #define S__LINE__ "Line: " S_(__LINE__)
 
-// Actually defined in sdcard.c
+/* Actually defined in sdcard.c */
 struct SDCard sdcard1;
 
-// Actually defined in spi.c
+/* Actually defined in spi.c */
 struct spi_periph spi2;
 
-// Actually defined in imu.c
+/* Actually defined in imu.c */
 struct Imu imu;
 
-// Actually defined in actuators_pwm_arch.c
+/* Actually defined in actuators_pwm_arch.c */
 int32_t actuators_pwm_values[ACTUATORS_PWM_NB];
 
-// Actually defined in uart.c
+/* Actually defined in uart.c */
 struct uart_periph uart1;
 
-// Actually defined in pprz_transport.c
+/* Actually defined in pprz_transport.c */
 struct pprz_transport pprz_tp;
 
-// Actually defined in sd_logger.c
+/* Actually defined in sd_logger.c */
 struct SdLogger sdlogger;
 
 
 void setUp(void)
 {
-  // Set incorrect values to ensure proper initialization
+  /* Set incorrect values to ensure proper initialization */
   sdlogger.block_addr = 0x12345678;
   sdlogger.buffer_addr = 0x1234;
   sdlogger.cmd = 0x57;
@@ -75,9 +75,9 @@ void helper_ExpectSdLoggerPeriodic(void)
 
 void test_Initialize(void)
 {
-  sdcard_spi_init_Expect(&sdcard1, &spi2, SPI_SLAVE3);
+  sdcard_spi_init_Expect(&sdcard1, &(SD_LOGGER_SPI_LINK_DEVICE), SD_LOGGER_SPI_LINK_SLAVE_NUMBER);
 
-  // Call the function
+  /* Call the start function */
   sd_logger_start();
   TEST_ASSERT_EQUAL(SdLogger_Initializing, sdlogger.status);
 }
@@ -87,7 +87,7 @@ void test_SdCardBusyWithInitialization(void)
   sdlogger.status = SdLogger_Initializing;
   sdcard1.status = SDCard_SendingCMD0;
 
-  // Run periodic loop
+  /* Run periodic loop */
   helper_ExpectSdLoggerPeriodic();
   TEST_ASSERT_EQUAL(SdLogger_Initializing, sdlogger.status);
 }
@@ -97,7 +97,7 @@ void test_SdCardInitializationComplete(void)
   sdlogger.status = SdLogger_Initializing;
   sdcard1.status = SDCard_Idle;
 
-  // Run periodic loop
+  /* Run periodic loop */
   helper_ExpectSdLoggerPeriodic();
   TEST_ASSERT_EQUAL(SdLogger_Idle, sdlogger.status);
 }
@@ -107,7 +107,7 @@ void test_SdCardInitializationFailed(void)
   sdlogger.status = SdLogger_Initializing;
   sdcard1.status = SDCard_Error;
 
-  // Run periodic loop
+  /* Run periodic loop */
   helper_ExpectSdLoggerPeriodic();
   TEST_ASSERT_EQUAL(SdLogger_Error, sdlogger.status);
 }
@@ -117,10 +117,11 @@ void test_DontAcceptStartCommandIfNotIdle(void)
   sdlogger.status = SDCard_SendingCMD0;
   sdlogger.cmd = SdLoggerCmd_StartLogging;
 
-  // Call the command function
+  /* Call the command function */
   sd_logger_command();
 
-  TEST_ASSERT_EQUAL_HEX8(SdLoggerCmd_Nothing, sdlogger.cmd); // Always reset
+  /* Always reset command */
+  TEST_ASSERT_EQUAL_HEX8(SdLoggerCmd_Nothing, sdlogger.cmd);
 }
 
 void test_AcceptStartCommandIfIdle(void)
@@ -130,7 +131,7 @@ void test_AcceptStartCommandIfIdle(void)
 
   sdcard_spi_multiwrite_start_Expect(&sdcard1, 0x00000001);
 
-  // Call the command function
+  /* Call the command function */
   sd_logger_command();
 
   TEST_ASSERT_EQUAL(0, sdlogger.error_count);
@@ -145,7 +146,7 @@ void test_SwitchToLoggingWhenSdIsIdle(void)
   sdlogger.status = SdLogger_BeforeLogging;
   sdcard1.status = SDCard_MultiWriteIdle;
 
-  // Periodic loop
+  /* Periodic loop */
   helper_ExpectSdLoggerPeriodic();
   TEST_ASSERT_EQUAL(SdLogger_Logging, sdlogger.status);
 }
@@ -155,39 +156,40 @@ void test_DontSwitchToLoggingIfSdNotIdle(void)
   sdlogger.status = SdLogger_BeforeLogging;
   sdcard1.status = SDCard_Busy;
 
-  // Periodic loop
+  /* Periodic loop */
   helper_ExpectSdLoggerPeriodic();
   TEST_ASSERT_EQUAL(SdLogger_BeforeLogging, sdlogger.status);
 }
 
-//! Not complete
 void test_AcceptStopCommandIfLogging(void)
 {
   sdlogger.status = SdLogger_Logging;
   sdlogger.cmd = SdLoggerCmd_StopLogging;
-  sdlogger.buffer_addr = 200; // not at the end
+  sdlogger.buffer_addr = 200; /* not at the end */
   sdlogger.packet_count = 1876;
   for (uint16_t i=0; i<sdlogger.buffer_addr; i++) {
     sdcard1.output_buf[1+i] = 0xDD;
   }
 
-  // Expect call to sdcard write block
+  /* Expect call to sdcard write block */
   sdcard_spi_multiwrite_next_Expect(&sdcard1);
 
-  // Call the command function
+  /* Call the command function */
   sd_logger_command();
 
-  // Dont modify logged values
+  /* Dont modify logged values */
   for (uint32_t i=0; i<sdlogger.buffer_addr; i++) {
     TEST_ASSERT_EQUAL_HEX8(0xDD, sdcard1.output_buf[1+i]);
   }
-  // Fill with trailing zeros
+  /* Fill with trailing zeros */
   for (uint32_t i=sdlogger.buffer_addr; i<(SD_LOGGER_BUFFER_OFFSET + SD_BLOCK_SIZE); i++) {
     TEST_ASSERT_EQUAL_HEX8(0x00, sdcard1.output_buf[1+i]);
   }
 
   TEST_ASSERT_EQUAL(SdLogger_StopLogging, sdlogger.status);
-  TEST_ASSERT_EQUAL_HEX8(SdLoggerCmd_Nothing, sdlogger.cmd); // Always reset
+
+  /* Always reset command */
+  TEST_ASSERT_EQUAL_HEX8(SdLoggerCmd_Nothing, sdlogger.cmd);
 }
 
 void test_RejectStopCommandIfNotStarted(void)
@@ -195,11 +197,13 @@ void test_RejectStopCommandIfNotStarted(void)
   sdlogger.status = SdLogger_Idle;
   sdlogger.cmd = SdLoggerCmd_StopLogging;
 
-  // Call the command function
+  /* Call the command function */
   sd_logger_command();
 
   TEST_ASSERT_EQUAL(SdLogger_Idle, sdlogger.status);
-  TEST_ASSERT_EQUAL_HEX8(SdLoggerCmd_Nothing, sdlogger.cmd); // Always reset
+
+  /* Always reset command */
+  TEST_ASSERT_EQUAL_HEX8(SdLoggerCmd_Nothing, sdlogger.cmd);
 }
 
 void test_StopLoggingAfterLastMultWriteTransferIsDone(void)
@@ -207,10 +211,10 @@ void test_StopLoggingAfterLastMultWriteTransferIsDone(void)
   sdlogger.status = SdLogger_StopLogging;
   sdcard1.status = SDCard_MultiWriteIdle;
 
-  // expect stop command
+  /* Expect stop command */
   sdcard_spi_multiwrite_stop_Expect(&sdcard1);
 
-  // check periodically if last transfer is done
+  /* Check periodically if last transfer is done */
   helper_ExpectSdLoggerPeriodic();
 
   TEST_ASSERT_EQUAL(SdLogger_WriteStatusPacket, sdlogger.status);
@@ -223,7 +227,7 @@ void test_StopLoggingLastTransferNotFinishedYet(void)
 
   helper_ExpectSdLoggerPeriodic();
 
-  // nothing changes
+  /* Nothing changes */
   TEST_ASSERT_EQUAL(SdLogger_StopLogging, sdlogger.status);
 }
 
@@ -247,7 +251,7 @@ void test_LoggingDataBufferNotFull(void)
 {
   sdlogger.status = SdLogger_Logging;
   sdlogger.block_addr = 0x00001234;
-  sdlogger.buffer_addr = 47; // not at the end
+  sdlogger.buffer_addr = 47; /* not at the end */
   sdlogger.packet_count = 20;
 
   imu.accel_unscaled.x = 111222333;
@@ -262,11 +266,11 @@ void test_LoggingDataBufferNotFull(void)
   actuators_pwm_values[4] = 159159159;
   actuators_pwm_values[5] = 753753753;
 
-  // Call the periodic loop
+  /* Call the periodic loop */
   helper_ExpectSdLoggerPeriodic();
 
-  TEST_ASSERT_EQUAL(21, sdlogger.packet_count); // Increment 1
-  TEST_ASSERT_EQUAL(47+(13*4), sdlogger.buffer_addr); // Added 13*4 bytes
+  TEST_ASSERT_EQUAL(21, sdlogger.packet_count); /* Increment 1 */
+  TEST_ASSERT_EQUAL(47+(13*4), sdlogger.buffer_addr); /* Added 13*4 bytes */
   helper_CompareUInt32FromAddress(21, &sdcard1.output_buf[1+47], S__LINE__);
   helper_CompareInt32FromAddress(111222333, &sdcard1.output_buf[1+47+4], S__LINE__);
   helper_CompareInt32FromAddress(444555666, &sdcard1.output_buf[1+47+8], S__LINE__);
@@ -279,7 +283,7 @@ void test_LoggingDataBufferNotFull(void)
   helper_CompareInt32FromAddress(987987987, &sdcard1.output_buf[1+47+36], S__LINE__);
   helper_CompareInt32FromAddress(159159159, &sdcard1.output_buf[1+47+40], S__LINE__);
   helper_CompareInt32FromAddress(753753753, &sdcard1.output_buf[1+47+44], S__LINE__);
-  helper_CompareInt32FromAddress(0, &sdcard1.output_buf[1+47+48], S__LINE__); // reserved
+  helper_CompareInt32FromAddress(0, &sdcard1.output_buf[1+47+48], S__LINE__); /* reserved */
 }
 
 
@@ -287,12 +291,12 @@ void test_LoggingDataBufferFullWriteToSD(void)
 {
   sdlogger.status = SdLogger_Logging;
   sdlogger.block_addr = 0x00001234;
-  sdlogger.buffer_addr = 440; // After next, buffer is full. Only possible to add once more 40 bytes
-  sdlogger.packet_count = 51; // sort of random
-  sdlogger.unique_id = 0xCAFEBEEF;
+  sdlogger.buffer_addr = 440; /* After next, buffer is full. Only possible to add once more 40 bytes */
+  sdlogger.packet_count = 51; /* Arbitrary number */
+  sdlogger.unique_id = 0xCAFEBABE;
 
   sdcard1.status = SDCard_MultiWriteIdle;
-  sdlogger.error_count = 57; // should stay the same
+  sdlogger.error_count = 57; /* Should stay the same */
 
   imu.accel_unscaled.x = 111222333;
   imu.accel_unscaled.y = 444555666;
@@ -306,21 +310,22 @@ void test_LoggingDataBufferFullWriteToSD(void)
   actuators_pwm_values[4] = 159159159;
   actuators_pwm_values[5] = 753753753;
 
-  // Expection a write action on the SD card since buffer will be full after this one.
+  /* Expection a write action on the SD card since buffer will be full after this one. */
   sdcard_spi_multiwrite_next_Expect(&sdcard1);
 
-  // Call the periodic loop
+  /* Call the periodic loop */
   helper_ExpectSdLoggerPeriodic();
 
-  helper_CompareUInt32FromAddress(0xCAFEBEEF, &sdcard1.output_buf[1], S__LINE__);
-  // Value resets to zero because buffer is written to SD and new buffer will be filled.
+  helper_CompareUInt32FromAddress(0xCAFEBABE, &sdcard1.output_buf[1], S__LINE__);
+
+  /* Value resets to zero because buffer is written to SD and new buffer will be filled. */
   TEST_ASSERT_EQUAL(4, sdlogger.buffer_addr);
 
-  // Adding 1 to the counter and also the block address
+  /* Adding 1 to the counter and also the block address */
   TEST_ASSERT_EQUAL(52, sdlogger.packet_count);
   TEST_ASSERT_EQUAL_HEX32(0x00001235, sdlogger.block_addr);
 
-  // No errors occured
+  /* No errors occured */
   TEST_ASSERT_EQUAL(57, sdlogger.error_count);
 
   helper_CompareInt32FromAddress(52, &sdcard1.output_buf[1+440], S__LINE__);
@@ -335,63 +340,65 @@ void test_LoggingDataBufferFullWriteToSD(void)
   helper_CompareInt32FromAddress(987987987, &sdcard1.output_buf[1+440+36], S__LINE__);
   helper_CompareInt32FromAddress(159159159, &sdcard1.output_buf[1+440+40], S__LINE__);
   helper_CompareInt32FromAddress(753753753, &sdcard1.output_buf[1+440+44], S__LINE__);
-  helper_CompareInt32FromAddress(0, &sdcard1.output_buf[1+440+48], S__LINE__); // reserved
+  helper_CompareInt32FromAddress(0, &sdcard1.output_buf[1+440+48], S__LINE__); /* reserved */
 }
 
 void test_IncrementErrorCountWhenWritingWhileSdBusy(void)
 {
   sdlogger.status = SdLogger_Logging;
   sdlogger.block_addr = 0x00001234;
-  sdlogger.buffer_addr = 440; // After next, buffer is full. Only possible to add once more 40 bytes
-  sdlogger.packet_count = 51; // sort of random
+  sdlogger.buffer_addr = 440; /* After next, buffer is full. Only possible to add once more 40 bytes */
+  sdlogger.packet_count = 51; /* Arbitrary */
 
   sdcard1.status = SDCard_MultiWriteBusy;
   sdlogger.error_count = 57;
 
-  // Expection a write action on the SD card since buffer will be full after this one.
+  /* Expection a write action on the SD card since buffer will be full after this one. */
   sdcard_spi_multiwrite_next_Expect(&sdcard1);
 
-  // Call the periodic loop
+  /* Call the periodic loop */
   helper_ExpectSdLoggerPeriodic();
 
-  // Value resets to zero because buffer is written to SD and new buffer will be filled.
+  /* Value resets to zero because buffer is written to SD and new buffer will be filled. */
   TEST_ASSERT_EQUAL(4, sdlogger.buffer_addr);
   TEST_ASSERT_EQUAL_HEX32(0x00001235, sdlogger.block_addr);
 
-  // Because card was busy, increase error
+  /* Because card was busy, increase error */
   TEST_ASSERT_EQUAL(58, sdlogger.error_count);
 
 }
 
-//! Logging just stopped, waiting for sdcard to be idle to write the last block (summary)
+/**
+ * Logging just stopped, waiting for sdcard to be idle to write the last block (summary)
+ */
 void test_WriteSummaryBlockSdCardNotReady(void)
 {
   sdlogger.status = SdLogger_WriteStatusPacket;
   sdcard1.status = SDCard_Busy;
 
-  // Call periodic loop
+  /* Call periodic loop */
   helper_ExpectSdLoggerPeriodic();
 }
 
 void test_WriteSummaryBlockSdCardReady(void)
 {
   sdlogger.status = SdLogger_WriteStatusPacket;
-  sdcard1.status = SDCard_Idle; // Ready to accept new write command
-  sdlogger.block_addr = 0x1234BEEF; // Random, should not matter
-  sdlogger.buffer_addr = 0x22; // Random, should not matter
+  sdcard1.status = SDCard_Idle; /* Ready to accept new write command */
+  sdlogger.block_addr = 0x1234BEEF; /* Random, should not matter */
+  sdlogger.buffer_addr = 0x22; /* Random, should not matter */
   sdlogger.error_count = 0xBEEFBEEF;
   sdlogger.packet_count = 0xABBACAFE;
-  sdlogger.unique_id = 0xCAFEBEEF;
+  sdlogger.unique_id = 0xCAFEBABE;
 
-  // Expect call to write summary data block at first address
+  /* Expect call to write summary data block at first address */
   sdcard_spi_write_block_Expect(&sdcard1, 0x00000000);
 
-  // Call periodic loop
+  /* Call periodic loop */
   helper_ExpectSdLoggerPeriodic();
 
   helper_CompareUInt32FromAddress(0xABBACAFE, &sdcard1.output_buf[6], S__LINE__);
   helper_CompareUInt32FromAddress(0xBEEFBEEF, &sdcard1.output_buf[6+4], S__LINE__);
-  helper_CompareUInt32FromAddress(0xCAFEBEEF, &sdcard1.output_buf[6+8], S__LINE__);
+  helper_CompareUInt32FromAddress(0xCAFEBABE, &sdcard1.output_buf[6+8], S__LINE__);
   for (uint16_t i=12; i<SD_BLOCK_SIZE; i++) {
     TEST_ASSERT_EQUAL_HEX8(0x00, sdcard1.output_buf[6+i]);
   }
@@ -421,8 +428,10 @@ void helper_WriteUInt32ToAddress(uint32_t value, uint8_t *ptr)
   ptr[3] = value >> 0;
 }
 
-//! The first log packet on block 0 is the status packet
-//! Only possible if not logging
+/**
+ * The first log packet on block 0 is the status packet
+ * Only possible if not logging
+ */
 void test_RequestStatusPacket(void)
 {
   sdlogger.status = SdLogger_DataAvailable;
@@ -444,7 +453,7 @@ void test_RequestStatusPacket(void)
   helper_WriteInt32ToAddress(159159, &sdcard1.input_buf[44]);
   helper_WriteInt32ToAddress(951951, &sdcard1.input_buf[48]);
 
-  // Call the command function
+  /* Call the command function */
   sd_logger_command();
 
   TEST_ASSERT_EQUAL(12341234, sdlogger.packet.time);
@@ -460,41 +469,45 @@ void test_RequestStatusPacket(void)
   TEST_ASSERT_EQUAL(753753, sdlogger.packet.data_10);
   TEST_ASSERT_EQUAL(159159, sdlogger.packet.data_11);
   TEST_ASSERT_EQUAL(951951, sdlogger.packet.data_12);
-  TEST_ASSERT_EQUAL_HEX8(SdLoggerCmd_Nothing, sdlogger.cmd); // Always reset
+  TEST_ASSERT_EQUAL_HEX8(SdLoggerCmd_Nothing, sdlogger.cmd); /* Always reset */
 }
 
-//! Data not ready in buffer, first read the data from sd card. Use callback to send log packet
+/**
+ * Data not ready in buffer, first read the data from sd card. Use callback to send log packet
+ */
 void test_RequestStatusPacketNotInBuffer(void)
 {
-  sdlogger.status = SdLogger_DataAvailable; // should also work with Idle
+  sdlogger.status = SdLogger_DataAvailable; /* Should also work with Idle */
   sdlogger.cmd = SdLoggerCmd_RequestStatusPacket;
-  sdlogger.block_addr = 0x0000CAFE; // Note that the wrong address is available
+  sdlogger.block_addr = 0x0000CAFE; /* Note that the wrong address is available */
 
-  // Using callback function to proceed when data is available
+  /* Using callback function to proceed when data is available */
   sdcard_spi_read_block_Expect(&sdcard1, 0x00000000, &sd_logger_statusblock_ready);
 
-  // Call the command function
+  /* Call the command function */
   sd_logger_command();
 
-  TEST_ASSERT_EQUAL_HEX8(SdLoggerCmd_Nothing, sdlogger.cmd); // Always reset
+  TEST_ASSERT_EQUAL_HEX8(SdLoggerCmd_Nothing, sdlogger.cmd); /* Always reset */
 }
 
 void test_RequestStatusPacketNotIdle(void)
 {
-  sdlogger.status = SdLogger_Logging; // Not Idle nor DataAvailable
+  sdlogger.status = SdLogger_Logging; /* Not Idle nor DataAvailable */
   sdlogger.cmd = SdLoggerCmd_RequestStatusPacket;
 
-  // Call the command function
+  /* Call the command function */
   sd_logger_command();
 
-  // Expecting no calls
-  TEST_ASSERT_EQUAL_HEX8(SdLoggerCmd_Nothing, sdlogger.cmd); // Always reset
+  /* Expecting no calls */
+
+  /* Always reset command */
+  TEST_ASSERT_EQUAL_HEX8(SdLoggerCmd_Nothing, sdlogger.cmd);
 }
 
 void test_SendStatusPacketByCallback(void)
 {
-  sdlogger.status = SdLogger_Idle; // Should also work with DataAvailable
-  sdlogger.cmd = SdLoggerCmd_Nothing; // There is no command associated with this
+  sdlogger.status = SdLogger_Idle; /* Should also work with DataAvailable */
+  sdlogger.cmd = SdLoggerCmd_Nothing; /* There is no command associated with this */
   sdlogger.block_addr = 0x0000CAFE;
   helper_ExpectSendLogPacket();
 
@@ -512,7 +525,7 @@ void test_SendStatusPacketByCallback(void)
   helper_WriteInt32ToAddress(159159, &sdcard1.input_buf[44]);
   helper_WriteInt32ToAddress(951951, &sdcard1.input_buf[48]);
 
-  // Call the command function
+  /* Call the function */
   sd_logger_statusblock_ready();
 
   TEST_ASSERT_EQUAL(12341234, sdlogger.packet.time);
@@ -531,19 +544,21 @@ void test_SendStatusPacketByCallback(void)
 
   TEST_ASSERT_EQUAL(0x00000000, sdlogger.block_addr);
   TEST_ASSERT_EQUAL(SdLogger_DataAvailable, sdlogger.status);
-  TEST_ASSERT_EQUAL_HEX8(SdLoggerCmd_Nothing, sdlogger.cmd); // Always reset
+
+  /* Always reset command */
+  TEST_ASSERT_EQUAL_HEX8(SdLoggerCmd_Nothing, sdlogger.cmd);
 }
 
 void test_RequestPacketFromBuffer(void)
 {
-  sdlogger.unique_id = 0xCAFEBEEF;
+  sdlogger.unique_id = 0xCAFEBABE;
   sdlogger.status = SdLogger_DataAvailable;
   sdlogger.block_addr = 0x00000002;
   sdlogger.cmd = SdLoggerCmd_Nothing;
-  sdlogger.request_id = 11; // 2nd packet at block address 2
+  sdlogger.request_id = 11; /* 2nd packet at block address 2 */
   helper_ExpectSendLogPacket();
 
-  helper_WriteUInt32ToAddress(0xCAFEBEEF, &sdcard1.input_buf[0]);
+  helper_WriteUInt32ToAddress(0xCAFEBABE, &sdcard1.input_buf[0]);
   helper_WriteUInt32ToAddress(12341234, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+0]);
   helper_WriteInt32ToAddress(123123, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+4]);
   helper_WriteInt32ToAddress(456456, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+8]);
@@ -558,7 +573,7 @@ void test_RequestPacketFromBuffer(void)
   helper_WriteInt32ToAddress(159159, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+44]);
   helper_WriteInt32ToAddress(951951, &sdcard1.input_buf[4+SD_LOGGER_PACKET_SIZE+48]);
 
-  // Command callback
+  /* Command callback */
   sd_logger_command();
 
   TEST_ASSERT_EQUAL(12341234, sdlogger.packet.time);
@@ -583,33 +598,33 @@ void test_ParseRequestOnlyGreaterThanZero(void)
   sdlogger.request_id = 0;
   sdlogger.cmd = SdLoggerCmd_Nothing;
 
-  // One of two parameters set, but both are zero
+  /* One of two parameters set, but both are zero */
   sd_logger_command();
 
-  // Expect no calls or whatsoever
+  /* Expect no calls or whatsoever */
 }
 
 void test_ParsePacketRequestOnlyIfIdleOrDataAvailable(void)
 {
-  sdlogger.status = SdLogger_Logging; // not idle nor data available
+  sdlogger.status = SdLogger_Logging; /* Not idle nor data available */
   sdlogger.request_id = 15;
   sdlogger.cmd = SdLoggerCmd_Nothing;
 
   sd_logger_command();
 
-  // Expect no calls
+  /* Expect no calls */
 }
 
 void test_RequestAnotherPacketFromBuffer(void)
 {
-  sdlogger.unique_id = 0xCAFEBEEF;
+  sdlogger.unique_id = 0xCAFEBABE;
   sdlogger.status = SdLogger_DataAvailable;
   sdlogger.block_addr = 0x00000002;
   sdlogger.cmd = SdLoggerCmd_Nothing;
-  sdlogger.request_id = 12; // 3nd packet at block 2
+  sdlogger.request_id = 12; /* 3rd packet at block 2 */
   helper_ExpectSendLogPacket();
 
-  helper_WriteUInt32ToAddress(0xCAFEBEEF, &sdcard1.input_buf[0]);
+  helper_WriteUInt32ToAddress(0xCAFEBABE, &sdcard1.input_buf[0]);
   helper_WriteUInt32ToAddress(12341234, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+0]);
   helper_WriteInt32ToAddress(123123, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+4]);
   helper_WriteInt32ToAddress(456456, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+8]);
@@ -624,7 +639,7 @@ void test_RequestAnotherPacketFromBuffer(void)
   helper_WriteInt32ToAddress(951951, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+44]);
   helper_WriteInt32ToAddress(753753, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+48]);
 
-  // Command callback
+  /* Command callback */
   sd_logger_command();
 
   TEST_ASSERT_EQUAL(12341234, sdlogger.packet.time);
@@ -644,14 +659,14 @@ void test_RequestAnotherPacketFromBuffer(void)
 
 void test_RequestLastPacketFromBuffer(void)
 {
-  sdlogger.unique_id = 0xCAFEBEEF;
+  sdlogger.unique_id = 0xCAFEBABE;
   sdlogger.status = SdLogger_DataAvailable;
   sdlogger.block_addr = 0x00000001;
   sdlogger.cmd = SdLoggerCmd_Nothing;
-  sdlogger.request_id = 9; // last packet at block 1
+  sdlogger.request_id = 9; /* last packet at block 1 */
   helper_ExpectSendLogPacket();
 
-  helper_WriteUInt32ToAddress(0xCAFEBEEF, &sdcard1.input_buf[0]);
+  helper_WriteUInt32ToAddress(0xCAFEBABE, &sdcard1.input_buf[0]);
   helper_WriteUInt32ToAddress(12341234, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+0]);
   helper_WriteInt32ToAddress(123123, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+4]);
   helper_WriteInt32ToAddress(456456, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+8]);
@@ -666,7 +681,7 @@ void test_RequestLastPacketFromBuffer(void)
   helper_WriteInt32ToAddress(951951, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+44]);
   helper_WriteInt32ToAddress(753753, &sdcard1.input_buf[4+8*SD_LOGGER_PACKET_SIZE+48]);
 
-  // Command callback
+  /* Command callback */
   sd_logger_command();
 
   TEST_ASSERT_EQUAL(12341234, sdlogger.packet.time);
@@ -686,16 +701,16 @@ void test_RequestLastPacketFromBuffer(void)
 
 void test_ReplyWithZerosIfUniqueIdMismatch(void)
 {
-  sdlogger.unique_id = 0xCAFEBEEF;
+  sdlogger.unique_id = 0xCAFEBABE;
   sdlogger.status = SdLogger_DataAvailable;
   sdlogger.block_addr = 0x00000001;
   sdlogger.cmd = SdLoggerCmd_Nothing;
-  sdlogger.request_id = 9; // last packet at block 1
+  sdlogger.request_id = 9; /* last packet at block 1 */
   helper_ExpectSendLogPacket();
 
-  helper_WriteUInt32ToAddress(0x0000BEEF, &sdcard1.input_buf[0]); // Not matching with unique_id
+  helper_WriteUInt32ToAddress(0x0000BEEF, &sdcard1.input_buf[0]); /* Not matching with unique_id */
 
-  // Command
+  /* Command callback */
   sd_logger_command();
 
   TEST_ASSERT_EQUAL(0, sdlogger.packet.time);
@@ -716,11 +731,11 @@ void test_ReplyWithZerosIfUniqueIdMismatch(void)
 void test_RequestPacketFromAnotherBlock(void)
 {
   sdlogger.status = SdLogger_DataAvailable;
-  sdlogger.block_addr = 0x00000001; // wrong block
+  sdlogger.block_addr = 0x00000001; /* wrong block */
   sdlogger.cmd = SdLoggerCmd_Nothing;
-  sdlogger.request_id = 10; // 1st packet at block 2
+  sdlogger.request_id = 10; /* 1st packet at block 2 */
 
-  // Using callback function to proceed when data is available
+  /* Using callback function to proceed when data is available */
   sdcard_spi_read_block_Expect(&sdcard1, 0x00000002, &sd_logger_packetblock_ready);
 
   sd_logger_command();
@@ -730,15 +745,17 @@ void test_RequestPacketFromAnotherBlock(void)
   TEST_ASSERT_EQUAL(0x00000002, sdlogger.block_addr);
 }
 
-//! Also read the block (again) if status is idle
+/**
+ * Also read the block (again) if status is idle
+ */
 void test_RequestPacketFromBlockWhenIdle(void)
 {
   sdlogger.status = SdLogger_Idle;
-  sdlogger.block_addr = 0x00000002; // correct block, but still read it again because we're not in dataready
+  sdlogger.block_addr = 0x00000002; /* correct block, but still read it again because we're not in dataready */
   sdlogger.cmd = SdLoggerCmd_Nothing;
   sdlogger.request_id = 13;
 
-  // Using callback function to proceed when data is available
+  /* Using callback function to proceed when data is available */
   sdcard_spi_read_block_Expect(&sdcard1, 0x00000002, &sd_logger_packetblock_ready);
 
   sd_logger_command();
@@ -746,16 +763,17 @@ void test_RequestPacketFromBlockWhenIdle(void)
   TEST_ASSERT_EQUAL(SdLogger_ReadingBlock, sdlogger.status);
   TEST_ASSERT_EQUAL(0, sdlogger.timeout_counter);
   TEST_ASSERT_EQUAL(0x00000002, sdlogger.block_addr);
-
 }
 
-//! If the block reading goes wrong, the callback will never be called. Then, revert to idle state
+/**
+ * If the block reading goes wrong, the callback will never be called. Then, revert to idle state
+ */
 void test_ReadingBlockTimesOutWhenNotResponding(void)
 {
   sdlogger.status = SdLogger_ReadingBlock;
   sdlogger.timeout_counter = 199;
 
-  // Periodic loop
+  /* Periodic loop */
   helper_ExpectSdLoggerPeriodic();
 
   TEST_ASSERT_EQUAL(SdLogger_Idle, sdlogger.status);
@@ -767,7 +785,7 @@ void test_ReadingBlockNotTimingOutBefore200Cycles(void)
   sdlogger.status = SdLogger_ReadingBlock;
   sdlogger.timeout_counter = 198;
 
-  // Periodic loop
+  /* Periodic loop */
   helper_ExpectSdLoggerPeriodic();
 
   TEST_ASSERT_EQUAL(SdLogger_ReadingBlock, sdlogger.status);
@@ -776,11 +794,11 @@ void test_ReadingBlockNotTimingOutBefore200Cycles(void)
 
 void test_CallbackProcessingPacketRequest(void)
 {
-  sdlogger.unique_id = 0xCAFEBEEF;
+  sdlogger.unique_id = 0xCAFEBABE;
   sdlogger.status = SdLogger_ReadingBlock;
-  sdlogger.request_id = 10; // 1st packet at block 2
+  sdlogger.request_id = 10; /* 1st packet at block 2 */
 
-  helper_WriteUInt32ToAddress(0xCAFEBEEF, &sdcard1.input_buf[0]);
+  helper_WriteUInt32ToAddress(0xCAFEBABE, &sdcard1.input_buf[0]);
   helper_WriteUInt32ToAddress(12341234, &sdcard1.input_buf[4+0]);
   helper_WriteInt32ToAddress(123123, &sdcard1.input_buf[4+4]);
   helper_WriteInt32ToAddress(456456, &sdcard1.input_buf[4+8]);
@@ -797,7 +815,7 @@ void test_CallbackProcessingPacketRequest(void)
 
   helper_ExpectSendLogPacket();
 
-  // The callback from sdcard read
+  /* The callback from sdcard read */
   sd_logger_packetblock_ready();
 
   TEST_ASSERT_EQUAL(12341234, sdlogger.packet.time);
@@ -821,7 +839,7 @@ void test_CallbackProcessingPacketRequestAnother(void)
 {
   sdlogger.unique_id = 0xCAFEBABE;
   sdlogger.status = SdLogger_ReadingBlock;
-  sdlogger.request_id = 12; // 3rd packet at block 2
+  sdlogger.request_id = 12; /* 3rd packet at block 2 */
 
   helper_WriteUInt32ToAddress(0xCAFEBABE, &sdcard1.input_buf[0]);
   helper_WriteUInt32ToAddress(12341234, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+0]);
@@ -839,7 +857,7 @@ void test_CallbackProcessingPacketRequestAnother(void)
   helper_WriteInt32ToAddress(951951, &sdcard1.input_buf[4+2*SD_LOGGER_PACKET_SIZE+48]);
   helper_ExpectSendLogPacket();
 
-  // The callback from sdcard read
+  /* The callback from sdcard read */
   sd_logger_packetblock_ready();
 
   TEST_ASSERT_EQUAL(12341234, sdlogger.packet.time);
@@ -856,5 +874,4 @@ void test_CallbackProcessingPacketRequestAnother(void)
   TEST_ASSERT_EQUAL(159159, sdlogger.packet.data_11);
   TEST_ASSERT_EQUAL(951951, sdlogger.packet.data_12);
   TEST_ASSERT_EQUAL(SdLogger_DataAvailable, sdlogger.status);
-
 }

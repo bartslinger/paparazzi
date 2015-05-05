@@ -1,8 +1,8 @@
 require 'yaml'
 require 'fileutils'
-require '/home/bart/unity/auto/unity_test_summary'
-require '/home/bart/unity/auto/generate_test_runner'
-require '/home/bart/unity/auto/colour_reporter'
+require '../../sw/ext/unity/auto/unity_test_summary'
+require '../../sw/ext/unity/auto/generate_test_runner'
+require '../../sw/ext/unity/auto/colour_reporter'
 
 module RakefileHelpers
 
@@ -206,6 +206,10 @@ module RakefileHelpers
               # Mock created in mocks/, move to correct directory
               paparazzi_home = File.expand_path(File.join(File.dirname(__FILE__), '../../'))
               mock_newdir    = original_directory.gsub(paparazzi_home + '/', '')
+              # If file is a _testable.h, put mock in the same directory
+              if header_filename.end_with?("testable.h")
+                mock_newdir = original_directory
+              end
               mock_newfile   = mock_newdir + '/' + mock_filename
               #print "MOVING TO : " + mock_newdir + "\n\n"
               FileUtils.mkdir_p(mock_newdir)
