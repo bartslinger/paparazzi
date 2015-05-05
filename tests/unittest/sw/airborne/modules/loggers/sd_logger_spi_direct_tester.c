@@ -4,7 +4,7 @@
 #include "peripherals/Mocksdcard_spi.h"
 #include "subsystems/Mockimu.h"
 #include "subsystems/actuators/Mockactuators_pwm_arch.h"
-#include "loggers/sd_logger.h"
+#include "loggers/sd_logger_spi_direct.h"
 
 #define S(x) #x
 #define S_(x) S(x)

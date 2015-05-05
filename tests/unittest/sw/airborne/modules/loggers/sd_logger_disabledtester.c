@@ -2,7 +2,7 @@
 #include "mcu_periph/Mockuart.h"
 #include "mcu_periph/Mockspi.h"
 #include "subsystems/Mockimu.h"
-#include "loggers/sd_logger.h"
+#include "loggers/sd_logger_spi_direct.h"
 
 #define S(x) #x
 #define S_(x) S(x)

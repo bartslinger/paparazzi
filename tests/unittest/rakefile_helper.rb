@@ -190,7 +190,7 @@ module RakefileHelpers
 
         #create mocks if needed
         if (header =~ /Mock/)
-          require "/home/bart/cmock/lib/cmock.rb"
+          require "../../sw/ext/cmock/lib/cmock.rb"
           @cmock ||= CMock.new($cfg_file)
           #find source path from all the includes
           $cfg['compiler']['includes']['items'].each do |dir|

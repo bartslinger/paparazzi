@@ -42,7 +42,7 @@
 
 #include "subsystems/imu.h"
 #include "subsystems/actuators/actuators_pwm_arch.h"
-#include "sd_logger.h"
+#include "sd_logger_spi_direct.h"
 
 /* Definition of the sdlogger */
 struct SdLogger sdlogger;
