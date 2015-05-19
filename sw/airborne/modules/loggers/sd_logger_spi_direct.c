@@ -44,6 +44,8 @@
 #include "subsystems/actuators/actuators_pwm_arch.h"
 #include "sd_logger_spi_direct.h"
 
+#include RADIO_CONTROL_TYPE_H
+
 /* Definition of the sdlogger */
 struct SdLogger sdlogger;
 
@@ -62,6 +64,21 @@ void sd_logger_start(void)
  */
 void sd_logger_periodic(void)
 {
+  /* Check if the switch is flipped to start or stop logging */
+  static bool_t sd_logger_previous_switch_state = FALSE;
+  if (USEC_OF_RC_PPM_TICKS(ppm_pulses[5]) > 1300 && sd_logger_previous_switch_state == FALSE) {
+    /* Start logging */
+    sdlogger.cmd = SdLoggerCmd_StartLogging;
+    sd_logger_command();
+    sd_logger_previous_switch_state = TRUE;
+  } else if (USEC_OF_RC_PPM_TICKS(ppm_pulses[5]) < 1300 && sd_logger_previous_switch_state == TRUE) {
+    /* Stop logging */
+    sdlogger.cmd = SdLoggerCmd_StopLogging;
+    sd_logger_command();
+    sd_logger_previous_switch_state = FALSE;
+  }
+
+
   /* Keep the SDCard running at the same rate */
   sdcard_spi_periodic(&sdcard1);
 

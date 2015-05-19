@@ -49,7 +49,7 @@ $(TARGET).srcs   += mcu.c
 $(TARGET).srcs   += $(SRC_ARCH)/mcu_arch.c
 
 # frequency of main periodic
-PERIODIC_FREQUENCY ?= 512
+PERIODIC_FREQUENCY ?= 1500
 $(TARGET).CFLAGS += -DPERIODIC_FREQUENCY=$(PERIODIC_FREQUENCY)
 
 ifdef AHRS_PROPAGATE_FREQUENCY

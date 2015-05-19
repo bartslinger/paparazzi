@@ -33,11 +33,16 @@
     <let var="halfway" value="(@THRUST >= ($hoverstick) ? 1 : 0)"/>
     <let var="collective" value="@THRUST * 0.4 + (MAX_PPRZ*0.01)"/>
     <let var="gas" value="($hoverpower) + $halfway * (((@THRUST) - ($hoverstick)) * (MAX_PPRZ - ($hoverpower))) / (MAX_PPRZ - ($hoverstick))  + (1 - $halfway) * ((@THRUST - ($hoverstick)) * ($hoverpower)) / ($hoverstick)"/>
-    <set servo="GAS" value="$gas"/>
+    <!--set servo="GAS" value="$gas"/>
     <set servo="CIC_LEFT" value="((@PITCH*0.5*0.5)-(@ROLL*0.5*0.73))-($collective)"/>
     <set servo="CIC_RIGHT" value="((-@PITCH*0.5*0.5)-(@ROLL*0.5*0.73))+($collective)"/>
-    <set servo="CIC_FRONT" value="-@PITCH*0.5-($collective)"/>
-    <set servo="TAIL" value="@YAW+0.4*$gas"/>
+    <set servo="CIC_FRONT" value="-@PITCH*0.5-($collective)"/-->
+    <!--set servo="TAIL" value="@YAW+0.4*$gas"/-->
+    <set servo="CIC_LEFT" value="0"/>
+    <set servo="CIC_RIGHT" value="0"/>
+    <set servo="CIC_FRONT" value="0"/>
+    <set servo="GAS" value="0"/>
+    <set servo="TAIL" value="@THRUST"/>
   </command_laws>
 
   <section name="IMU" prefix="IMU_">
@@ -163,10 +168,11 @@
    <define name="IGAIN" value="0"/>
  </section>
 
- <modules main_freq="512">
+ <modules main_freq="1500">
    <load name="gps_ubx_ucenter.xml"/>
    <load name="send_imu_mag_current.xml"/>
    <load name="sd_logger_spi_direct.xml"/>
+   <load name="sys_mon.xml"/>
  </modules>
 
   <firmware name="rotorcraft">
