@@ -35,6 +35,11 @@
 
 #include "mcu_periph/gpio_arch.h"
 
+#include RADIO_CONTROL_TYPE_H
+
+
+
+
 
 int32_t actuators_pwm_values[ACTUATORS_PWM_NB];
 
@@ -150,6 +155,11 @@ void actuators_pwm_arch_init(void)
  */
 void actuators_pwm_commit(void)
 {
+  if (USEC_OF_RC_PPM_TICKS(ppm_pulses[5]) > 1600 || USEC_OF_RC_PPM_TICKS(ppm_pulses[5]) < 1300) {
+    timer_set_oc_value(PWM_SERVO_2_TIMER, PWM_SERVO_2_OC, 0);
+  } else {
+    timer_set_oc_value(PWM_SERVO_2_TIMER, PWM_SERVO_2_OC, 1900);
+  }
 #ifdef PWM_SERVO_0
   timer_set_oc_value(PWM_SERVO_0_TIMER, PWM_SERVO_0_OC, actuators_pwm_values[PWM_SERVO_0]);
 #endif
@@ -157,7 +167,7 @@ void actuators_pwm_commit(void)
   timer_set_oc_value(PWM_SERVO_1_TIMER, PWM_SERVO_1_OC, actuators_pwm_values[PWM_SERVO_1]);
 #endif
 #ifdef PWM_SERVO_2
-  timer_set_oc_value(PWM_SERVO_2_TIMER, PWM_SERVO_2_OC, actuators_pwm_values[PWM_SERVO_2]);
+  /* timer_set_oc_value(PWM_SERVO_2_TIMER, PWM_SERVO_2_OC, actuators_pwm_values[PWM_SERVO_2]);*/
 #endif
 #ifdef PWM_SERVO_3
   timer_set_oc_value(PWM_SERVO_3_TIMER, PWM_SERVO_3_OC, actuators_pwm_values[PWM_SERVO_3]);

@@ -32,6 +32,7 @@
 
 #include "subsystems/ahrs/ahrs_int_cmpl_quat.h"
 #include "subsystems/ahrs/ahrs_int_utils.h"
+#include "modules/loggers/sd_logger_spi_direct.h"
 
 #if USE_GPS
 #include "subsystems/gps.h"
@@ -237,6 +238,8 @@ void ahrs_icq_update_accel(struct Int32Vect3 *accel, float dt)
   if (ahrs_icq.accel_cnt == 0) {
     return;
   }
+
+  sd_logger_periodic();
 
   // c2 = ltp z-axis in imu-frame
   struct Int32RMat ltp_to_imu_rmat;
