@@ -14,10 +14,10 @@
 
   <servos driver="Pwm">
     <servo name="CIC_FRONT" no="4" min="1100" neutral="1500" max="1900"/>
-    <!--servo name="CIC_RIGHT" no="5" min="1100" neutral="1500" max="1900"/-->
+    <servo name="CIC_RIGHT" no="5" min="1100" neutral="1500" max="1900"/>
     <servo name="CIC_LEFT" no="0" min="1100" neutral="1500" max="1900"/>
     <servo name="TAIL" no="2" min="0" neutral="0" max="500"/>
-    <!--servo name="GAS" no="3" min="1900" neutral="1890" max="10"/-->
+    <servo name="GAS" no="3" min="1900" neutral="1890" max="10"/>
   </servos>
 
   <commands>
@@ -40,10 +40,10 @@
     <set servo="CIC_FRONT" value="-@PITCH*0.5-($collective)"/>
     <set servo="TAIL" value="@YAW+0.4*$gas"/>
     -->
-    <set servo="CIC_LEFT" value="@PITCH"/>
-    <!--set servo="CIC_RIGHT" value="0"/-->
+    <set servo="CIC_LEFT" value="0"/>
+    <set servo="CIC_RIGHT" value="0"/>
     <set servo="CIC_FRONT" value="0"/>
-    <!--set servo="GAS" value="0"/-->
+    <set servo="GAS" value="@THRUST"/>
     <set servo="TAIL" value="0"/>
   </command_laws>
 
@@ -173,8 +173,8 @@
  <modules main_freq="512">
    <load name="gps_ubx_ucenter.xml"/>
    <load name="send_imu_mag_current.xml"/>
-   <!--load name="sd_logger_spi_direct.xml"/>
-   <load name="sys_mon.xml"/-->
+   <load name="sd_logger_spi_direct.xml"/>
+   <load name="sys_mon.xml"/>
  </modules>
 
   <firmware name="rotorcraft">

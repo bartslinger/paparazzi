@@ -292,7 +292,7 @@
  * PWM
  *
  */
-#define PWM_USE_TIM8 0
+#define PWM_USE_TIM8 1
 #define PWM_USE_TIM4 1
 #define PWM_USE_TIM5 1
 
@@ -323,7 +323,7 @@
 #define USE_DUAL_PWM6 1
 #else
 #define USE_PWM5 1
-#define USE_PWM6 0
+#define USE_PWM6 1
 #endif
 
 // Servo numbering on LisaM silkscreen/docs starts with 1
@@ -443,7 +443,7 @@
 /* servos 5-6 on TIM5 */
 #define PWM_TIM5_CHAN_MASK (PWM_SERVO_5_OC_BIT) //|PWM_SERVO_6_OC_BIT
 
-//#define PWM_TIM8_CHAN_MASK (PWM_SERVO_6_OC_BIT)
+#define PWM_TIM8_CHAN_MASK (PWM_SERVO_6_OC_BIT)
 
 /* SuperbitRF mounted */
 #define SUPERBITRF_SPI_DEV spi2

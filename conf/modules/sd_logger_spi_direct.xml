@@ -19,7 +19,7 @@
     <file name="sd_logger_spi_direct.h"/>
   </header>
   <init fun="sd_logger_start()"/>
-  <periodic fun="sd_logger_periodic()" autorun="TRUE"/>
+  <!--periodic fun="sd_logger_periodic()" autorun="TRUE"/-->
   <datalink message="SETTING" fun="sd_logger_command()"/>
   <makefile target="ap">
     <define name="SPI_MASTER" value="1" />
