@@ -174,7 +174,8 @@
    <load name="gps_ubx_ucenter.xml"/>
    <load name="send_imu_mag_current.xml"/>
    <load name="sd_logger_spi_direct.xml"/>
-   <load name="sys_mon.xml"/>
+   <!--load name="sys_mon.xml"/-->
+   <load name="rpm_sensor.xml"/>
  </modules>
 
   <firmware name="rotorcraft">

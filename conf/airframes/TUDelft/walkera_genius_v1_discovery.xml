@@ -167,20 +167,23 @@
  <modules main_freq="512"> <!-- was 512 -->
    <load name="gps_ubx_ucenter.xml"/>
    <load name="send_imu_mag_current.xml"/>
-   <!--load name="high_speed_logger_spi_link.xml"/-->
-   <load name="sd_logger.xml"/>
+   <load name="rpm_sensor.xml"/>
+   <!--load name="sd_logger.xml"/-->
  </modules>
 
   <firmware name="rotorcraft">
     <target name="ap" board="stm32f4_discovery">
-      <!--subsystem name="radio_control" type="superbitrf_rc"-->
+      <subsystem name="radio_control" type="superbitrf_rc">
         <!--<define name="RADIO_TRANSMITTER_ID" value="2008496626"/>-->   <!-- TUDelft Dx6i: TX 4 -->
         <!--<define name="RADIO_TRANSMITTER_CHAN" value="6"/>-->
         <!--<define name="RADIO_TRANSMITTER_PROTOCOL" value="0x01"/>-->
+      </subsystem>
 
+      <!--
 	  <subsystem name="radio_control" type="ppm">
         <configure name="RADIO_CONTROL_PPM_PIN" value="SERVO6"/>
       </subsystem>
+      -->
 
       <configure name="AHRS_PROPAGATE_FREQUENCY" value="500"/>
       <define name="USE_PERSISTENT_SETTINGS" value="TRUE"/>
@@ -193,7 +196,7 @@
     </subsystem>
 
 	<subsystem name="telemetry" type="transparent">
-	  <!--configure name="MODEM_BAUD" value="B115200"/-->
+	  <configure name="MODEM_BAUD" value="B115200"/>
 	  <configure name="MODEM_PORT" value="UART1"/>
 	</subsystem>
     <!--subsystem name="telemetry" type="superbitrf" /-->
