@@ -170,12 +170,15 @@
    <define name="IGAIN" value="0"/>
  </section>
 
+ <section name="RPM_SENSOR" prefix="RPM_SENSOR_">
+   <define name="PULSES_PER_ROTATION" value="6"/>
+ </section>
+
  <modules main_freq="512">
    <load name="gps_ubx_ucenter.xml"/>
    <load name="send_imu_mag_current.xml"/>
    <load name="sd_logger_spi_direct.xml"/>
    <!--load name="sys_mon.xml"/-->
-   <load name="rpm_sensor.xml"/>
  </modules>
 
   <firmware name="rotorcraft">
@@ -207,6 +210,7 @@
     <subsystem name="imu" type="lisa_s_v1.0"/>
     <subsystem name="gps" type="ublox"/>
     <subsystem name="stabilization" type="int_quat"/>
+    <subsystem name="rpm_sensor" type="eagletree"/>
     <subsystem name="ahrs" type="int_cmpl_quat"/>
     <subsystem name="ins"/>
   </firmware>

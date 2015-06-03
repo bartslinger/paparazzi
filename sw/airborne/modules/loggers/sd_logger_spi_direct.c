@@ -42,6 +42,7 @@
 
 #include "subsystems/imu.h"
 #include "subsystems/actuators/actuators_pwm_arch.h"
+#include "subsystems/sensors/rpm_sensor.h"
 #include "sd_logger_spi_direct.h"
 
 #include RADIO_CONTROL_TYPE_H
@@ -120,7 +121,7 @@ void sd_logger_periodic(void)
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 40]);
       sd_logger_int32_to_buffer(actuators_pwm_values[5],
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 44]);
-      sd_logger_int32_to_buffer(0,
+      sd_logger_int32_to_buffer(rpm_sensor.motor_frequency,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 48]); // reserved for something
       sdlogger.buffer_addr += SD_LOGGER_PACKET_SIZE;
 

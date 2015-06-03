@@ -106,6 +106,16 @@ struct AhrsIntCmplQuat {
 
 extern struct AhrsIntCmplQuat ahrs_icq;
 
+struct SecondOrderNotchFilter {
+  struct Int32Vect3 xn1;             ///< x[n-1]
+  struct Int32Vect3 xn2;             ///< x[n-2]
+  struct Int32Vect3 yn1;             ///< y[n-1]
+  struct Int32Vect3 yn2;             ///< y[n-2]
+  float d2;                   ///< d^2 where d=exp(-2*PI*fw/2*Ts)
+};
+
+extern struct SecondOrderNotchFilter notch;
+
 extern void ahrs_icq_init(void);
 extern void ahrs_icq_set_body_to_imu(struct OrientationReps *body_to_imu);
 extern void ahrs_icq_set_body_to_imu_quat(struct FloatQuat *q_b2i);

@@ -32,7 +32,8 @@
 
 #include "subsystems/ahrs/ahrs_int_cmpl_quat.h"
 #include "subsystems/ahrs/ahrs_int_utils.h"
-//#include "modules/loggers/sd_logger_spi_direct.h"
+#include "modules/loggers/sd_logger_spi_direct.h"
+#include "subsystems/sensors/rpm_sensor.h"
 
 #if USE_GPS
 #include "subsystems/gps.h"
@@ -84,6 +85,10 @@ PRINT_CONFIG_VAR(AHRS_MAG_OMEGA)
 PRINT_CONFIG_VAR(AHRS_MAG_ZETA)
 #endif
 
+/** Notch filter settings */
+#define NOTCH_BW 10.0
+
+
 /** by default use the gravity heuristic to reduce gain */
 #ifndef AHRS_GRAVITY_HEURISTIC_FACTOR
 #define AHRS_GRAVITY_HEURISTIC_FACTOR 30
@@ -102,12 +107,17 @@ PRINT_CONFIG_VAR(AHRS_MAG_ZETA)
 #endif
 
 struct AhrsIntCmplQuat ahrs_icq;
+struct SecondOrderNotchFilter notch;
 
 static inline void UNUSED ahrs_icq_update_mag_full(struct Int32Vect3 *mag, float dt);
 static inline void ahrs_icq_update_mag_2d(struct Int32Vect3 *mag, float dt);
 
 void ahrs_icq_init(void)
 {
+  /* Set notch filter bandwidth */
+  float d = exp(-1.*M_PI*NOTCH_BW/PERIODIC_FREQUENCY);
+  notch.d2 = d*d;
+
 
   ahrs_icq.status = AHRS_ICQ_UNINIT;
   ahrs_icq.is_aligned = FALSE;
@@ -239,7 +249,50 @@ void ahrs_icq_update_accel(struct Int32Vect3 *accel, float dt)
     return;
   }
 
-  //sd_logger_periodic();
+  /*
+   * Notch filter on accelerations, only if rotor is turning
+   * y[n] = b * y[n-1] - d^2 * y[n-2] + a * x[n] - b * x[n-1] + a * x[n-2]
+   *
+   */
+  struct Int32Vect3 accel_filt;
+  if (rpm_sensor.motor_frequency > 5.0 /*Hz*/) {
+
+    float costheta = cos(2.*M_PI*rpm_sensor.motor_frequency/PERIODIC_FREQUENCY);
+    float a = (1 + notch.d2) * 0.5;
+    float b = (1 + notch.d2) * costheta;
+
+    struct Int32Vect3 p1; // b   * y[n-1]
+    struct Int32Vect3 p2; // d^2 * y[n-2]
+    struct Int32Vect3 p3; // a   * x[n]
+    struct Int32Vect3 p4; // b   * x[n-1]
+    struct Int32Vect3 p5; // a   * x[n-2]
+
+    VECT3_SMUL(p1, notch.yn1, b);
+    VECT3_SMUL(p2, notch.yn2, notch.d2);
+    VECT3_SMUL(p3, *accel, a);
+    VECT3_SMUL(p4, notch.xn1, b);
+    VECT3_SMUL(p5, notch.xn2, a);
+
+    accel_filt = p1;
+    VECT3_SUB(accel_filt, p2);
+    VECT3_ADD(accel_filt, p3);
+    VECT3_SUB(accel_filt, p4);
+    VECT3_ADD(accel_filt, p5);
+  } else { /* Do not apply filtering if rotor is (near) idle */
+    accel_filt = *accel;
+  }
+
+  /* Propagate for next round */
+  notch.yn2 = notch.yn1;
+  notch.yn1 = accel_filt;
+  notch.xn2 = notch.xn1;
+  notch.xn1 = *accel;
+
+  /* Set accel values to filtered values */
+  *accel = accel_filt;
+
+  /* Log it! */
+  sd_logger_periodic();
 
   // c2 = ltp z-axis in imu-frame
   struct Int32RMat ltp_to_imu_rmat;

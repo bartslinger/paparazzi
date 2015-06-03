@@ -28,9 +28,23 @@
 
 #include "std.h"
 
-extern uint32_t rpm_last_ppm;
+/**
+ * Architecture dependant code
+ */
+#include "subsystems/sensors/rpm_sensor_arch.h"
+/* must be implemented by arch dependant code */
+extern void rpm_sensor_arch_init(void);
+
+struct RpmSensor {
+  uint16_t previous_cnt;
+  float previous_frequency;
+  float motor_frequency;
+};
+
+extern struct RpmSensor rpm_sensor;
 
 extern void rpm_sensor_init(void);
+extern void rpm_sensor_process_pulse(uint16_t cnt, uint8_t overflow_cnt);
 
 #endif
 

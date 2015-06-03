@@ -4,6 +4,7 @@
 #include "peripherals/Mocksdcard_spi.h"
 #include "subsystems/Mockimu.h"
 #include "subsystems/actuators/Mockactuators_pwm_arch.h"
+#include "subsystems/sensors/Mockrpm_sensor.h"
 #include "loggers/sd_logger_spi_direct.h"
 
 #define S(x) #x
@@ -30,6 +31,13 @@ struct pprz_transport pprz_tp;
 
 /* Actually defined in sd_logger.c */
 struct SdLogger sdlogger;
+
+#define RADIO_CTL_NB 7
+/* Actually defined in ppm.c */
+uint16_t ppm_pulses[RADIO_CTL_NB];
+
+/* Actually defined in rpm_sensor.c */
+struct RpmSensor rpm_sensor;
 
 
 void setUp(void)

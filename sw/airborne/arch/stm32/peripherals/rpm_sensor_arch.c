@@ -65,7 +65,7 @@ static void send_rpm(struct transport_tx *trans, struct link_device *dev)
   pprz_msg_send_CSC_CAN_DEBUG(trans, dev, AC_ID, &rpm_last_ppm, 0);
 }
 
-void rpm_sensor_init(void)
+void rpm_sensor_arch_init(void)
 {
   register_periodic_telemetry(DefaultPeriodic, "CSC_CAN_DEBUG", send_rpm);
 
@@ -73,42 +73,39 @@ void rpm_sensor_init(void)
   rcc_periph_clock_enable(RPM_RCC_TIM_PPM);
   rcc_periph_clock_enable(RCC_AFIO);
 
-  /* GPIO configuration as input capture for timer (STM32F1) */
-  /* GPIO configuration as input capture for timer */
+  /* GPIO configuration as input capture for timer
+   * Using RADIO_IRQ pin on Lisa/S (=PC6).
+   * Requires remapping to get timer 3 channel 1.
+   */
   gpio_enable_clock(RPM_PPM_GPIO_PORT);
   gpio_primary_remap(FALSE, AFIO_MAPR_TIM3_REMAP_FULL_REMAP);
   gpio_set_mode(RPM_PPM_GPIO_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, RPM_PPM_GPIO_PIN);
-  //gpio_setup_pin_af(RPM_PPM_GPIO_PORT, RPM_PPM_GPIO_PIN, RPM_PPM_GPIO_AF, FALSE);
 
   /* Time Base configuration */
-
   timer_reset(RPM_PPM_TIMER);
   timer_set_mode(RPM_PPM_TIMER, TIM_CR1_CKD_CK_INT,
                  TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
   timer_set_period(RPM_PPM_TIMER, 0xFFFF);
   //uint32_t timer_clk = timer_get_frequency(RPM_PPM_TIMER);
   //timer_set_prescaler(RPM_PPM_TIMER, (timer_clk / (RPM_PPM_TICKS_PER_USEC * ONE_MHZ_CLK)) - 1);
+  timer_set_prescaler(RPM_PPM_TIMER, 256);
 
   /* TIM configuration: Input Capture mode ---------------------
       The Rising edge is used as active edge
    ------------------------------------------------------------ */
-
   timer_ic_set_polarity(RPM_PPM_TIMER, RPM_PPM_CHANNEL, TIM_IC_RISING);
   timer_ic_set_input(RPM_PPM_TIMER, RPM_PPM_CHANNEL, RPM_PPM_TIMER_INPUT);
   timer_ic_set_prescaler(RPM_PPM_TIMER, RPM_PPM_CHANNEL, TIM_IC_PSC_OFF);
   timer_ic_set_filter(RPM_PPM_TIMER, RPM_PPM_CHANNEL, TIM_IC_OFF);
 
   /* Enable timer Interrupt(s). */
-
   nvic_set_priority(RPM_PPM_IRQ, RPM_PPM_IRQ_PRIO);
   nvic_enable_irq(RPM_PPM_IRQ);
 
   /* Enable the Capture/Compare and Update interrupt requests. */
-
   timer_enable_irq(RPM_PPM_TIMER, (RPM_PPM_CC_IE));// | TIM_DIER_UIE));
 
   /* Enable capture channel. */
-
   timer_ic_enable(RPM_PPM_TIMER, RPM_PPM_CHANNEL);
 
   /* TIM enable counter */
@@ -128,9 +125,11 @@ void tim3_isr(void)
     //rpm_last_ppm++;
     // call a function here
     //send_rpm();
+    timer_set_counter(RPM_PPM_TIMER, 0);
   } else if ((TIM3_SR & TIM_SR_UIF) != 0) {
     timer_rollover_cnt += (1 << 16);
     timer_clear_flag(TIM3, TIM_SR_UIF);
   }
 }
+
 
