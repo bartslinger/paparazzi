@@ -39,6 +39,13 @@ uint16_t ppm_pulses[RADIO_CTL_NB];
 /* Actually defined in rpm_sensor.c */
 struct RpmSensor rpm_sensor;
 
+#ifdef AHRS_USE_RPM_SENSOR_NOTCH
+#include "filters/notch_filter.h"
+struct SecondOrderNotchFilter acc_x_notch;
+struct SecondOrderNotchFilter acc_y_notch;
+struct SecondOrderNotchFilter acc_z_notch;
+#endif
+
 
 void setUp(void)
 {

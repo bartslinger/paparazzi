@@ -43,6 +43,7 @@
 #include "subsystems/imu.h"
 #include "subsystems/actuators/actuators_pwm_arch.h"
 #include "subsystems/sensors/rpm_sensor.h"
+#include "subsystems/ahrs/ahrs_int_cmpl_quat.h"
 #include "sd_logger_spi_direct.h"
 
 #include RADIO_CONTROL_TYPE_H
@@ -99,17 +100,17 @@ void sd_logger_periodic(void)
     case SdLogger_Logging:
       sdlogger.packet_count++;
       sd_logger_uint32_to_buffer(sdlogger.packet_count, &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr]);
-      sd_logger_int32_to_buffer(imu.accel_unscaled.x,
+      sd_logger_int32_to_buffer(imu.accel.x,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 4]);
-      sd_logger_int32_to_buffer(imu.accel_unscaled.y,
+      sd_logger_int32_to_buffer(imu.accel.y,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 8]);
-      sd_logger_int32_to_buffer(imu.accel_unscaled.z,
+      sd_logger_int32_to_buffer(imu.accel.z,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 12]);
-      sd_logger_int32_to_buffer(imu.gyro_unscaled.p,
+      sd_logger_int32_to_buffer(acc_x2_notch.yn1,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 16]);
-      sd_logger_int32_to_buffer(imu.gyro_unscaled.q,
+      sd_logger_int32_to_buffer(acc_y2_notch.yn1,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 20]);
-      sd_logger_int32_to_buffer(imu.gyro_unscaled.r,
+      sd_logger_int32_to_buffer(acc_z2_notch.yn1,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 24]);
       sd_logger_int32_to_buffer(actuators_pwm_values[0],
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 28]);

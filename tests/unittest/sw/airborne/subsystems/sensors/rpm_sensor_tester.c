@@ -1,9 +1,14 @@
 #include "unity.h"
 #include "subsystems/datalink/Mocktelemetry.h"
 #include "Mockmessages_testable.h"
-#include "subsystems/sensors/Mockrpm_sensor_arch.h"
 #include "subsystems/sensors/rpm_sensor.h"
 
+/* rpm_sensor_arch_init */
+bool_t rpm_sensor_arch_init_called;
+void rpm_sensor_arch_init(void)
+{
+  rpm_sensor_arch_init_called = TRUE;
+}
 
 /* Actually defined in telemetry.c */
 struct periodic_telemetry pprz_telemetry;
@@ -18,20 +23,18 @@ struct RpmSensor rpm_sensor_original;
 void setUp(void)
 {
   rpm_sensor_original = rpm_sensor;
-  Mockrpm_sensor_arch_Init();
+  rpm_sensor_arch_init_called = FALSE;
 }
 
 void tearDown(void)
 {
-  Mockrpm_sensor_arch_Verify();
-  Mockrpm_sensor_arch_Destroy();
   rpm_sensor = rpm_sensor_original;
 }
 
 void test_CallArchInitFunctionWhenInitializing(void)
 {
-  rpm_sensor_arch_init_Expect();
   rpm_sensor_init();
+  TEST_ASSERT_TRUE(rpm_sensor_arch_init_called);
 }
 
 void test_SetPreviousCountAfterProcessingPulse(void)

@@ -39,6 +39,10 @@ AHRS_ICQ_SRCS   += subsystems/ahrs/ahrs_int_cmpl_quat.c
 AHRS_ICQ_SRCS   += subsystems/ahrs/ahrs_int_cmpl_quat_wrapper.c
 AHRS_ICQ_SRCS   += subsystems/ahrs/ahrs_aligner.c
 
+#ifdef AHRS_USE_RPM_SENSOR_NOTCH
+AHRS_ICQ_SRCS   += filters/notch_filter.c
+#endif
+
 # add it for all targets except sim and fbw
 ifeq (,$(findstring $(TARGET),sim fbw))
 $(TARGET).CFLAGS += $(AHRS_ICQ_CFLAGS)

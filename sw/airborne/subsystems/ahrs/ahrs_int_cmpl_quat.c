@@ -33,7 +33,11 @@
 #include "subsystems/ahrs/ahrs_int_cmpl_quat.h"
 #include "subsystems/ahrs/ahrs_int_utils.h"
 #include "modules/loggers/sd_logger_spi_direct.h"
+
+#ifdef AHRS_USE_RPM_SENSOR_NOTCH
 #include "subsystems/sensors/rpm_sensor.h"
+#include "filters/notch_filter.h"
+#endif
 
 #if USE_GPS
 #include "subsystems/gps.h"
@@ -85,10 +89,6 @@ PRINT_CONFIG_VAR(AHRS_MAG_OMEGA)
 PRINT_CONFIG_VAR(AHRS_MAG_ZETA)
 #endif
 
-/** Notch filter settings */
-#define NOTCH_BW 10.0
-
-
 /** by default use the gravity heuristic to reduce gain */
 #ifndef AHRS_GRAVITY_HEURISTIC_FACTOR
 #define AHRS_GRAVITY_HEURISTIC_FACTOR 30
@@ -107,16 +107,56 @@ PRINT_CONFIG_VAR(AHRS_MAG_ZETA)
 #endif
 
 struct AhrsIntCmplQuat ahrs_icq;
-struct SecondOrderNotchFilter notch;
+
+#ifdef AHRS_USE_RPM_SENSOR_NOTCH
+struct SecondOrderNotchFilter acc_x_notch;
+struct SecondOrderNotchFilter acc_y_notch;
+struct SecondOrderNotchFilter acc_z_notch;
+struct SecondOrderNotchFilter acc_x1_notch;
+struct SecondOrderNotchFilter acc_y1_notch;
+struct SecondOrderNotchFilter acc_z1_notch;
+struct SecondOrderNotchFilter acc_x2_notch;
+struct SecondOrderNotchFilter acc_y2_notch;
+struct SecondOrderNotchFilter acc_z2_notch;
+#endif
 
 static inline void UNUSED ahrs_icq_update_mag_full(struct Int32Vect3 *mag, float dt);
 static inline void ahrs_icq_update_mag_2d(struct Int32Vect3 *mag, float dt);
 
 void ahrs_icq_init(void)
 {
+#ifdef AHRS_USE_RPM_SENSOR_NOTCH
   /* Set notch filter bandwidth */
-  float d = exp(-1.*M_PI*NOTCH_BW/PERIODIC_FREQUENCY);
-  notch.d2 = d*d;
+  rpm_sensor_init();
+
+  notch_filter_set_sampling_frequency(&acc_x_notch, PERIODIC_FREQUENCY);
+  notch_filter_set_bandwidth(&acc_x_notch, AHRS_NOTCH_FILTER_BANDWIDTH);
+
+  notch_filter_set_sampling_frequency(&acc_y_notch, PERIODIC_FREQUENCY);
+  notch_filter_set_bandwidth(&acc_y_notch, AHRS_NOTCH_FILTER_BANDWIDTH);
+
+  notch_filter_set_sampling_frequency(&acc_z_notch, PERIODIC_FREQUENCY);
+  notch_filter_set_bandwidth(&acc_z_notch, AHRS_NOTCH_FILTER_BANDWIDTH);
+
+  notch_filter_set_sampling_frequency(&acc_x1_notch, PERIODIC_FREQUENCY);
+  notch_filter_set_bandwidth(&acc_x_notch, AHRS_NOTCH_FILTER_BANDWIDTH);
+
+  notch_filter_set_sampling_frequency(&acc_y1_notch, PERIODIC_FREQUENCY);
+  notch_filter_set_bandwidth(&acc_y_notch, AHRS_NOTCH_FILTER_BANDWIDTH);
+
+  notch_filter_set_sampling_frequency(&acc_z1_notch, PERIODIC_FREQUENCY);
+  notch_filter_set_bandwidth(&acc_z_notch, AHRS_NOTCH_FILTER_BANDWIDTH);
+
+  notch_filter_set_sampling_frequency(&acc_x2_notch, PERIODIC_FREQUENCY);
+  notch_filter_set_bandwidth(&acc_x_notch, AHRS_NOTCH_FILTER_BANDWIDTH);
+
+  notch_filter_set_sampling_frequency(&acc_y2_notch, PERIODIC_FREQUENCY);
+  notch_filter_set_bandwidth(&acc_y_notch, AHRS_NOTCH_FILTER_BANDWIDTH);
+
+  notch_filter_set_sampling_frequency(&acc_z2_notch, PERIODIC_FREQUENCY);
+  notch_filter_set_bandwidth(&acc_z_notch, AHRS_NOTCH_FILTER_BANDWIDTH);
+
+#endif
 
 
   ahrs_icq.status = AHRS_ICQ_UNINIT;
@@ -249,50 +289,53 @@ void ahrs_icq_update_accel(struct Int32Vect3 *accel, float dt)
     return;
   }
 
-  /*
-   * Notch filter on accelerations, only if rotor is turning
-   * y[n] = b * y[n-1] - d^2 * y[n-2] + a * x[n] - b * x[n-1] + a * x[n-2]
-   *
-   */
-  struct Int32Vect3 accel_filt;
-  if (rpm_sensor.motor_frequency > 5.0 /*Hz*/) {
+#ifdef AHRS_USE_RPM_SENSOR_NOTCH
+  if (rpm_sensor.motor_frequency > 5.0) {
 
-    float costheta = cos(2.*M_PI*rpm_sensor.motor_frequency/PERIODIC_FREQUENCY);
-    float a = (1 + notch.d2) * 0.5;
-    float b = (1 + notch.d2) * costheta;
+    notch_filter_set_filter_frequency(&acc_x_notch, rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&acc_y_notch, rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&acc_z_notch, rpm_sensor.motor_frequency);
 
-    struct Int32Vect3 p1; // b   * y[n-1]
-    struct Int32Vect3 p2; // d^2 * y[n-2]
-    struct Int32Vect3 p3; // a   * x[n]
-    struct Int32Vect3 p4; // b   * x[n-1]
-    struct Int32Vect3 p5; // a   * x[n-2]
+    notch_filter_set_filter_frequency(&acc_x1_notch, 2.0*rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&acc_y1_notch, 2.0*rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&acc_z1_notch, 2.0*rpm_sensor.motor_frequency);
 
-    VECT3_SMUL(p1, notch.yn1, b);
-    VECT3_SMUL(p2, notch.yn2, notch.d2);
-    VECT3_SMUL(p3, *accel, a);
-    VECT3_SMUL(p4, notch.xn1, b);
-    VECT3_SMUL(p5, notch.xn2, a);
+    notch_filter_set_filter_frequency(&acc_x2_notch, 3.0*rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&acc_y2_notch, 3.0*rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&acc_z2_notch, 3.0*rpm_sensor.motor_frequency);
 
-    accel_filt = p1;
-    VECT3_SUB(accel_filt, p2);
-    VECT3_ADD(accel_filt, p3);
-    VECT3_SUB(accel_filt, p4);
-    VECT3_ADD(accel_filt, p5);
-  } else { /* Do not apply filtering if rotor is (near) idle */
-    accel_filt = *accel;
+    int32_t xout;
+    notch_filter_update(&acc_x_notch, &accel->x, &xout);
+    int32_t xout1;
+    notch_filter_update(&acc_x1_notch, &xout, &xout1);
+    int32_t xout2;
+    notch_filter_update(&acc_x2_notch, &xout1, &xout2);
+
+    int32_t yout;
+    notch_filter_update(&acc_y_notch, &accel->y, &yout);
+    int32_t yout1;
+    notch_filter_update(&acc_y1_notch, &yout, &yout1);
+    int32_t yout2;
+    notch_filter_update(&acc_y2_notch, &yout1, &yout2);
+
+    int32_t zout;
+    notch_filter_update(&acc_z_notch, &accel->z, &zout);
+    int32_t zout1;
+    notch_filter_update(&acc_z1_notch, &zout, &zout1);
+    int32_t zout2;
+    notch_filter_update(&acc_z2_notch, &zout1, &zout2);
+
+    /* Log it! */
+    sd_logger_periodic();
+
+    /* Set acceleration values to filtered values */
+    accel->x = xout2;
+    accel->y = yout2;
+    accel->z = zout2;
+  } else {
+    sd_logger_periodic();
   }
-
-  /* Propagate for next round */
-  notch.yn2 = notch.yn1;
-  notch.yn1 = accel_filt;
-  notch.xn2 = notch.xn1;
-  notch.xn1 = *accel;
-
-  /* Set accel values to filtered values */
-  *accel = accel_filt;
-
-  /* Log it! */
-  sd_logger_periodic();
+#endif
 
   // c2 = ltp z-axis in imu-frame
   struct Int32RMat ltp_to_imu_rmat;

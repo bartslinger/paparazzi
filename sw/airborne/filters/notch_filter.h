@@ -29,5 +29,19 @@
 
 #include "std.h"
 
+struct SecondOrderNotchFilter {
+  float Ts;
+  float d2;
+  float costheta;
+  int32_t xn1;
+  int32_t xn2;
+  int32_t yn1;
+  int32_t yn2;
+};
+
+extern void notch_filter_set_sampling_frequency(struct SecondOrderNotchFilter *filter, uint16_t frequency);
+extern void notch_filter_set_bandwidth(struct SecondOrderNotchFilter *filter, float bandwidth);
+extern void notch_filter_set_filter_frequency(struct SecondOrderNotchFilter *filter, float frequency);
+extern void notch_filter_update(struct SecondOrderNotchFilter *filter, int32_t *input_signal, int32_t *output_signal);
 
 #endif
