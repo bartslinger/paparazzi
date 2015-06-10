@@ -13,11 +13,11 @@
 <airframe name="walkera_genius_v2">
 
   <servos driver="Pwm">
-    <servo name="CIC_FRONT" no="4" min="1100" neutral="1500" max="1900"/>
-    <servo name="CIC_RIGHT" no="5" min="1100" neutral="1500" max="1900"/>
-    <servo name="CIC_LEFT" no="0" min="1100" neutral="1500" max="1900"/>
+    <servo name="CIC_FRONT" no="4" min="1000" neutral="1400" max="1700"/>
+    <servo name="CIC_RIGHT" no="5" min="1150" neutral="1450" max="1850"/>
+    <servo name="CIC_LEFT" no="0" min="1000" neutral="1400" max="1700"/>
     <servo name="TAIL" no="2" min="0" neutral="0" max="500"/>
-    <servo name="GAS" no="3" min="1900" neutral="1890" max="10"/>
+    <servo name="GAS" no="3" min="1890" neutral="1890" max="1430"/>
   </servos>
 
   <commands>
@@ -28,29 +28,34 @@
   </commands>
 
   <command_laws>
-    <let var="hoverpower" value=".75*MAX_PPRZ"/>
+    <let var="hoverpower" value=".86*MAX_PPRZ"/>
     <let var="hoverstick" value=".35*MAX_PPRZ"/>
     <let var="halfway" value="(@THRUST >= ($hoverstick) ? 1 : 0)"/>
-    <let var="collective" value="@THRUST * 0.4 + (MAX_PPRZ*0.01)"/>
+    <let var="collective" value="@THRUST * 0.1283 + (MAX_PPRZ*0.2129)"/>
+    <!--let var="collective" value="@PITCH"/-->
     <let var="gas" value="($hoverpower) + $halfway * (((@THRUST) - ($hoverstick)) * (MAX_PPRZ - ($hoverpower))) / (MAX_PPRZ - ($hoverstick))  + (1 - $halfway) * ((@THRUST - ($hoverstick)) * ($hoverpower)) / ($hoverstick)"/>
-    <!--
+
+    <set servo="CIC_LEFT" value="((@PITCH*1.75*0.5*0.5)-(@ROLL*1.75*0.5*0.73))-($collective)"/>
+    <set servo="CIC_RIGHT" value="((-@PITCH*1.75*0.5*0.5)-(@ROLL*1.75*0.5*0.73))+($collective)"/>
+    <set servo="CIC_FRONT" value="-@PITCH*1.75*0.5-($collective)"/>
+
+    <!--set servo="CIC_LEFT" value="-$collective"/>
+    <set servo="CIC_RIGHT" value="$collective"/>
+    <set servo="CIC_FRONT" value="-$collective"/-->
+    
     <set servo="GAS" value="$gas"/>
-    <set servo="CIC_LEFT" value="((@PITCH*0.5*0.5)-(@ROLL*0.5*0.73))-($collective)"/>
-    <set servo="CIC_RIGHT" value="((-@PITCH*0.5*0.5)-(@ROLL*0.5*0.73))+($collective)"/>
-    <set servo="CIC_FRONT" value="-@PITCH*0.5-($collective)"/>
-    <set servo="TAIL" value="@YAW+0.4*$gas"/>
-    -->
-    <set servo="CIC_LEFT" value="0"/>
-    <set servo="CIC_RIGHT" value="0"/>
-    <set servo="CIC_FRONT" value="0"/>
-    <set servo="GAS" value="@THRUST"/>
-    <set servo="TAIL" value="0"/>
+    <set servo="TAIL" value="@YAW + $halfway * ((MAX_PPRZ*0.4) + @THRUST*0.2037) + (1 - $halfway) * (@THRUST * 1.4872) "/>
+    <!--set servo="TAIL" value="0"/-->
+    
+    <!--set servo="GAS" value="$gas"/>
+    <set servo="TAIL" value="@YAW+0.4*$gas"/-->
+    
   </command_laws>
 
   <section name="IMU" prefix="IMU_">
-    <define name="BODY_TO_IMU_PHI" value="185." unit="deg"/>
-    <define name="BODY_TO_IMU_THETA" value="0." unit="deg"/>
-    <define name="BODY_TO_IMU_PSI" value="0." unit="deg"/>
+    <define name="BODY_TO_IMU_PHI" value="184." unit="deg"/>
+    <define name="BODY_TO_IMU_THETA" value="-4.5" unit="deg"/>
+    <define name="BODY_TO_IMU_PSI" value="0" unit="deg"/>
 
     <!-- From Delft MAVlab, quick calibration -->
     <define name="ACCEL_X_NEUTRAL" value="62"/>
