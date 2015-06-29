@@ -44,6 +44,8 @@
 #include "subsystems/actuators/actuators_pwm_arch.h"
 #include "subsystems/sensors/rpm_sensor.h"
 #include "subsystems/ahrs/ahrs_int_cmpl_quat.h"
+#include "math/pprz_algebra_int.h"
+#include "state.h"
 #include "sd_logger_spi_direct.h"
 
 #include RADIO_CONTROL_TYPE_H
@@ -68,7 +70,7 @@ void sd_logger_periodic(void)
 {
   /* Check if the switch is flipped to start or stop logging */
   static bool_t sd_logger_previous_switch_state = FALSE;
-  if (USEC_OF_RC_PPM_TICKS(ppm_pulses[4]) < 1300 && sd_logger_previous_switch_state == FALSE && sdcard1.status == SDCard_Idle) {
+  if (USEC_OF_RC_PPM_TICKS(ppm_pulses[4]) < 1300 && USEC_OF_RC_PPM_TICKS(ppm_pulses[4]) > 900 && sd_logger_previous_switch_state == FALSE && sdcard1.status == SDCard_Idle) {
     /* Start logging */
     sdlogger.cmd = SdLoggerCmd_StartLogging;
     sd_logger_command();
@@ -99,6 +101,8 @@ void sd_logger_periodic(void)
       /* Logging data, write data to buffer */
     case SdLogger_Logging:
       sdlogger.packet_count++;
+      struct Int32Eulers attitude;
+      attitude = *stateGetNedToBodyEulers_i();
       sd_logger_uint32_to_buffer(sdlogger.packet_count, &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr]);
       sd_logger_int32_to_buffer(imu.accel.x,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 4]);
@@ -112,17 +116,17 @@ void sd_logger_periodic(void)
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 20]);
       sd_logger_int32_to_buffer(acc_z2_notch.yn1,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 24]);
-      sd_logger_int32_to_buffer(actuators_pwm_values[0],
+      sd_logger_int32_to_buffer(attitude.phi,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 28]);
-      sd_logger_int32_to_buffer(actuators_pwm_values[2],
+      sd_logger_int32_to_buffer(attitude.theta,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 32]);
-      sd_logger_int32_to_buffer(actuators_pwm_values[3],
+      sd_logger_int32_to_buffer(attitude.psi,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 36]);
-      sd_logger_int32_to_buffer(actuators_pwm_values[4],
+      sd_logger_int32_to_buffer(imu.gyro.r,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 40]);
-      sd_logger_int32_to_buffer(actuators_pwm_values[5],
+      sd_logger_int32_to_buffer(actuators_pwm_values[2],
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 44]);
-      sd_logger_int32_to_buffer(rpm_sensor.motor_frequency,
+      sd_logger_int32_to_buffer(100.0*rpm_sensor.motor_frequency,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 48]); // reserved for something
       sdlogger.buffer_addr += SD_LOGGER_PACKET_SIZE;
 

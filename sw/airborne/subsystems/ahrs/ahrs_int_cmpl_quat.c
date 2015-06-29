@@ -158,7 +158,6 @@ void ahrs_icq_init(void)
 
 #endif
 
-
   ahrs_icq.status = AHRS_ICQ_UNINIT;
   ahrs_icq.is_aligned = FALSE;
 
@@ -290,7 +289,7 @@ void ahrs_icq_update_accel(struct Int32Vect3 *accel, float dt)
   }
 
 #ifdef AHRS_USE_RPM_SENSOR_NOTCH
-  if (rpm_sensor.motor_frequency > 5.0) {
+  if (rpm_sensor.motor_frequency > 25.0) {
 
     notch_filter_set_filter_frequency(&acc_x_notch, rpm_sensor.motor_frequency);
     notch_filter_set_filter_frequency(&acc_y_notch, rpm_sensor.motor_frequency);
@@ -329,9 +328,11 @@ void ahrs_icq_update_accel(struct Int32Vect3 *accel, float dt)
     sd_logger_periodic();
 
     /* Set acceleration values to filtered values */
+#if 0
     accel->x = xout2;
     accel->y = yout2;
     accel->z = zout2;
+#endif
   } else {
     sd_logger_periodic();
   }

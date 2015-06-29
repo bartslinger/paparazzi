@@ -58,12 +58,15 @@
     <define name="BODY_TO_IMU_PSI" value="0" unit="deg"/>
 
     <!-- From Delft MAVlab, quick calibration -->
-    <define name="ACCEL_X_NEUTRAL" value="62"/>
+    <define name="ACCEL_X_NEUTRAL" value="0"/>
+    <define name="ACCEL_Y_NEUTRAL" value="0"/>
+    <define name="ACCEL_Z_NEUTRAL" value="0"/>
+    <!--define name="ACCEL_X_NEUTRAL" value="62"/>
     <define name="ACCEL_Y_NEUTRAL" value="16"/>
     <define name="ACCEL_Z_NEUTRAL" value="-191"/>
     <define name="ACCEL_X_SENS" value="4.86205019187" integer="16"/>
     <define name="ACCEL_Y_SENS" value="4.88606377201" integer="16"/>
-    <define name="ACCEL_Z_SENS" value="4.84406734807" integer="16"/>
+    <define name="ACCEL_Z_SENS" value="4.84406734807" integer="16"/-->
 
 
     <!-- From delft MAVLab -->
@@ -81,9 +84,9 @@
   </section>
 
  <section name="AUTOPILOT">
-   <define name="MODE_MANUAL" value="AP_MODE_ATTITUDE_DIRECT"/>
-   <define name="MODE_AUTO1" value="AP_MODE_RC_DIRECT"/> <!--AP_MODE_ATTITUDE_Z_HOLD-->
-   <define name="MODE_AUTO2" value="AP_MODE_KILL"/> <!--AP_MODE_ATTITUDE_DIRECT-->
+   <define name="MODE_AUTO2" value="AP_MODE_RC_DIRECT"/> <!--AP_MODE_ATTITUDE_DIRECT-->
+   <define name="MODE_AUTO1" value="AP_MODE_ATTITUDE_DIRECT"/>
+   <define name="MODE_MANUAL" value="AP_MODE_KILL"/> <!--AP_MODE_ATTITUDE_Z_HOLD-->
  </section>
 
  <section name="BAT">
