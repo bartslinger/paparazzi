@@ -1,0 +1,13 @@
+/home/bart/paparazzi/sw/airborne
+/home/bart/paparazzi/sw/airborne/stm32
+/home/bart/paparazzi/sw/ext/libopencm3/include
+/home/bart/paparazzi/sw/include
+/home/bart/paparazzi/sw/airborne
+/home/bart/paparazzi/conf/autopilot
+/home/bart/paparazzi/sw/airborne/arch/stm32
+/home/bart/paparazzi/var/include
+/home/bart/paparazzi/var/aircrafts/Helisa/ap
+/home/bart/paparazzi/sw/airborne/arch/stm32/modules
+/home/bart/paparazzi/sw/airborne/boards/lisa_s
+/home/bart/paparazzi/sw/airborne/firmwares/rotorcraft
+/home/bart/paparazzi/sw/airborne/modules

@@ -65,7 +65,7 @@ gtk_process.ml : paparazzicenter.glade
 
 %.cmo : %.ml
 	@echo OC $<
-	$(Q)$(OCAMLC) $(INCLUDES) -c $(XPKG) $<
+	$(Q)$(OCAMLC) $(INCLUDES) -I /home/bart/paparazzi/sw/lib/ocaml -c $(XPKG) $<
 
 %.cmi : %.mli
 	@echo OC $<
