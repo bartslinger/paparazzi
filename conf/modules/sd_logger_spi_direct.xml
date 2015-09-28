@@ -12,6 +12,7 @@
         <dl_setting module="loggers/sd_logger_spi_direct" var="sdlogger.cmd" min="0" max="255" step="1"/>
         <dl_setting module="loggers/sd_logger_spi_direct" var="sdlogger.status" min="0" max="255" step="1"/>
         <dl_setting module="loggers/sd_logger_spi_direct" var="sdcard1.status" min="0" max="255" step="1"/>
+        <dl_setting module="loggers/sd_logger_spi_direct" var="sdlogger.timeout_counter" min="0" max="255" step="1"/>
       </dl_settings>
     </dl_settings>
   </settings>

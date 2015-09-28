@@ -36,16 +36,16 @@
 #define SD_LOGGER_BLOCK_PREAMBLE_SIZE 4     /**< 32-bit number that contains the unique_id in each block */
 
 enum SdLoggerStatus {
-  SdLogger_UnInit,                          /**< SD logger is not initialized */
-  SdLogger_Initializing,                    /**< Initializing the SD Card */
-  SdLogger_Idle,                            /**< Idle state, ready to accept commands */
-  SdLogger_Error,                           /**< Something failed */
-  SdLogger_BeforeLogging,                   /**< Clear status block before start with logging */
-  SdLogger_Logging,                         /**< Recording data */
-  SdLogger_StopLogging,                     /**< Stop multiwrite on the sd card with stop token */
-  SdLogger_WriteStatusPacket,               /**< After stopping, writing summary info to block 0 */
-  SdLogger_DataAvailable,                   /**< In this state, the sdcard input buffer has data from address block_addr */
-  SdLogger_ReadingBlock,                    /**< Temporary status when reading block until the callback */
+  SdLogger_UnInit,                          /**< 0  SD logger is not initialized */
+  SdLogger_Initializing,                    /**< 1  Initializing the SD Card */
+  SdLogger_Idle,                            /**< 2  Idle state, ready to accept commands */
+  SdLogger_Error,                           /**< 3  Something failed */
+  SdLogger_BeforeLogging,                   /**< 4  Clear status block before start with logging */
+  SdLogger_Logging,                         /**< 5  Recording data */
+  SdLogger_StopLogging,                     /**< 6  Stop multiwrite on the sd card with stop token */
+  SdLogger_WriteStatusPacket,               /**< 7  After stopping, writing summary info to block 0 */
+  SdLogger_DataAvailable,                   /**< 8  In this state, the sdcard input buffer has data from address block_addr */
+  SdLogger_ReadingBlock,                    /**< 9  Temporary status when reading block until the callback */
 };
 
 enum SdLoggerCommand {
