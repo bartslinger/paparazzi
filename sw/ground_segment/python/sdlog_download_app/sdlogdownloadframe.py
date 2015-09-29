@@ -48,13 +48,18 @@ class LoggerCmd():
 
 
 class SDLogDownloadFrame(wx.Frame):
-    def __init__(self, ac_id, msg_class="telemetry"):
-        self.settings = PaparazziACSettings(ac_id[0])
-        self.ac_id = ac_id[0]
-
-        # Init ivy
+    def __init__(self, options, msg_class='telemetry'):
+        self.ac_id = options['ac_id'][0]
+        self.settings = PaparazziACSettings(self.ac_id)
         self.msg_class = msg_class
+<<<<<<< Updated upstream:sw/ground_segment/python/sdlog_download_app/sdlogdownloadframe.py
         self.InitIvy()
+=======
+
+        # Init serial message link
+        self.InitSerialMessageLink(options['port'][0], options['baud'][0])
+        self.msglink.sendMessage('datalink', 'SETTING', (1, 2, 3))
+>>>>>>> Stashed changes:sw/ground_segment/python/sdlog_download_app_direct/sdlogdownloadframe.py
 
         # GUI
         wx.Frame.__init__(self, id=-1, parent=None, name=u'MessagesFrame', size=wx.Size(WIDTH, HEIGHT), style=wx.DEFAULT_FRAME_STYLE, title=u'SDCard Log Downloader')
@@ -153,8 +158,14 @@ class SDLogDownloadFrame(wx.Frame):
     def OnSettingConfirmation(self, agent, *larg):
         wx.CallAfter(self.process_setting_confirmation, larg[0])
 
+<<<<<<< Updated upstream:sw/ground_segment/python/sdlog_download_app/sdlogdownloadframe.py
     def process_setting_confirmation(self, message):
+=======
+    def process_setting_confirmation(self, msg):
+        print msg.payload_items
+>>>>>>> Stashed changes:sw/ground_segment/python/sdlog_download_app_direct/sdlogdownloadframe.py
         # Extract field values
+        """
         message_values = list(filter(None, message.split(' ')))
         message_values = message_values[0:1] + message_values[2:]
         cmd_idx = self.settings.name_lookup["sdlogger.cmd"].index
@@ -186,6 +197,7 @@ class SDLogDownloadFrame(wx.Frame):
             if self.last_command == 3:
                 self.download_counter += 1
                 self.RequestNextPacket()
+        """
 
     def RequestNextPacket(self):
         if (self.download_counter <= self.download_available):
@@ -199,7 +211,15 @@ class SDLogDownloadFrame(wx.Frame):
             self.inDataLabel.SetLabel("Download complete!")
             self.downloadButton.Enable()
 
+<<<<<<< Updated upstream:sw/ground_segment/python/sdlog_download_app/sdlogdownloadframe.py
     def InitIvy(self):
+=======
+    def InitSerialMessageLink(self, port, baud):
+        self.msglink = serialmessagelink.SerialMessageLink(port, baud)
+        self.msglink.subscribe("DL_VALUE", self.process_setting_confirmation)
+
+    ###def InitIvy(self):
+>>>>>>> Stashed changes:sw/ground_segment/python/sdlog_download_app_direct/sdlogdownloadframe.py
         # initialising the bus
         logging.getLogger('Ivy').setLevel(logging.WARN)
         IvyInit("sdlog_download_app", # application name for Ivy

@@ -7,17 +7,21 @@ import sys
 
 def Usage(scmd):
     lpathitem = scmd.split('/')
-    fmt = '''Usage: %s [-h | --help] [-a AC_ID | --ac_id=AC_ID]
+    fmt = '''Usage: %s [-h | --help] [-a AC_ID | --ac_id=AC_ID] 
+\t [-s PORT | --port=PORT] [-b BAUD | --baud=BAUD]
 where
 \t-h | --help print this message
-\t-a AC_ID | --ac_id=AC_ID where AC_ID is an aircraft ID to use for downloading log data
+\t-a AC_ID | --ac_id=AC_ID where AC_ID is an aircraft ID to use for 
+\t\tdownloading log data
+\t-s PORT | --port=PORT where PORT is the serial port device ('/dev/ttyUSB0')
+\t-b BAUD | --baud=BAUD where BAUD is the baudrate of the serial port
 '''
     print(fmt % lpathitem[-1])
 
 def GetOptions():
-    options = {'ac_id':[]}
+    options = {'ac_id':[], 'port':[], 'baud':[]}
     try:
-        optlist, left_args = getopt.getopt(sys.argv[1:],'h:a:', ['help', 'ac_id='])
+        optlist, left_args = getopt.getopt(sys.argv[1:],'h:a:s:b:', ['help', 'ac_id=', 'port=', 'baud='])
     except getopt.GetoptError:
         # print help information and exit:
         Usage(sys.argv[0])
@@ -28,7 +32,17 @@ def GetOptions():
             sys.exit()
         elif o in ("-a", "--ac_id"):
             options['ac_id'].append(int(a))
+        elif o in ("-s", "--port"):
+            options['port'].append(a)
+        elif o in ("-b", "--baud"):
+            options['baud'].append(int(a))
 
+    if not options['port']:
+        print "DEFAULT PORT"
+        options['port'].append('/dev/ttyACM1')
+    if not options['baud']:
+        print "DEFAULT BAUD"
+        options['baud'].append(int(115200))
     return options
 
 class SDLogDownloadApp(wx.App):
@@ -37,7 +51,7 @@ class SDLogDownloadApp(wx.App):
         if not options['ac_id']:
             Usage(sys.argv[0])
             sys.exit("Error: Please specify at least one aircraft ID.")
-        self.main = sdlogdownloadframe.SDLogDownloadFrame(options['ac_id'])
+        self.main = sdlogdownloadframe.SDLogDownloadFrame(options)
         self.main.Show()
         self.SetTopWindow(self.main)
         return True
