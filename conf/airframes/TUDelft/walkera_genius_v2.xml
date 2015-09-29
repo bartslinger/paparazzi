@@ -167,10 +167,7 @@
    <load name="gps_ubx_ucenter.xml"/>
    <load name="send_imu_mag_current.xml"/>
    <load name="sd_logger_spi_direct.xml"/>
-<<<<<<< Updated upstream
-=======
    <!--load name="sys_mon.xml"/-->
->>>>>>> Stashed changes
  </modules>
 
   <firmware name="rotorcraft">

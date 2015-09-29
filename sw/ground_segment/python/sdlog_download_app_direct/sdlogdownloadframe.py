@@ -28,7 +28,6 @@ class Message(PprzMessage):
         self.index = None
         self.last_seen = time.clock()
 
-
 class Aircraft(object):
     def __init__(self, ac_id):
         self.ac_id = ac_id
@@ -40,7 +39,6 @@ class LoggerCmd():
     stop = 1
     download = 2
 
-
 class SDLogDownloadFrame(wx.Frame):
     def __init__(self, options, msg_class='telemetry'):
         self.ac_id = options['ac_id'][0]
@@ -49,7 +47,6 @@ class SDLogDownloadFrame(wx.Frame):
 
         # Init serial message link
         self.InitSerialMessageLink(options['port'][0], options['baud'][0])
-        self.msglink.sendMessage('datalink', 'SETTING', (1, 2, 3))
 
         # GUI
         wx.Frame.__init__(self, id=-1, parent=None, name=u'MessagesFrame', size=wx.Size(WIDTH, HEIGHT), style=wx.DEFAULT_FRAME_STYLE, title=u'SDCard Log Downloader')
@@ -86,7 +83,7 @@ class SDLogDownloadFrame(wx.Frame):
         self.download_available = 0
         self.last_command = 0
         self.unique_id = 0
-        self.download_timer = threading.Timer
+        self.download_timer = None
         self.request_timer = threading.Timer
         self.timeout_time = 0.1
 
@@ -99,45 +96,42 @@ class SDLogDownloadFrame(wx.Frame):
         unique_id_idx = self.settings.name_lookup["sdlogger.unique_id"].index
         if index == 1:
             # First set unique id
-            ###IvySendMsg("dl DL_SETTING %s %s %s" % (self.ac_id, unique_id_idx, int(time.time()) - 1428500000))
+            self.msglink.sendMessage('datalink', 'SETTING', (unique_id_idx, self.ac_id, int(time.time()) - 1428500000))
             self.last_command = 0
             # Continuing trough callback from setting unique id
         elif index == 2:
-            ###IvySendMsg("dl DL_SETTING %s %s %s" % (self.ac_id, setting_index, 2))
+            self.msglink.sendMessage('datalink', 'SETTING', (setting_index, self.ac_id, 2))
             self.stopButton.Disable()
             self.request_timer = threading.Timer(0.5, self.stopButton.Enable)
             self.request_timer.start()
         elif index == 3:
-            ###IvySendMsg("dl DL_SETTING %s %s %s" % (self.ac_id, setting_index, 3))
+            self.msglink.sendMessage('datalink', 'SETTING', (setting_index, self.ac_id, 3))
             self.downloadButton.Disable()
 
     def OnStatusRequest(self, event):
         setting_index = self.settings.name_lookup["sdlogger.cmd"].index
         ###IvySendMsg("dl DL_SETTING %s %s %s" % (self.ac_id, setting_index, 3))
+        self.msglink.sendMessage('datalink', 'SETTING', (setting_index, self.ac_id, 3))
 
-    def OnLogPacketReceive(self, agent, *larg):
-        wx.CallAfter(self.process_log_packet, larg[0])
+    def OnLogPacketReceive(self, larg):
+        wx.CallAfter(self.process_log_packet, larg)
 
-        # Called to update GUI with new values
-    def process_log_packet(self, message):
-        self.inDataLabel.SetLabel(message)
-        # Extract field values
-        message_values = list(filter(None, message.split(' ')))
-        message_values = message_values[0:1] + message_values[2:]
+    # Called to update GUI with new values
+    def process_log_packet(self, msg):
+        self.inDataLabel.SetLabel(str(msg.payload_items))
         if self.last_command == 3:
             self.download_counter = 0
-            self.download_available = int(message_values[1])
-            self.unique_id = message_values[3]
-            self.statusDataLabel.SetLabel(message)
+            self.download_available = msg.payload_items[0]
+            self.statusDataLabel.SetLabel("%s packets available" % self.download_available)
+            self.unique_id = msg.payload_items[2]
             # Set the unique ID before reading, otherwise zeros will be returned
             setting_index = self.settings.name_lookup["sdlogger.unique_id"].index
-            ###IvySendMsg("dl DL_SETTING %s %s %s" % (self.ac_id, setting_index, self.unique_id))
-            #self.RequestNextPacket() do this in callback instead
+            self.msglink.sendMessage('datalink', 'SETTING', (setting_index, self.ac_id, self.unique_id))
         elif self.last_command == 57:
             self.download_timer.cancel()
-            self.inDataLabel.SetLabel(message)
+            ##self.inDataLabel.SetLabel(message)
             fh = open("logfile.txt", "a")
-            fh.write(message + "\n")
+            fh.write(str(msg.payload_items) + "\n")
             fh.close()
             percentage = (self.download_counter * 100)/self.download_available
             self.progressBar.SetValue(percentage)
@@ -145,21 +139,16 @@ class SDLogDownloadFrame(wx.Frame):
             self.timeout_time = 0.1
             self.RequestNextPacket()
 
-    ###def OnSettingConfirmation(self, agent, *larg):
-        ###wx.CallAfter(self.process_setting_confirmation, larg[0])
+    def OnSettingConfirmation(self, larg):
+        wx.CallAfter(self.process_setting_confirmation, larg)
 
     def process_setting_confirmation(self, msg):
-        print msg.payload_items
-        # Extract field values
-        """
-        message_values = list(filter(None, message.split(' ')))
-        message_values = message_values[0:1] + message_values[2:]
         cmd_idx = self.settings.name_lookup["sdlogger.cmd"].index
         unique_id_idx = self.settings.name_lookup["sdlogger.unique_id"].index
-        given_idx = int(message_values[1])
+        given_idx = msg.payload_items[0]
         if given_idx == cmd_idx:
-            self.inDataLabel.SetLabel(message)
-            given_cmd = int(float(message_values[2]))
+            #self.inDataLabel.SetLabel("INCOMING")
+            given_cmd = int(msg.payload_items[1])
             # start command
             if given_cmd == 1:
                 self.request_timer.cancel()
@@ -175,7 +164,7 @@ class SDLogDownloadFrame(wx.Frame):
             # If set for start logging
             if self.last_command == 0:
                 # continue with logging command
-                ###IvySendMsg("dl DL_SETTING %s %s %s" % (self.ac_id, cmd_idx, 1))
+                self.msglink.sendMessage('datalink', 'SETTING', (cmd_idx, self.ac_id, 1))
                 self.startButton.Disable()
                 self.request_timer = threading.Timer(0.5, self.startButton.Enable)
                 self.request_timer.start()
@@ -183,15 +172,16 @@ class SDLogDownloadFrame(wx.Frame):
             if self.last_command == 3:
                 self.download_counter += 1
                 self.RequestNextPacket()
-        """
 
     def RequestNextPacket(self):
         if (self.download_counter <= self.download_available):
-            self.timeout_time = self.timeout_time * 2
+            #self.timeout_time = self.timeout_time * 2
             self.last_command = 57
             setting_index = self.settings.name_lookup["sdlogger.request_id"].index
-            ###IvySendMsg("dl DL_SETTING %s %s %s" % (self.ac_id, setting_index, self.download_counter))
-            self.download_timer = threading.Timer(0.3, self.RequestNextPacket)
+            self.msglink.sendMessage('datalink', 'SETTING', (setting_index, self.ac_id, self.download_counter))
+            if self.download_timer is not None:
+                self.download_timer.cancel()
+            self.download_timer = threading.Timer(0.1, self.RequestNextPacket)
             self.download_timer.start()
         else:
             self.inDataLabel.SetLabel("Download complete!")
@@ -199,26 +189,11 @@ class SDLogDownloadFrame(wx.Frame):
 
     def InitSerialMessageLink(self, port, baud):
         self.msglink = serialmessagelink.SerialMessageLink(port, baud)
-        self.msglink.subscribe("DL_VALUE", self.process_setting_confirmation)
-
-    ###def InitIvy(self):
-        # initialising the bus
-        ###logging.getLogger('Ivy').setLevel(logging.WARN)
-        ###IvyInit("sdlog_download_app", # application name for Ivy
-        ###        "",                 # ready message
-        ###        0,                  # main loop is local (ie. using IvyMainloop)
-        ###        lambda x,y: y,      # handler called on connection/deconnection
-        ###        lambda x,y: y       # handler called when a diemessage is received
-        ###        )
-
-        # starting the bus
-        ###IvyStart("")
-        ###IvyBindMsg(self.OnLogPacketReceive, "(^.* LOG_DATAPACKET .*)")
-        ###IvyBindMsg(self.OnSettingConfirmation, "(^.* DL_VALUE .*)")
-        #IvyBindMsg(self.OnSettingMsg, "dl DL_SETTING (.*)")
-		###return
+        self.msglink.subscribe("DL_VALUE", self.OnSettingConfirmation)
+        self.msglink.subscribe("LOG_DATAPACKET", self.OnLogPacketReceive)
 
     def OnClose(self, event):
-        ###IvyStop()
+        if self.download_timer is not None:
+            self.download_timer.cancel()
         self.msglink.close()
         self.Destroy()

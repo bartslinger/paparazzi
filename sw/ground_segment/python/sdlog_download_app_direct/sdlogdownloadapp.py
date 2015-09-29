@@ -56,7 +56,6 @@ class SDLogDownloadApp(wx.App):
         self.SetTopWindow(self.main)
         return True
 
-
 def main():
     application = SDLogDownloadApp(0)
     application.MainLoop()

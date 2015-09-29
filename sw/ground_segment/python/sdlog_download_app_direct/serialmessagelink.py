@@ -89,7 +89,7 @@ class SerialMessageLink():
             # Does not block because of serial timeout set in init:
             indata = bytearray(self.serial.read(self.serial.inWaiting() or 1))
             for b in indata:
-                self.parseByte(b)
+                self.parseByte(int(b))
 
     """
     PPRZ-message: ABCxxxxxxxDE
@@ -174,9 +174,42 @@ class SerialMessageLink():
     def sendMessage(self, msg_class, msg_name, items):
         """Find the message format"""
         pprz_msg = PprzMessage(msg_class, msg_name)
+        msg_id = pprz_msg._id
 
         """Define binary format to use for packing"""
         fmt = "="
+        length = 6
         for a in pprz_msg.fieldtypes:
             fmt += (self.data_types[a][0])
-        print fmt
+            length += (self.data_types[a][1])
+        packed = bytearray(struct.pack(fmt, *items))
+        
+        """Construct serial package"""
+        crc_a = 0
+        crc_b = 0
+        buf = bytearray()
+
+        """Preamble and length"""
+        buf.append(PPRZ_STX)
+        buf.append(length)
+        crc_a += length
+        crc_b += crc_a
+        """Sender id"""
+        buf.append(0)
+        crc_a += 0
+        crc_b += crc_a
+        """Message id"""
+        buf.append(msg_id)
+        crc_a += msg_id
+        crc_b += crc_a
+        """Payload"""
+        for b in packed:
+            buf.append(b)
+            crc_a += int(b)
+            crc_b += crc_a
+        """CRC_A"""
+        buf.append(crc_a % 256)
+        """CRC_B"""
+        buf.append(crc_b % 256)
+
+        self.serial.write(buf)
