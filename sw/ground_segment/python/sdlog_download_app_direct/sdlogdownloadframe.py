@@ -41,6 +41,7 @@ class LoggerCmd():
 
 class SDLogDownloadFrame(wx.Frame):
     def __init__(self, options, msg_class='telemetry'):
+        self.options = options
         self.ac_id = options['ac_id'][0]
         self.settings = PaparazziACSettings(self.ac_id)
         self.msg_class = msg_class
@@ -85,7 +86,6 @@ class SDLogDownloadFrame(wx.Frame):
         self.unique_id = 0
         self.download_timer = None
         self.request_timer = threading.Timer
-        self.timeout_time = 0.1
 
     # Called on button push
     def onButton(self, event):
@@ -120,7 +120,7 @@ class SDLogDownloadFrame(wx.Frame):
     def process_log_packet(self, msg):
         self.inDataLabel.SetLabel(str(msg.payload_items))
         if self.last_command == 3:
-            self.download_counter = 0
+            self.download_counter = self.options['start'][0]
             self.download_available = msg.payload_items[0]
             self.statusDataLabel.SetLabel("%s packets available" % self.download_available)
             self.unique_id = msg.payload_items[2]
@@ -136,7 +136,6 @@ class SDLogDownloadFrame(wx.Frame):
             percentage = (self.download_counter * 100)/self.download_available
             self.progressBar.SetValue(percentage)
             self.download_counter += 1
-            self.timeout_time = 0.1
             self.RequestNextPacket()
 
     def OnSettingConfirmation(self, larg):
@@ -175,10 +174,10 @@ class SDLogDownloadFrame(wx.Frame):
 
     def RequestNextPacket(self):
         if (self.download_counter <= self.download_available):
-            #self.timeout_time = self.timeout_time * 2
             self.last_command = 57
             setting_index = self.settings.name_lookup["sdlogger.request_id"].index
             self.msglink.sendMessage('datalink', 'SETTING', (setting_index, self.ac_id, self.download_counter))
+            print "Req packet %s " % self.download_counter
             if self.download_timer is not None:
                 self.download_timer.cancel()
             self.download_timer = threading.Timer(0.1, self.RequestNextPacket)

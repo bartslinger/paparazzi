@@ -19,9 +19,9 @@ where
     print(fmt % lpathitem[-1])
 
 def GetOptions():
-    options = {'ac_id':[], 'port':[], 'baud':[]}
+    options = {'ac_id':[], 'port':[], 'baud':[], 'start':[]}
     try:
-        optlist, left_args = getopt.getopt(sys.argv[1:],'h:a:s:b:', ['help', 'ac_id=', 'port=', 'baud='])
+        optlist, left_args = getopt.getopt(sys.argv[1:],'h:a:p:b:s:', ['help', 'ac_id=', 'port=', 'baud=', 'start='])
     except getopt.GetoptError:
         # print help information and exit:
         Usage(sys.argv[0])
@@ -32,10 +32,12 @@ def GetOptions():
             sys.exit()
         elif o in ("-a", "--ac_id"):
             options['ac_id'].append(int(a))
-        elif o in ("-s", "--port"):
+        elif o in ("-p", "--port"):
             options['port'].append(a)
         elif o in ("-b", "--baud"):
             options['baud'].append(int(a))
+        elif o in ("-s", "--start"):
+            options['start'].append(int(a))
 
     if not options['port']:
         print "DEFAULT PORT"
@@ -43,6 +45,8 @@ def GetOptions():
     if not options['baud']:
         print "DEFAULT BAUD"
         options['baud'].append(int(115200))
+    if not options['start']:
+        options['start'].append(int(0))
     return options
 
 class SDLogDownloadApp(wx.App):
