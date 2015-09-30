@@ -69,13 +69,14 @@ void sd_logger_start(void)
 void sd_logger_periodic(void)
 {
   /* Check if the switch is flipped to start or stop logging */
+#define SDLOG_FLIP_SWITCH_CHANNEL 6
   static bool_t sd_logger_previous_switch_state = FALSE;
-  if (USEC_OF_RC_PPM_TICKS(ppm_pulses[4]) < 1300 && USEC_OF_RC_PPM_TICKS(ppm_pulses[4]) > 900 && sd_logger_previous_switch_state == FALSE && sdcard1.status == SDCard_Idle) {
+  if (USEC_OF_RC_PPM_TICKS(ppm_pulses[SDLOG_FLIP_SWITCH_CHANNEL]) < 1300 && USEC_OF_RC_PPM_TICKS(ppm_pulses[SDLOG_FLIP_SWITCH_CHANNEL]) > 900 && sd_logger_previous_switch_state == FALSE && sdcard1.status == SDCard_Idle) {
     /* Start logging */
     sdlogger.cmd = SdLoggerCmd_StartLogging;
     sd_logger_command();
     sd_logger_previous_switch_state = TRUE;
-  } else if (USEC_OF_RC_PPM_TICKS(ppm_pulses[4]) > 1300 && sd_logger_previous_switch_state == TRUE && sdlogger.status == SdLogger_Logging) {
+  } else if (USEC_OF_RC_PPM_TICKS(ppm_pulses[SDLOG_FLIP_SWITCH_CHANNEL]) > 1300 && sd_logger_previous_switch_state == TRUE && sdlogger.status == SdLogger_Logging) {
     /* Stop logging */
     sdlogger.cmd = SdLoggerCmd_StopLogging;
     sd_logger_command();
