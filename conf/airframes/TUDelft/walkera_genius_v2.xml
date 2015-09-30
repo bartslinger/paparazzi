@@ -44,7 +44,8 @@
     <set servo="CIC_FRONT" value="-$collective"/-->
     
     <set servo="GAS" value="$gas"/>
-    <set servo="TAIL" value="@YAW + $halfway * ((MAX_PPRZ*0.4) + @THRUST*0.2037) + (1 - $halfway) * (@THRUST * 1.4872) "/>
+    <set servo="TAIL" value="@YAW+0.4*$gas"/>
+    <!--set servo="TAIL" value="@YAW + $halfway * ((MAX_PPRZ*0.4) + @THRUST*0.2037) + (1 - $halfway) * (@THRUST * 1.4872) "/-->
     <!--set servo="TAIL" value="0"/-->
     
     <!--set servo="GAS" value="$gas"/>
@@ -84,9 +85,9 @@
   </section>
 
  <section name="AUTOPILOT">
-   <define name="MODE_AUTO2" value="AP_MODE_RC_DIRECT"/> <!--AP_MODE_ATTITUDE_DIRECT-->
-   <define name="MODE_AUTO1" value="AP_MODE_ATTITUDE_DIRECT"/>
-   <define name="MODE_MANUAL" value="AP_MODE_KILL"/> <!--AP_MODE_ATTITUDE_Z_HOLD-->
+   <define name="MODE_AUTO2" value="AP_MODE_NAV"/> <!--AP_MODE_ATTITUDE_DIRECT-->
+   <define name="MODE_AUTO1" value="AP_MODE_HOVER_Z_HOLD"/>
+   <define name="MODE_MANUAL" value="AP_MODE_ATTITUDE_DIRECT"/> <!--AP_MODE_ATTITUDE_Z_HOLD-->
  </section>
 
  <section name="BAT">
@@ -185,7 +186,7 @@
  </section>
 
  <modules main_freq="512">
-   <load name="gps_ubx_ucenter.xml"/>
+   <!--load name="gps_ubx_ucenter.xml"/-->
    <load name="send_imu_mag_current.xml"/>
    <load name="sd_logger_spi_direct.xml"/>
    <!--load name="sys_mon.xml"/-->
@@ -201,6 +202,7 @@
 	  <subsystem name="radio_control" type="ppm">
         <configure name="RADIO_CONTROL_PPM_PIN" value="SERVO6"/>
       </subsystem>
+      <define name="RADIO_KILL_SWITCH" value="RADIO_FLAP"/>
 
       <configure name="AHRS_PROPAGATE_FREQUENCY" value="500"/>
       <define name="USE_PERSISTENT_SETTINGS" value="TRUE"/>
@@ -218,7 +220,7 @@
 	</subsystem>
     <!--subsystem name="telemetry" type="superbitrf" /-->
     <subsystem name="imu" type="lisa_s_v1.0"/>
-    <subsystem name="gps" type="ublox"/>
+    <subsystem name="gps" type="datalink"/> <!-- was type="ublox" /-->
     <subsystem name="stabilization" type="int_quat"/>
     <subsystem name="rpm_sensor" type="eagletree"/>
     <subsystem name="ahrs" type="int_cmpl_quat"/>
