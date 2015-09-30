@@ -123,7 +123,7 @@ void sd_logger_periodic(void)
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 32]);
       sd_logger_int32_to_buffer(attitude.psi,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 36]);
-      sd_logger_int32_to_buffer(imu.gyro.r,
+      sd_logger_int32_to_buffer(ahrs_icq.weight,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 40]);
       sd_logger_int32_to_buffer(actuators_pwm_values[2],
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 44]);
