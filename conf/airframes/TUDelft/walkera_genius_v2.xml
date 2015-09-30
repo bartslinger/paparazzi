@@ -55,7 +55,7 @@
 
   <section name="IMU" prefix="IMU_">
     <define name="BODY_TO_IMU_PHI" value="184." unit="deg"/>
-    <define name="BODY_TO_IMU_THETA" value="-4.5" unit="deg"/>
+    <define name="BODY_TO_IMU_THETA" value="+4.5" unit="deg"/>
     <define name="BODY_TO_IMU_PSI" value="0" unit="deg"/>
 
     <!-- From Delft MAVlab, quick calibration -->
@@ -158,6 +158,9 @@
   </section>
 
   <section name="INS" prefix="INS_">
+    <!-- Use GPS altitude measurments and set the R gain -->
+    <define name="USE_GPS_ALT" value="1"/>
+    <define name="VFF_R_GPS" value="0.01"/>
   </section>
 
  <section name="GUIDANCE_V" prefix="GUIDANCE_V_">
@@ -173,6 +176,8 @@
     <define name="H_Z" value=" 0.87161"/>
     <define name="USE_RPM_SENSOR_NOTCH" value="1"/>
     <define name="NOTCH_FILTER_BANDWIDTH" value="10.0"/>
+    <define name="USE_GPS_HEADING" value="1"/>
+    <define name="HEADING_UPDATE_GPS_MIN_SPEED" value="0"/>
   </section>
 
  <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
@@ -194,6 +199,8 @@
 
   <firmware name="rotorcraft">
     <target name="ap" board="lisa_s_1.0">
+      <configure name="USE_BARO_BOARD" value="0"/>
+      <configure name="USE_MAGNETOMETER" value="0"/>
       <!--subsystem name="radio_control" type="superbitrf_rc"-->
         <!--<define name="RADIO_TRANSMITTER_ID" value="2008496626"/>-->   <!-- TUDelft Dx6i: TX 4 -->
         <!--<define name="RADIO_TRANSMITTER_CHAN" value="6"/>-->
