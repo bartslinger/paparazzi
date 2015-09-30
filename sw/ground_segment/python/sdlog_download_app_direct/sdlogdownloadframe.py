@@ -180,7 +180,7 @@ class SDLogDownloadFrame(wx.Frame):
             print "Req packet %s " % self.download_counter
             if self.download_timer is not None:
                 self.download_timer.cancel()
-            self.download_timer = threading.Timer(0.005, self.RequestNextPacket)
+            self.download_timer = threading.Timer(0.1, self.RequestNextPacket)
             self.download_timer.start()
         else:
             self.inDataLabel.SetLabel("Download complete!")
