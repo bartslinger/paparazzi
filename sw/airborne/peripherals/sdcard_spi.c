@@ -81,6 +81,7 @@ void sdcard_spi_init(struct SDCard *sdcard, struct spi_periph *spi_p, const uint
   sdcard->spi_t.output_buf = sdcard->output_buf;
   sdcard->spi_t.input_length = 0;
   sdcard->spi_t.output_length = 0;
+  sdcard->error = SDCardError_None;
 
   sdcard->status = SDCard_BeforeDummyClock;
   sdcard->card_type = SDCardType_Unknown;
@@ -174,6 +175,7 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_SendingCMD8;
       } else if (sdcard1.response_counter >= 9) {
         sdcard1.status = SDCard_Error;
+        sdcard1.error = SDCardError_TimeoutCMD0;
       } else {
         sdcard_spi_request_bytes(&sdcard1, 1);
       }
@@ -193,6 +195,7 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_ReadingCMD8Parameter;
       } else if (sdcard1.response_counter >= 9) {
         sdcard1.status = SDCard_Error;
+        sdcard1.error = SDCardError_TimeoutCMD8;
       } else {
         sdcard_spi_request_bytes(&sdcard1, 1);
       }
@@ -206,6 +209,7 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.timeout_counter = 0;
       } else {
         sdcard1.status = SDCard_Error;
+        sdcard1.error = SDCardError_OlderSDVersion;
       }
       break;
 
@@ -223,12 +227,14 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
           sdcard1.status = SDCard_SendingACMD41v2;
         } else {
           sdcard1.status = SDCard_Error;
+          sdcard1.error = SDCardError_NoResponseACMD41;
         }
       } else if (t->input_buf[0] == 0x00) {
         sdcard_spi_send_cmd(&sdcard1, 58, 0x00000000);
         sdcard1.status = SDCard_SendingCMD58;
       } else if (sdcard1.response_counter >= 9) {
         sdcard1.status = SDCard_Error;
+        sdcard1.error = SDCardError_TimeoutACMD41;
       } else {
         sdcard_spi_request_bytes(&sdcard1, 1);
       }
@@ -245,6 +251,7 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
     case SDCard_ReadingCMD58Resp:
       if (sdcard1.response_counter >= 9) {
         sdcard1.status = SDCard_Error;
+        sdcard1.error = SDCardError_TimeoutCMD58;
       } else if (sdcard1.input_buf[0] == 0x00) {
         sdcard_spi_request_bytes(&sdcard1, 4);
         sdcard1.status = SDCard_ReadingCMD58Parameter;
@@ -266,6 +273,7 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         }
       } else { // bit 31 not set, CCS bit is unvalid
         sdcard1.status = SDCard_Error;
+        sdcard1.error = SDCardError_CCSbitNotValid;
       }
       break;
 
@@ -282,6 +290,7 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_Idle;
       } else if (sdcard1.response_counter >= 9) {
         sdcard1.status = SDCard_Error;
+        sdcard1.error = SDCardError_TimeoutCMD16;
       } else {
         sdcard_spi_request_bytes(&sdcard1, 1);
       }
@@ -301,6 +310,7 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_BeforeSendingDataBlock;
       } else if (sdcard1.response_counter >= 9) {
         sdcard1.status = SDCard_Error;
+        sdcard1.error = SDCardError_TimeoutCMD24;
       } else {
         sdcard_spi_request_bytes(&sdcard1, 1);
       }
@@ -320,6 +330,7 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_SendingDataBlock;
       } else {
         sdcard1.status = SDCard_Error;
+        sdcard1.error = SDCardError_SendingDataBlock;
       }
       break;
 
@@ -329,6 +340,7 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_Busy;
       } else {
         sdcard1.status = SDCard_Error;
+        sdcard1.error = SDCardError_FinishingDataBlock;
       }
       sdcard1.spi_t.output_buf = sdcard1.output_buf;
       break;
@@ -354,6 +366,7 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_WaitingForDataToken;
       } else if (sdcard1.response_counter >= 9) {
         sdcard1.status = SDCard_Error;
+        sdcard1.error = SDCardError_TimeoutCMD17;
       } else {
         sdcard_spi_request_bytes(&sdcard1, 1);
       }
@@ -374,6 +387,7 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_ReadingDataBlock;
       } else if (sdcard1.timeout_counter > 498) {
         sdcard1.status = SDCard_Error;
+        sdcard1.error = SDCardError_TimeoutDataReadyToken;
       }
       break;
 
@@ -399,6 +413,7 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_MultiWriteIdle;
       } else if (sdcard1.response_counter >= 9) {
         sdcard1.status = SDCard_Error;
+        sdcard1.error = SDCardError_TimeoutCMD25;
       } else {
         sdcard_spi_request_bytes(&sdcard1, 1);
       }
@@ -410,6 +425,7 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_MultiWriteBusy;
       } else {
         sdcard1.status = SDCard_Error;
+        sdcard1.error = SDCardError_MultiwriteNotAccepted;
       }
       break;
 

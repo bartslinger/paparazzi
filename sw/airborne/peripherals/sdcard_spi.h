@@ -87,6 +87,26 @@ enum SDCardStatus {
   SDCard_MultiWriteStopping,                /**< 31 Busy sending the stop token */
 };
 
+enum SDCardError {
+    SDCardError_None,                       /**< 0  No error */
+    SDCardError_TimeoutCMD0,                /**< 1  Timeout occured reading response of CMD0 */
+    SDCardError_TimeoutCMD8,                /**< 2  Timeout occured reading response of CMD8 */
+    SDCardError_OlderSDVersion,             /**< 3  Older SDCard version not supported */
+    SDCardError_NoResponseACMD41,           /**< 4  No response from ACMD41 */
+    SDCardError_TimeoutACMD41,              /**< 5  Timeout ACMD41 */
+    SDCardError_TimeoutCMD58,               /**< 6  Timeout from CMD58 */
+    SDCardError_CCSbitNotValid,             /**< 7  CCS bit is not valid */
+    SDCardError_TimeoutCMD16,               /**< 8  Timeout from CMD16 */
+    SDCardError_TimeoutCMD24,               /**< 9  Timeout from CMD24 */
+    SDCardError_SendingDataBlock,           /**< 10 Error sending datablock */
+    SDCardError_FinishingDataBlock,         /**< 11 Error in response after writign datablock */
+    SDCardError_TimeoutCMD17,               /**< 12 Timeout CMD17 */
+    SDCardError_TimeoutDataReadyToken,      /**< 13 Timout in receiving a token that data is ready */
+    SDCardError_TimeoutCMD25,               /**< 14 Timeout from CMD25 */
+    SDCardError_MultiwriteNotAccepted,      /**< 15 Written block during multiwrite is not accepted */
+    Bla
+};
+
 struct SDCard {
   struct spi_periph *spi_p;                 /**< The SPI peripheral for the connection */
   struct spi_transaction spi_t;             /**< The SPI transaction used for the writing and reading of registers */
@@ -97,6 +117,7 @@ struct SDCard {
   uint32_t timeout_counter;                 /**< Timeout counter used for initialization checks with ACMD41 */
   enum SDCardType card_type;                /**< Type of SDCard */
   SDCardCallback read_callback;             /**< Callback to call when read operation finishes */
+  enum SDCardError error;                   /**< Error that has occured, or zero if none */
 };
 
 extern struct SDCard sdcard1;
