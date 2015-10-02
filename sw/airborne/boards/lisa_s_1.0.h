@@ -113,6 +113,11 @@
 #define SPI_SELECT_SLAVE3_PORT GPIOB
 #define SPI_SELECT_SLAVE3_PIN GPIO9
 
+/* SPI alternate function */
+#define SPI1_GPIO_AF 0
+#define SPI2_GPIO_AF 0
+#define SPI3_GPIO_AF 0
+
 /*
  * UART pin configuration
  *
@@ -274,6 +279,7 @@
 #error "Unknown PPM config"
 
 #endif // PPM_CONFIG
+
 /*
  * I2C
  *
