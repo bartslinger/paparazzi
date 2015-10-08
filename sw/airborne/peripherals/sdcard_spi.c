@@ -39,7 +39,6 @@
  */
 
 #include "sdcard_spi.h"
-
 /**
  * This is the definition of the SD card. Currently, only one SD card can be used.
  * Most of the functions are prepared for feature support of multiple SD cards, by taking a reference to the SDCard as parameter.
@@ -93,7 +92,6 @@ void sdcard_spi_init(struct SDCard *sdcard, struct spi_periph *spi_p, const uint
  */
 void sdcard_spi_periodic(struct SDCard *sdcard)
 {
-
   /* Do nothing if spi transaction is in progress */
   if (sdcard->spi_t.status == SPITransPending || sdcard->spi_t.status == SPITransRunning) {
     return;

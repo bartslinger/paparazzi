@@ -62,7 +62,7 @@ void sd_logger_start(void)
   sdcard_spi_init(&sdcard1, &(SD_LOGGER_SPI_LINK_DEVICE), SD_LOGGER_SPI_LINK_SLAVE_NUMBER);
   sdlogger.status = SdLogger_Initializing;
 }
-
+#include "led.h"
 /**
  * @brief Periodic function of the logger, called at modules main frequency.
  */
