@@ -18,14 +18,15 @@
  * <http://www.gnu.org/licenses/>.
  */
 /**
- * @file "modules/loggers/sdlogger_spi.c"
+ * @file "modules/loggers/sdlogger_spi_direct.c"
  * @author Bart Slinger
  * SPI SD Logger that saves pprzlog messages to SD Card.
  */
 
-#include "modules/loggers/sdlogger_spi.h"
+#include "modules/loggers/sdlogger_spi_direct.h"
 
-// void sdlogger_spi_init() {}
-// void sdlogger_spi_periodic() {}
+void sdlogger_spi_direct_init() {}
+void sdlogger_spi_direct_periodic() {}
 
-
+void sdlogger_spi_direct_start() {}
+void sdlogger_spi_direct_stop() {}

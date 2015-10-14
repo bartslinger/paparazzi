@@ -187,7 +187,7 @@
  <modules main_freq="512">
    <load name="gps_ubx_ucenter.xml"/>
    <load name="send_imu_mag_current.xml"/>
-   <!--load name="sd_logger_spi_direct.xml"/-->
+   <load name="sdlogger_spi_direct.xml"/>
    <!--load name="sys_mon.xml"/-->
  </modules>
 
