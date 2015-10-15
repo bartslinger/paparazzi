@@ -36,6 +36,13 @@ paparazzi.sublime-workspace
 # JetBrains (PyCharm, etc) IDE project files
 .idea
 
+# QtCreator IDE
+*.creator
+*.creator.user
+*.config
+*.files
+*.includes
+
 # Vagrant VM files
 /.vagrant
 
