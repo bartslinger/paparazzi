@@ -43,6 +43,7 @@
 #include "subsystems/imu.h"
 #include "subsystems/actuators/actuators_pwm_arch.h"
 #include "subsystems/sensors/rpm_sensor.h"
+#include "subsystems/commands.h"
 #include "subsystems/ahrs/ahrs_int_cmpl_quat.h"
 #include "math/pprz_algebra_int.h"
 #include "state.h"
@@ -111,21 +112,21 @@ void sd_logger_periodic(void)
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 8]);
       sd_logger_int32_to_buffer(imu.accel.z,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 12]);
-      sd_logger_int32_to_buffer(acc_x2_notch.yn1,
+      sd_logger_int32_to_buffer(commands[COMMAND_ROLL],
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 16]);
-      sd_logger_int32_to_buffer(acc_y2_notch.yn1,
+      sd_logger_int32_to_buffer(commands[COMMAND_PITCH],
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 20]);
-      sd_logger_int32_to_buffer(acc_z2_notch.yn1,
+      sd_logger_int32_to_buffer(commands[COMMAND_YAW],
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 24]);
-      sd_logger_int32_to_buffer(attitude.phi,
+      sd_logger_int32_to_buffer(commands[COMMAND_THRUST],
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 28]);
-      sd_logger_int32_to_buffer(attitude.theta,
+      sd_logger_int32_to_buffer(0,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 32]);
-      sd_logger_int32_to_buffer(attitude.psi,
+      sd_logger_int32_to_buffer(imu.gyro.p,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 36]);
-      sd_logger_int32_to_buffer(ahrs_icq.weight,
+      sd_logger_int32_to_buffer(imu.gyro.q,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 40]);
-      sd_logger_int32_to_buffer(actuators_pwm_values[2],
+      sd_logger_int32_to_buffer(imu.gyro.r,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 44]);
       sd_logger_int32_to_buffer(100.0*rpm_sensor.motor_frequency,
                                 &sdcard1.output_buf[SD_LOGGER_BUFFER_OFFSET + sdlogger.buffer_addr + 48]); // reserved for something

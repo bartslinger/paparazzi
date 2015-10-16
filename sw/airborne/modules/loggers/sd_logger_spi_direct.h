@@ -67,7 +67,7 @@ struct LogPacket {
   int32_t data_7;
   int32_t data_8;
   int32_t data_9;
-  float data_10;
+  int32_t data_10;
   int32_t data_11;
   float data_12;
 };

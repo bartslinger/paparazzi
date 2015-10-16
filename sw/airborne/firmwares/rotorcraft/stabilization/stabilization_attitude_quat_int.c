@@ -35,6 +35,9 @@
 #include "math/pprz_algebra_int.h"
 #include "state.h"
 
+/* For identification experiment */
+#include RADIO_CONTROL_TYPE_H
+
 struct Int32AttitudeGains stabilization_gains = {
   {STABILIZATION_ATTITUDE_PHI_PGAIN, STABILIZATION_ATTITUDE_THETA_PGAIN, STABILIZATION_ATTITUDE_PSI_PGAIN },
   {STABILIZATION_ATTITUDE_PHI_DGAIN, STABILIZATION_ATTITUDE_THETA_DGAIN, STABILIZATION_ATTITUDE_PSI_DGAIN },
@@ -268,6 +271,22 @@ void stabilization_attitude_run(bool_t enable_integrator)
 
   /* compute the feed back command */
   attitude_run_fb(stabilization_att_fb_cmd, &stabilization_gains, &att_err, &rate_err, &stabilization_att_sum_err_quat);
+
+  /* Step input for identification experiment, on SD Logger switch */
+  /* Check if the switch is flipped to start or stop logging */
+#define SDLOG_FLIP_SWITCH_CHANNEL 6
+  static bool_t sd_logger_previous_switch_state = FALSE;
+  if (USEC_OF_RC_PPM_TICKS(ppm_pulses[SDLOG_FLIP_SWITCH_CHANNEL]) < 1300 && USEC_OF_RC_PPM_TICKS(ppm_pulses[SDLOG_FLIP_SWITCH_CHANNEL]) > 900 && sd_logger_previous_switch_state == FALSE && sdcard1.status == SDCard_Idle) {
+    /* Start logging */
+    sdlogger.cmd = SdLoggerCmd_StartLogging;
+    sd_logger_command();
+    sd_logger_previous_switch_state = TRUE;
+  } else if (USEC_OF_RC_PPM_TICKS(ppm_pulses[SDLOG_FLIP_SWITCH_CHANNEL]) > 1300 && sd_logger_previous_switch_state == TRUE && sdlogger.status == SdLogger_Logging) {
+    /* Stop logging */
+    sdlogger.cmd = SdLoggerCmd_StopLogging;
+    sd_logger_command();
+    sd_logger_previous_switch_state = FALSE;
+  }
 
   /* sum feedforward and feedback */
   stabilization_cmd[COMMAND_ROLL] = stabilization_att_fb_cmd[COMMAND_ROLL] + stabilization_att_ff_cmd[COMMAND_ROLL];
