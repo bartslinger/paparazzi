@@ -1,6 +1,6 @@
 <!DOCTYPE module SYSTEM "module.dtd">
 
-<module name="sdlogger_spi_direct" dir="loggers">
+<module name="logger_sd_spi_direct" dir="loggers">
   <doc>
     <description>Direct SPI SD Logger that saves pprzlog messages to SD Card.</description>
   </doc>
@@ -10,6 +10,7 @@
   <init fun="sdlogger_spi_direct_init()"/>
   <periodic fun="sdlogger_spi_direct_periodic()" freq="512" start="sdlogger_spi_direct_start()" stop="sdlogger_spi_direct_stop()" autorun="FALSE"/>
   <makefile>
+    <file name="sdcard_spi.c" dir="peripherals"/>
     <file name="sdlogger_spi_direct.c"/>
   </makefile>
 </module>

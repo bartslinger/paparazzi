@@ -235,4 +235,6 @@
 /home/bart/paparazzi/sw/airborne/subsystems/ins/vf_float.c
 /home/bart/paparazzi/sw/airborne/modules/gps/gps_ubx_ucenter.c
 /home/bart/paparazzi/sw/airborne/modules/calibration/send_imu_mag_current.c
+/home/bart/paparazzi/sw/airborne/peripherals/sdcard_spi.c
+/home/bart/paparazzi/sw/airborne/peripherals/sdcard_spi.h
 /home/bart/paparazzi/sw/airborne/modules/loggers/sdlogger_spi_direct.c
