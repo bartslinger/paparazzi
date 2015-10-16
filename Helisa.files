@@ -134,7 +134,6 @@
 /home/bart/paparazzi/sw/airborne/firmwares/rotorcraft/navigation.c
 /home/bart/paparazzi/sw/airborne/pprz_debug.h
 /home/bart/paparazzi/sw/airborne/subsystems/gps.h
-/home/bart/paparazzi/sw/airborne/subsystems/gps/gps_datalink.h
 /home/bart/paparazzi/sw/airborne/subsystems/ins.h
 /home/bart/paparazzi/sw/airborne/subsystems/ins/ins_int.h
 /home/bart/paparazzi/var/aircrafts/Helisa/ap/generated/flight_plan.h
@@ -209,8 +208,6 @@
 /home/bart/paparazzi/sw/airborne/subsystems/imu/imu_aspirin_2_spi.c
 /home/bart/paparazzi/sw/airborne/peripherals/mpu60x0.c
 /home/bart/paparazzi/sw/airborne/peripherals/mpu60x0_spi.c
-/home/bart/paparazzi/sw/airborne/subsystems/gps.c
-/home/bart/paparazzi/sw/airborne/subsystems/gps/gps_datalink.c
 /home/bart/paparazzi/sw/airborne/firmwares/rotorcraft/stabilization/stabilization_attitude_ref_quat_int.c
 /home/bart/paparazzi/sw/airborne/firmwares/rotorcraft/stabilization/stabilization_attitude_quat_int.c
 /home/bart/paparazzi/sw/airborne/firmwares/rotorcraft/stabilization/stabilization_attitude_quat_transformations.h

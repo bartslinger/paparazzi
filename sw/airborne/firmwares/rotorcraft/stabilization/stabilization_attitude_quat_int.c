@@ -275,21 +275,32 @@ void stabilization_attitude_run(bool_t enable_integrator)
   /* Step input for identification experiment, on SD Logger switch */
   /* Check if the switch is flipped to start or stop logging */
 #define SDLOG_FLIP_SWITCH_CHANNEL 6
-  static bool_t sd_logger_previous_switch_state = FALSE;
-  if (USEC_OF_RC_PPM_TICKS(ppm_pulses[SDLOG_FLIP_SWITCH_CHANNEL]) < 1300 && USEC_OF_RC_PPM_TICKS(ppm_pulses[SDLOG_FLIP_SWITCH_CHANNEL]) > 900 && sd_logger_previous_switch_state == FALSE && sdcard1.status == SDCard_Idle) {
-    /* Start logging */
-    sdlogger.cmd = SdLoggerCmd_StartLogging;
-    sd_logger_command();
-    sd_logger_previous_switch_state = TRUE;
-  } else if (USEC_OF_RC_PPM_TICKS(ppm_pulses[SDLOG_FLIP_SWITCH_CHANNEL]) > 1300 && sd_logger_previous_switch_state == TRUE && sdlogger.status == SdLogger_Logging) {
-    /* Stop logging */
-    sdlogger.cmd = SdLoggerCmd_StopLogging;
-    sd_logger_command();
-    sd_logger_previous_switch_state = FALSE;
+  static bool_t experiment_switch_state = FALSE;
+  static bool_t experiment_step = FALSE;
+  static uint32_t experiment_timer = 0;
+  if (USEC_OF_RC_PPM_TICKS(ppm_pulses[SDLOG_FLIP_SWITCH_CHANNEL]) < 1300 && USEC_OF_RC_PPM_TICKS(ppm_pulses[SDLOG_FLIP_SWITCH_CHANNEL]) > 900 && experiment_switch_state == FALSE) {
+    /* Start experiment */
+    experiment_timer = 0;
+    experiment_switch_state = TRUE;
+  } else if (USEC_OF_RC_PPM_TICKS(ppm_pulses[SDLOG_FLIP_SWITCH_CHANNEL]) > 1300 && experiment_switch_state == TRUE) {
+    /* Stop experiment */
+    experiment_switch_state = FALSE;
+  }
+
+  experiment_step = FALSE;
+  if (experiment_switch_state) {
+    experiment_timer++;
+    if (experiment_timer > 512 && experiment_timer < 612) {
+      experiment_step = TRUE;
+    }
   }
 
   /* sum feedforward and feedback */
-  stabilization_cmd[COMMAND_ROLL] = stabilization_att_fb_cmd[COMMAND_ROLL] + stabilization_att_ff_cmd[COMMAND_ROLL];
+  if (experiment_step) {
+    stabilization_cmd[COMMAND_ROLL] = 7000;
+  } else {
+    stabilization_cmd[COMMAND_ROLL] = stabilization_att_fb_cmd[COMMAND_ROLL] + stabilization_att_ff_cmd[COMMAND_ROLL];
+  }
   stabilization_cmd[COMMAND_PITCH] = stabilization_att_fb_cmd[COMMAND_PITCH] + stabilization_att_ff_cmd[COMMAND_PITCH];
   stabilization_cmd[COMMAND_YAW] = stabilization_att_fb_cmd[COMMAND_YAW] + stabilization_att_ff_cmd[COMMAND_YAW];
 
