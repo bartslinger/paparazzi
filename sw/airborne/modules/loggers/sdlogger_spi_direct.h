@@ -26,19 +26,22 @@
 #ifndef SDLOGGER_SPI_H
 #define SDLOGGER_SPI_H
 
+#include "std.h"
 #include "mcu_periph/link_device.h"
 
 struct sdlogger_spi_periph{
-    struct link_device device;
+  uint32_t next_available_address;
+  struct link_device device;
 };
 
 extern struct sdlogger_spi_periph sdlogger_spi;
 
 extern void sdlogger_spi_direct_init(void);
 extern void sdlogger_spi_direct_periodic(void);
-
 extern void sdlogger_spi_direct_start(void);
 extern void sdlogger_spi_direct_stop(void);
+
+extern void sdlogger_spi_direct_index_received(void);
 
 extern int sdlogger_spi_direct_check_free_space(void *p, uint8_t len);
 extern void sdlogger_spi_direct_put_byte(void *p, uint8_t data);

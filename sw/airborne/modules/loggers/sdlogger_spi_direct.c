@@ -23,12 +23,19 @@
  * SPI SD Logger that saves pprzlog messages to SD Card.
  */
 
+#include "peripherals/sdcard_spi.h"
 #include "modules/loggers/sdlogger_spi_direct.h"
 
 
 struct sdlogger_spi_periph sdlogger_spi;
 
-void sdlogger_spi_direct_init(void) {
+void sdlogger_spi_direct_init(void)
+{
+  /* Initialize the SD Card */
+  sdcard_spi_init(&sdcard1, &(SD_LOGGER_SPI_LINK_DEVICE),
+                  SD_LOGGER_SPI_LINK_SLAVE_NUMBER);
+
+  /* Set function pointers in link_device to the logger functions */
   sdlogger_spi.device.check_free_space = &sdlogger_spi_direct_check_free_space;
   sdlogger_spi.device.put_byte = &sdlogger_spi_direct_put_byte;
   sdlogger_spi.device.send_message = &sdlogger_spi_direct_send_message;
@@ -36,15 +43,27 @@ void sdlogger_spi_direct_init(void) {
   sdlogger_spi.device.get_byte = &sdlogger_spi_direct_get_byte;
   sdlogger_spi.device.periph = &sdlogger_spi;
 }
-void sdlogger_spi_direct_periodic(void) {}
+void sdlogger_spi_direct_periodic(void)
+{
+  sdcard_spi_periodic(&sdcard1);
+
+  if (sdcard1.status == SDCard_Idle) {
+    sdcard_spi_read_block(&sdcard1, 0x00002000, &sdlogger_spi_direct_index_received);
+  }
+}
 
 void sdlogger_spi_direct_start(void) {}
 void sdlogger_spi_direct_stop(void) {}
 
+void sdlogger_spi_direct_index_received(void)
+{
+  sdlogger_spi.next_available_address = 0x12345678;
+}
+
 int sdlogger_spi_direct_check_free_space(void *p, uint8_t len)
 {
   (void) p, (void) len;
-  return 0;
+  return TRUE;
 }
 
 void sdlogger_spi_direct_put_byte(void *p, uint8_t data)
