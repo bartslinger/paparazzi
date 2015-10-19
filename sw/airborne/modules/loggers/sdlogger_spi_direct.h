@@ -28,9 +28,17 @@
 
 #include "std.h"
 #include "mcu_periph/link_device.h"
+#include "subsystems/radio_control.h"
+#include "peripherals/sdcard_spi.h"
+#include "led.h"
 
 struct sdlogger_spi_periph{
   uint32_t next_available_address;
+  uint8_t last_completed;
+  bool_t accepting_messages;
+  uint16_t sdcard_buf_idx;
+  bool_t switch_state;
+  uint8_t buffer[64];
   struct link_device device;
 };
 
@@ -43,7 +51,7 @@ extern void sdlogger_spi_direct_stop(void);
 
 extern void sdlogger_spi_direct_index_received(void);
 
-extern int sdlogger_spi_direct_check_free_space(void *p, uint8_t len);
+extern bool_t sdlogger_spi_direct_check_free_space(struct sdlogger_spi_periph *p, uint8_t len);
 extern void sdlogger_spi_direct_put_byte(void *p, uint8_t data);
 extern void sdlogger_spi_direct_send_message(void *p);
 extern int sdlogger_spi_direct_char_available(void *p);

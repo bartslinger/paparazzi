@@ -187,7 +187,10 @@
  <modules main_freq="512">
    <load name="gps_ubx_ucenter.xml"/>
    <load name="send_imu_mag_current.xml"/>
-   <load name="logger_sd_spi_direct.xml"/>
+   <load name="logger_sd_spi_direct.xml">
+     <configure name="LOGGER_CONTROL_SWITCH" value="RADIO_AUX2"/>
+     <configure name="LOGGER_LED" value="3"/>
+   </load>
    <!--load name="sys_mon.xml"/-->
  </modules>
 
