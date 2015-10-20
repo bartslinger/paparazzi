@@ -26,19 +26,30 @@
 #ifndef SDLOGGER_SPI_H
 #define SDLOGGER_SPI_H
 
+#define SDLOGGER_BUFFER_SIZE 64
+
 #include "std.h"
 #include "mcu_periph/link_device.h"
 #include "subsystems/radio_control.h"
 #include "peripherals/sdcard_spi.h"
 #include "led.h"
 
+enum SDLoggerStatus {
+  SDLogger_UnInit,
+  SDLogger_Error,
+  SDLogger_Initializing,
+  SDLogger_RetreivingIndex,
+  SDLogger_Ready,
+  SDLogger_Logging
+};
+
 struct sdlogger_spi_periph{
+  enum SDLoggerStatus status;
   uint32_t next_available_address;
   uint8_t last_completed;
-  bool_t accepting_messages;
   uint16_t sdcard_buf_idx;
-  bool_t switch_state;
-  uint8_t buffer[64];
+  uint8_t buffer[SDLOGGER_BUFFER_SIZE];
+  uint8_t idx;
   struct link_device device;
 };
 
@@ -50,9 +61,10 @@ extern void sdlogger_spi_direct_start(void);
 extern void sdlogger_spi_direct_stop(void);
 
 extern void sdlogger_spi_direct_index_received(void);
+extern void sdlogger_spi_direct_multiwrite_written(void);
 
 extern bool_t sdlogger_spi_direct_check_free_space(struct sdlogger_spi_periph *p, uint8_t len);
-extern void sdlogger_spi_direct_put_byte(void *p, uint8_t data);
+extern void sdlogger_spi_direct_put_byte(struct sdlogger_spi_periph *p, uint8_t data);
 extern void sdlogger_spi_direct_send_message(void *p);
 extern int sdlogger_spi_direct_char_available(void *p);
 extern uint8_t sdlogger_spi_direct_get_byte(void *p);
