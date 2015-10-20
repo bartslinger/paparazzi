@@ -40,7 +40,11 @@ enum SDLoggerStatus {
   SDLogger_Initializing,
   SDLogger_RetreivingIndex,
   SDLogger_Ready,
-  SDLogger_Logging
+  SDLogger_Logging,
+  SDLogger_LoggingFinalBlock,
+  SDLogger_StoppedLogging,
+  SDLogger_GettingIndexForUpdate,
+  SDLogger_UpdatingIndex
 };
 
 struct sdlogger_spi_periph{

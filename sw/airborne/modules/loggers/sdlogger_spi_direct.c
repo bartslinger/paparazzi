@@ -95,6 +95,29 @@ void sdlogger_spi_direct_periodic(void)
           sdcard1.status == SDCard_MultiWriteIdle) {
         sdcard_spi_multiwrite_next(&sdcard1, &sdlogger_spi_direct_multiwrite_written);
       }
+      /* Check if switch is flipped to stop logging */
+      if (radio_control.values[SDLOGGER_CONTROL_SWITCH] < 0) {
+        sdlogger_spi.status = SDLogger_LoggingFinalBlock;
+      }
+      break;
+
+    case SDLogger_LoggingFinalBlock:
+      if (sdcard1.status == SDCard_MultiWriteIdle) {
+        if (sdlogger_spi.sdcard_buf_idx > 512) {
+          sdcard_spi_multiwrite_next(&sdcard1, &sdlogger_spi_direct_multiwrite_written);
+        }
+        else if (sdlogger_spi.sdcard_buf_idx > 1) {
+          /* Fill with trailing zero's */
+          for (uint16_t i = sdlogger_spi.sdcard_buf_idx; i < (SD_BLOCK_SIZE+1); i++) {
+            sdcard1.output_buf[i] = 0x00;
+          }
+          sdcard_spi_multiwrite_next(&sdcard1, &sdlogger_spi_direct_multiwrite_written);
+        }
+        else if (sdlogger_spi.sdcard_buf_idx == 1) {
+          sdcard_spi_multiwrite_stop(&sdcard1);
+          sdlogger_spi.status = SDLogger_StoppedLogging;
+        }
+      }
       break;
 
     default:
@@ -141,9 +164,11 @@ void sdlogger_spi_direct_multiwrite_written(void)
 
 bool_t sdlogger_spi_direct_check_free_space(struct sdlogger_spi_periph *p, uint8_t len)
 {
-  (void) len;
   if (p->status == SDLogger_Logging) {
-    return TRUE;
+    /* Calculating free space in both buffers */
+    if ( (513 - p->sdcard_buf_idx) + (SDLOGGER_BUFFER_SIZE - p->idx) >= len) {
+      return TRUE;
+    }
   }
   return FALSE;
 }
@@ -155,6 +180,7 @@ void sdlogger_spi_direct_put_byte(struct sdlogger_spi_periph *p, uint8_t data)
     if (p->idx < SDLOGGER_BUFFER_SIZE) {
       p->buffer[p->idx++] = data;
     }
+    /* else: data lost */
   }
   /* Writing directly to SD Card buffer */
   else {
