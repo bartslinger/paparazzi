@@ -47,7 +47,8 @@ enum SDLoggerStatus {
   SDLogger_StoppedLogging,
   SDLogger_GettingIndexForUpdate,
   SDLogger_UpdatingIndex,
-  SDLogger_GettingIndexForDownload
+  SDLogger_GettingIndexForDownload,
+  SDLogger_Downloading
 };
 
 struct sdlogger_spi_periph{
@@ -60,6 +61,8 @@ struct sdlogger_spi_periph{
   uint32_t log_len;
   uint8_t command;
   uint8_t download_id;
+  uint32_t download_address;
+  uint32_t download_length;
   struct link_device device;
 };
 

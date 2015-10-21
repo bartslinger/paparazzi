@@ -35,19 +35,6 @@
 
 struct sdlogger_spi_periph sdlogger_spi;
 
-static bool_t LED_BEUN_STATE = TRUE;
-static void toggle_beun_led(void)
-{
-  if (LED_BEUN_STATE) {
-    LED_BEUN_STATE = FALSE;
-    LOGGER_LED_OFF;
-  }
-  else {
-    LED_BEUN_STATE = TRUE;
-    LOGGER_LED_ON;
-  }
-}
-
 /* Private function declarations */
 void sdlogger_spi_direct_block_to_uart(void);
 
@@ -75,6 +62,8 @@ void sdlogger_spi_direct_init(void)
   sdlogger_spi.log_len = 0;
   sdlogger_spi.command = 0;
   sdlogger_spi.download_id = 0;
+  sdlogger_spi.download_address = 0;
+  sdlogger_spi.download_length = 0;
 
   /* Set function pointers in link_device to the logger functions */
   sdlogger_spi.device.check_free_space = (check_free_space_t)sdlogger_spi_direct_check_free_space;
@@ -158,6 +147,35 @@ void sdlogger_spi_direct_periodic(void)
       }
       break;
 
+    case SDLogger_Downloading:
+      if (sdcard1.status == SDCard_Idle) {
+        /* Put bytes to the buffer until all is written or buffer is full */
+        for (uint16_t i = sdlogger_spi.sdcard_buf_idx; i < SD_BLOCK_SIZE; i++) {
+          if(uart_check_free_space(&DOWNLINK_DEVICE, 1)) {
+            uart_put_byte(&DOWNLINK_DEVICE, sdcard1.input_buf[i]);
+          }
+          else {
+            /* No free space left, abort for-loop */
+            break;
+          }
+          sdlogger_spi.sdcard_buf_idx++;
+        }
+        /* Request next block if entire buffer was written to uart */
+        if (sdlogger_spi.sdcard_buf_idx >= SD_BLOCK_SIZE) {
+          if (sdlogger_spi.download_length > 0) {
+            sdcard_spi_read_block(&sdcard1, sdlogger_spi.download_address, NULL);
+            sdlogger_spi.download_address++;
+            sdlogger_spi.download_length--;
+          }
+          else {
+            LOGGER_LED_OFF;
+            sdlogger_spi.status = SDLogger_Ready;
+          }
+          sdlogger_spi.sdcard_buf_idx = 0;
+        }
+      }
+      break;
+
     default:
       break;
   }
@@ -192,14 +210,14 @@ void sdlogger_spi_direct_index_received(void)
     case SDLogger_GettingIndexForUpdate:
       /* Copy input buffer to output buffer */
       for (uint16_t i = 0; i < SD_BLOCK_SIZE; i++) {
-        sdcard1.output_buf[i+5] = sdcard1.input_buf[i];
+        sdcard1.output_buf[i+6] = sdcard1.input_buf[i];
       }
 
       /* Increment last completed log */
-      sdcard1.output_buf[4+5] = ++sdlogger_spi.last_completed;
+      sdcard1.output_buf[4+6] = ++sdlogger_spi.last_completed;
       /* Write log info at dedicated location */
       {
-        uint16_t log_idx_start = 5 + 5 + (sdlogger_spi.last_completed - 1) * 12;
+        uint16_t log_idx_start = 5 + 6 + (sdlogger_spi.last_completed - 1) * 12;
 
         /* Set start address and length at location that belongs to the log nr */
         sdcard1.output_buf[log_idx_start+0] = sdlogger_spi.next_available_address >> 24;
@@ -214,10 +232,10 @@ void sdlogger_spi_direct_index_received(void)
 
       /* Increment and update the next available address */
       sdlogger_spi.next_available_address += sdlogger_spi.log_len;
-      sdcard1.output_buf[0+5] = sdlogger_spi.next_available_address >> 24;
-      sdcard1.output_buf[1+5] = sdlogger_spi.next_available_address >> 16;
-      sdcard1.output_buf[2+5] = sdlogger_spi.next_available_address >> 8;
-      sdcard1.output_buf[3+5] = sdlogger_spi.next_available_address >> 0;
+      sdcard1.output_buf[0+6] = sdlogger_spi.next_available_address >> 24;
+      sdcard1.output_buf[1+6] = sdlogger_spi.next_available_address >> 16;
+      sdcard1.output_buf[2+6] = sdlogger_spi.next_available_address >> 8;
+      sdcard1.output_buf[3+6] = sdlogger_spi.next_available_address >> 0;
 
       sdcard_spi_write_block(&sdcard1, 0x00002000);
       /* Reset log length */
@@ -227,35 +245,28 @@ void sdlogger_spi_direct_index_received(void)
 
     case SDLogger_GettingIndexForDownload:
       {
-        /* Get information about the specified log number */
-        uint16_t s = 5 + 0 + (sdlogger_spi.download_id - 1) * 12;
-        uint32_t start = (sdcard1.input_buf[s+0] << 24) |
-                         (sdcard1.input_buf[s+1] << 16) |
-                         (sdcard1.input_buf[s+2] << 8) |
-                         (sdcard1.input_buf[s+3]);
-        uint32_t length = (sdcard1.input_buf[s+4] << 24) |
-                          (sdcard1.input_buf[s+5] << 16) |
-                          (sdcard1.input_buf[s+6] << 8) |
-                          (sdcard1.input_buf[s+7]);
-        /* Loop through all blocks */
-#warning was length  instead of 1
-        for (uint32_t i = 0; i < 1; i++) {
-#warning was start+i
-          /*sdcard_spi_read_block(&sdcard1, 0x00004000, NULL);
-          while (sdcard1.status != SDCard_Idle) {
-            sys_time_usleep(300000);
-            sdcard_spi_periodic(&sdcard1);
-            toggle_beun_led();
-            for (uint8_t i = 0; i < sdcard1.status-20; i++) {
-              LOGGER_LED_ON;
-              sys_time_usleep(150000);
-              LOGGER_LED_OFF;
-              sys_time_usleep(150000);
-            }
-          }*/
-          sdlogger_spi_direct_block_to_uart();
-          LOGGER_LED_OFF;
+        uint16_t info_idx = 5 + (sdlogger_spi.download_id - 1) * 12;
+        sdlogger_spi.download_address = (sdcard1.input_buf[info_idx+0] << 24) |
+                                        (sdcard1.input_buf[info_idx+1] << 16) |
+                                        (sdcard1.input_buf[info_idx+2] << 8) |
+                                        (sdcard1.input_buf[info_idx+3] << 0);
+        sdlogger_spi.download_length = (sdcard1.input_buf[info_idx+4] << 24) |
+                                       (sdcard1.input_buf[info_idx+5] << 16) |
+                                       (sdcard1.input_buf[info_idx+6] << 8) |
+                                       (sdcard1.input_buf[info_idx+7] << 0);
+        if (sdlogger_spi.download_length > 0) {
+          /* Request the first block */
+          sdcard_spi_read_block(&sdcard1, sdlogger_spi.download_address, NULL);
+          /* After each read block, incr address, decr length */
+          sdlogger_spi.download_address++;
+          sdlogger_spi.download_length--;
+          sdlogger_spi.status = SDLogger_Downloading;
         }
+        else {
+          LOGGER_LED_OFF;
+          sdlogger_spi.status = SDLogger_Ready;
+        }
+        sdlogger_spi.sdcard_buf_idx = 0;
       }
       break;
 
@@ -297,17 +308,6 @@ void sdlogger_spi_direct_command(void)
   }
   /* Always reset command value back to zero */
   sdlogger_spi.command = 0;
-}
-
-void sdlogger_spi_direct_block_to_uart(void)
-{
-#warning was < SD_BLOCK_SIZE
-  for (uint16_t i = 0; i < 10; i++) {
-    /* Wait for space in the buffer */
-    while(!uart_check_free_space(&DOWNLINK_DEVICE, 1)) { }
-    /* Put next byte */
-    uart_put_byte(&DOWNLINK_DEVICE, sdcard1.input_buf[i]);
-  }
 }
 
 bool_t sdlogger_spi_direct_check_free_space(struct sdlogger_spi_periph *p, uint8_t len)
