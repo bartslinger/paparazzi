@@ -33,6 +33,7 @@
 #include "subsystems/radio_control.h"
 #include "subsystems/datalink/pprzlog_transport.h"
 #include "peripherals/sdcard_spi.h"
+#include "mcu_periph/uart.h"
 #include "led.h"
 
 enum SDLoggerStatus {
@@ -45,7 +46,8 @@ enum SDLoggerStatus {
   SDLogger_LoggingFinalBlock,
   SDLogger_StoppedLogging,
   SDLogger_GettingIndexForUpdate,
-  SDLogger_UpdatingIndex
+  SDLogger_UpdatingIndex,
+  SDLogger_GettingIndexForDownload
 };
 
 struct sdlogger_spi_periph{
@@ -56,6 +58,8 @@ struct sdlogger_spi_periph{
   uint8_t buffer[SDLOGGER_BUFFER_SIZE];
   uint8_t idx;
   uint32_t log_len;
+  uint8_t command;
+  uint8_t download_id;
   struct link_device device;
 };
 
@@ -68,6 +72,7 @@ extern void sdlogger_spi_direct_stop(void);
 
 extern void sdlogger_spi_direct_index_received(void);
 extern void sdlogger_spi_direct_multiwrite_written(void);
+extern void sdlogger_spi_direct_command(void);
 
 extern bool_t sdlogger_spi_direct_check_free_space(struct sdlogger_spi_periph *p, uint8_t len);
 extern void sdlogger_spi_direct_put_byte(struct sdlogger_spi_periph *p, uint8_t data);
