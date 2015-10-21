@@ -31,6 +31,7 @@
 #include "std.h"
 #include "mcu_periph/link_device.h"
 #include "subsystems/radio_control.h"
+#include "subsystems/datalink/pprzlog_transport.h"
 #include "peripherals/sdcard_spi.h"
 #include "led.h"
 

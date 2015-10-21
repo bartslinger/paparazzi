@@ -40,6 +40,8 @@
 #endif
 #endif
 
+#include "subsystems/datalink/pprzlog_transport.h"
+
 #if PERIODIC_TELEMETRY
 #include "subsystems/datalink/telemetry.h"
 
@@ -52,6 +54,9 @@ static void send_accel_raw(struct transport_tx *trans, struct link_device *dev)
 static void send_accel_scaled(struct transport_tx *trans, struct link_device *dev)
 {
   pprz_msg_send_IMU_ACCEL_SCALED(trans, dev, AC_ID,
+                                 &imu.accel.x, &imu.accel.y, &imu.accel.z);
+  pprz_msg_send_IMU_ACCEL_SCALED(&pprzlog_tp.trans_tx, &sdlogger_spi.device,
+                                 AC_ID,
                                  &imu.accel.x, &imu.accel.y, &imu.accel.z);
 }
 
@@ -109,7 +114,6 @@ struct Imu imu;
 
 void imu_init(void)
 {
-
 #ifdef IMU_POWER_GPIO
   gpio_setup_output(IMU_POWER_GPIO);
   IMU_POWER_GPIO_ON(IMU_POWER_GPIO);

@@ -65,6 +65,9 @@ void sdlogger_spi_direct_init(void)
   sdlogger_spi.device.char_available = (char_available_t)sdlogger_spi_direct_char_available;
   sdlogger_spi.device.get_byte = (get_byte_t)sdlogger_spi_direct_get_byte;
   sdlogger_spi.device.periph = &sdlogger_spi;
+
+  /* Init pprzlog_tp */
+  pprzlog_transport_init();
 }
 
 /**
