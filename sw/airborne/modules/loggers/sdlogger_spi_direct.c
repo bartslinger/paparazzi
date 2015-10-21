@@ -27,8 +27,10 @@
 
 #ifdef LOGGER_LED
 #define LOGGER_LED_ON LED_ON(LOGGER_LED);
+#define LOGGER_LED_OFF LED_OFF(LOGGER_LED);
 #else
 #define LOGGER_LED_ON {}
+#define LOGGER_LED_OFF {}
 #endif
 
 struct sdlogger_spi_periph sdlogger_spi;
@@ -54,6 +56,7 @@ void sdlogger_spi_direct_init(void)
     sdlogger_spi.buffer[i] = 0;
   }
   sdlogger_spi.idx = 0;
+  sdlogger_spi.log_len = 0;
 
   /* Set function pointers in link_device to the logger functions */
   sdlogger_spi.device.check_free_space = (check_free_space_t)sdlogger_spi_direct_check_free_space;
@@ -120,6 +123,20 @@ void sdlogger_spi_direct_periodic(void)
       }
       break;
 
+    case SDLogger_StoppedLogging:
+      if (sdcard1.status == SDCard_Idle) {
+        sdcard_spi_read_block(&sdcard1, 0x00002000, &sdlogger_spi_direct_index_received);
+        sdlogger_spi.status = SDLogger_GettingIndexForUpdate;
+      }
+      break;
+
+    case SDLogger_UpdatingIndex:
+      if (sdcard1.status == SDCard_Idle) {
+        LOGGER_LED_OFF;
+        sdlogger_spi.status = SDLogger_Ready;
+      }
+      break;
+
     default:
       break;
   }
@@ -134,15 +151,63 @@ void sdlogger_spi_direct_stop(void) {}
  */
 void sdlogger_spi_direct_index_received(void)
 {
-  /* Save address and last completed log for later use */
-  sdlogger_spi.next_available_address = (sdcard1.input_buf[0] << 24) |
-                                        (sdcard1.input_buf[1] << 16) |
-                                        (sdcard1.input_buf[2] << 8) |
-                                        (sdcard1.input_buf[3]);
-  sdlogger_spi.last_completed = sdcard1.input_buf[4];
 
-  /* Ready to start logging */
-  sdlogger_spi.status = SDLogger_Ready;
+  switch (sdlogger_spi.status) {
+    case SDLogger_RetreivingIndex:
+      sdlogger_spi.next_available_address = 0x00004000;
+      sdlogger_spi.last_completed = 0;
+      /* Save data for later use
+      sdlogger_spi.next_available_address = (sdcard1.input_buf[0] << 24) |
+                                            (sdcard1.input_buf[1] << 16) |
+                                            (sdcard1.input_buf[2] << 8) |
+                                            (sdcard1.input_buf[3]);
+      sdlogger_spi.last_completed = sdcard1.input_buf[4];
+      */
+
+      /* Ready to start logging */
+      sdlogger_spi.status = SDLogger_Ready;
+      break;
+
+    case SDLogger_GettingIndexForUpdate:
+      /* Copy input buffer to output buffer */
+      for (uint16_t i = 0; i < SD_BLOCK_SIZE; i++) {
+        sdcard1.output_buf[i+5] = sdcard1.input_buf[i];
+      }
+
+      /* Increment last completed log */
+      sdcard1.output_buf[4+5] = ++sdlogger_spi.last_completed;
+      /* Write log info at dedicated location */
+      {
+        uint16_t log_idx_start = 5 + 5 + (sdlogger_spi.last_completed - 1) * 12;
+
+        /* Set start address and length at location that belongs to the log nr */
+        sdcard1.output_buf[log_idx_start+0] = sdlogger_spi.next_available_address >> 24;
+        sdcard1.output_buf[log_idx_start+1] = sdlogger_spi.next_available_address >> 16;
+        sdcard1.output_buf[log_idx_start+2] = sdlogger_spi.next_available_address >> 8;
+        sdcard1.output_buf[log_idx_start+3] = sdlogger_spi.next_available_address >> 0;
+        sdcard1.output_buf[log_idx_start+4] = sdlogger_spi.log_len >> 24;
+        sdcard1.output_buf[log_idx_start+5] = sdlogger_spi.log_len >> 16;
+        sdcard1.output_buf[log_idx_start+6] = sdlogger_spi.log_len >> 8;
+        sdcard1.output_buf[log_idx_start+7] = sdlogger_spi.log_len >> 0;
+      }
+
+      /* Increment and update the next available address */
+      sdlogger_spi.next_available_address += sdlogger_spi.log_len;
+      sdcard1.output_buf[0+5] = sdlogger_spi.next_available_address >> 24;
+      sdcard1.output_buf[1+5] = sdlogger_spi.next_available_address >> 16;
+      sdcard1.output_buf[2+5] = sdlogger_spi.next_available_address >> 8;
+      sdcard1.output_buf[3+5] = sdlogger_spi.next_available_address >> 0;
+
+      sdcard_spi_write_block(&sdcard1, 0x00002000);
+      /* Reset log length */
+      sdlogger_spi.log_len = 0;
+      sdlogger_spi.status = SDLogger_UpdatingIndex;
+      break;
+
+    default:
+      break;
+  }
+
 }
 
 /**
@@ -152,6 +217,9 @@ void sdlogger_spi_direct_index_received(void)
  */
 void sdlogger_spi_direct_multiwrite_written(void)
 {
+  /* Increment log length */
+  sdlogger_spi.log_len++;
+
   /* Copy data from logger buffer to SD Card buffer */
   for (uint8_t i = 0; i < sdlogger_spi.idx; i++) {
     sdcard1.output_buf[i+1] = sdlogger_spi.buffer[i];

@@ -54,6 +54,7 @@ struct sdlogger_spi_periph{
   uint16_t sdcard_buf_idx;
   uint8_t buffer[SDLOGGER_BUFFER_SIZE];
   uint8_t idx;
+  uint32_t log_len;
   struct link_device device;
 };
 
