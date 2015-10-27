@@ -21,6 +21,10 @@
  * @file "modules/loggers/sdlogger_spi_direct.c"
  * @author Bart Slinger
  * SPI SD Logger that saves pprzlog messages to SD Card.
+ *
+ * Developed using Test Driven Development.
+ * Test code available at:
+ *   https://github.com/bartslinger/paparazzi-unittest
  */
 
 #include "modules/loggers/sdlogger_spi_direct.h"
@@ -35,7 +39,10 @@
 
 #ifndef TELEMETRY_MODE_Main_empty
 #warning You need to define a main telemetry mode named "empty" without any \
-  messages in your config file in /conf/telemetry/<your_config.xml>
+  messages in your config file in /conf/telemetry/<your_config.xml>. \
+  \
+  Add <mode name="empty"></mode> to your main telemetry process.
+
 #endif
 
 struct sdlogger_spi_periph sdlogger_spi;

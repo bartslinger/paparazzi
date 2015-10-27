@@ -35,6 +35,11 @@
  * The following resource was used as implementation reference: http://elm-chan.org/docs/mmc/mmc_e.html
  * The initialization procedure is implemented according to the following diagram. Only the branches for SD ver.2 are currently included.
  * \image html airborne/sdinit.png
+ *
+ * Developed using Test Driven Development.
+ * Test code available at:
+ *   https://github.com/bartslinger/paparazzi-unittest
+ *
  * @todo CRC checksums are not implemented. Fake values of 0xFF are used and they are ignored by the card.
  */
 
