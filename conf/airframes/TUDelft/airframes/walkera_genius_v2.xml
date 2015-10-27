@@ -188,8 +188,6 @@
    <load name="gps_ubx_ucenter.xml"/>
    <load name="send_imu_mag_current.xml"/>
    <load name="logger_sd_spi_direct.xml">
-     <configure name="SDLOGGER_DIRECT_SPI_UART" value="UART1"/>
-     <configure name="SDLOGGER_DIRECT_SPI_BAUD" value="B115200"/>
      <configure name="LOGGER_CONTROL_SWITCH" value="RADIO_AUX2"/>
      <configure name="LOGGER_LED" value="3"/>
    </load>
