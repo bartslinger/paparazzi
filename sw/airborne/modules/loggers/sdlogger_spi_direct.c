@@ -33,6 +33,11 @@
 #define LOGGER_LED_OFF {}
 #endif
 
+#ifndef TELEMETRY_MODE_Main_empty
+#warning You need to define a main telemetry mode named "empty" without any \
+  messages in your config file in /conf/telemetry/<your_config.xml>
+#endif
+
 struct sdlogger_spi_periph sdlogger_spi;
 
 /* Private function declarations */
@@ -305,6 +310,14 @@ void sdlogger_spi_direct_command(void)
                           &sdlogger_spi_direct_index_received);
     sdlogger_spi.download_id = sdlogger_spi.command;
     sdlogger_spi.status = SDLogger_GettingIndexForDownload;
+  }
+  else if (sdcard1.status == SDCard_Idle && sdlogger_spi.command == 255) {
+    telemetry_mode_Main = TELEMETRY_MODE_Main_empty;
+    LOGGER_LED_ON;
+    sdcard_spi_read_block(&sdcard1, 0x00002000, NULL);
+    sdlogger_spi.download_length = 0;
+    sdlogger_spi.sdcard_buf_idx = 0;
+    sdlogger_spi.status = SDLogger_Downloading;
   }
   /* Always reset command value back to zero */
   sdlogger_spi.command = 0;

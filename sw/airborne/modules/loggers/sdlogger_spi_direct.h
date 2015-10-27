@@ -36,6 +36,8 @@
 #include "mcu_periph/uart.h"
 #include "led.h"
 
+#include "generated/periodic_telemetry.h"
+
 enum SDLoggerStatus {
   SDLogger_UnInit,
   SDLogger_Error,

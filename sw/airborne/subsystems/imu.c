@@ -55,9 +55,6 @@ static void send_accel_scaled(struct transport_tx *trans, struct link_device *de
 {
   pprz_msg_send_IMU_ACCEL_SCALED(trans, dev, AC_ID,
                                  &imu.accel.x, &imu.accel.y, &imu.accel.z);
-  pprz_msg_send_IMU_ACCEL_SCALED(&pprzlog_tp.trans_tx, &sdlogger_spi.device,
-                                 AC_ID,
-                                 &imu.accel.x, &imu.accel.y, &imu.accel.z);
 }
 
 static void send_accel(struct transport_tx *trans, struct link_device *dev)
