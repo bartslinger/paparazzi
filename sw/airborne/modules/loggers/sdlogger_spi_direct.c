@@ -40,12 +40,10 @@
 #endif
 
 #ifndef TELEMETRY_MODE_Main_empty
-#if !SEPARATE_LOGLINK
 #warning You need to define a main telemetry mode named "empty" without any \
   messages in your config file in /conf/telemetry/<your_config.xml>. \
   \
   Add <mode name="empty"></mode> to your main telemetry process.
-#endif
 #endif
 
 #ifndef TELEMETRY_PROCESS_Logger
