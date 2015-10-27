@@ -27,6 +27,8 @@
  *   https://github.com/bartslinger/paparazzi-unittest
  */
 
+#define PERIODIC_C_LOGGER
+
 #include "modules/loggers/sdlogger_spi_direct.h"
 
 #ifdef LOGGER_LED
@@ -38,12 +40,19 @@
 #endif
 
 #ifndef TELEMETRY_MODE_Main_empty
+#if !SEPARATE_LOGLINK
 #warning You need to define a main telemetry mode named "empty" without any \
   messages in your config file in /conf/telemetry/<your_config.xml>. \
   \
   Add <mode name="empty"></mode> to your main telemetry process.
-
 #endif
+#endif
+
+#ifndef TELEMETRY_PROCESS_Logger
+#error "You need to use a telemetry xml file with Logger process!"
+#endif
+
+
 
 struct sdlogger_spi_periph sdlogger_spi;
 
@@ -115,6 +124,12 @@ void sdlogger_spi_direct_periodic(void)
       break;
 
     case SDLogger_Logging:
+      /* This line is NOT unit-tested because it is an inline function */
+      #if PERIODIC_TELEMETRY
+      periodic_telemetry_send_Logger(DefaultPeriodic,
+                                     &pprzlog_tp.trans_tx,
+                                     &sdlogger_spi.device);
+      #endif
       /* Check if SD Card buffer is full and SD Card is ready for new data */
       if (sdlogger_spi.sdcard_buf_idx > 512 &&
           sdcard1.status == SDCard_MultiWriteIdle) {
@@ -163,8 +178,8 @@ void sdlogger_spi_direct_periodic(void)
       if (sdcard1.status == SDCard_Idle) {
         /* Put bytes to the buffer until all is written or buffer is full */
         for (uint16_t i = sdlogger_spi.sdcard_buf_idx; i < SD_BLOCK_SIZE; i++) {
-          if(uart_check_free_space(&DOWNLINK_DEVICE, 1)) {
-            uart_put_byte(&DOWNLINK_DEVICE, sdcard1.input_buf[i]);
+          if(uart_check_free_space(&SDLOGGER_SPI_DIRECT_DOWNLINK_DEVICE, 1)) {
+            uart_put_byte(&SDLOGGER_SPI_DIRECT_DOWNLINK_DEVICE, sdcard1.input_buf[i]);
           }
           else {
             /* No free space left, abort for-loop */

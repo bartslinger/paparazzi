@@ -3,6 +3,8 @@
 <module name="logger_sd_spi_direct" dir="loggers">
   <doc>
     <description>Direct SPI SD Logger that saves pprzlog messages to SD Card.</description>
+    <configure name="SDLOGGER_DIRECT_SPI_UART" value="UART1|UART2|UART3|UART4|UART5|UART6" description="Port to read back the memory"/>
+    <configure name="SDLOGGER_DIRECT_SPI_BAUD" value="B57600"/>
     <configure name="SDLOGGER_DIRECT_SPI" value="SPI1|SPI2|SPI3|SPI4|SPI5|SPI6" description="Port to which the SD Card is connected."/>
     <configure name="SDLOGGER_DIRECT_SPI_SLAVE" value="SPI_SLAVE1|SPI_SLAVE2|SPI_SLAVE3|SPI_SLAVE4|SPI_SLAVE5|SPI_SLAVE6" description="Port to which the SD Card is connected."/>
     <configure name="LOGGER_CONTROL_SWITCH" value="RADIO_AUX2"/>
@@ -31,22 +33,31 @@
   <makefile>
 
     <raw>
-      SDLOGGER_DIRECT_SPI ?= spi2
-      SDLOGGER_DIRECT_SPI_LOWER=$(shell echo $(SDLOGGER_DIRECT_SPI) | tr A-Z a-z)
-      SDLOGGER_DIRECT_SPI_UPPER=$(shell echo $(SDLOGGER_DIRECT_SPI) | tr a-z A-Z)
+        SDLOGGER_DIRECT_SPI_UART ?= UART1
+        SDLOGGER_DIRECT_SPI_BAUD ?= B57600
+        SDLOGGER_DIRECT_SPI_UART_LOWER = $(shell echo $(SDLOGGER_DIRECT_SPI_UART) | tr A-Z a-z)
+        SDLOGGER_DIRECT_SPI_UART_UPPER = $(shell echo $(SDLOGGER_DIRECT_SPI_UART) | tr a-z A-Z)
 
-      SDLOGGER_DIRECT_SPI_SLAVE ?= spi_slave2
-      SDLOGGER_DIRECT_SPI_SLAVE_LOWER=$(shell echo $(SDLOGGER_DIRECT_SPI_SLAVE) | tr A-Z a-z)
-      SDLOGGER_DIRECT_SPI_SLAVE_UPPER=$(shell echo $(SDLOGGER_DIRECT_SPI_SLAVE) | tr a-z A-Z)
+        $(TARGET).CFLAGS += -DUSE_$(SDLOGGER_DIRECT_SPI_UART_UPPER)
+        $(TARGET).CFLAGS += -D$(SDLOGGER_DIRECT_SPI_UART_UPPER)_BAUD=$(SDLOGGER_DIRECT_SPI_BAUD)
+        $(TARGET).CFLAGS += -DSDLOGGER_SPI_DIRECT_DOWNLINK_DEVICE=$(SDLOGGER_DIRECT_SPI_UART_LOWER)
 
-      LOGGER_CONTROL_SWITCH ?= RADIO_AUX2
+        SDLOGGER_DIRECT_SPI ?= spi2
+        SDLOGGER_DIRECT_SPI_LOWER=$(shell echo $(SDLOGGER_DIRECT_SPI) | tr A-Z a-z)
+        SDLOGGER_DIRECT_SPI_UPPER=$(shell echo $(SDLOGGER_DIRECT_SPI) | tr a-z A-Z)
 
-      LOGGER_LED ?= none
-      ifneq ($(LOGGER_LED),none)
+        SDLOGGER_DIRECT_SPI_SLAVE ?= spi_slave2
+        SDLOGGER_DIRECT_SPI_SLAVE_LOWER=$(shell echo $(SDLOGGER_DIRECT_SPI_SLAVE) | tr A-Z a-z)
+        SDLOGGER_DIRECT_SPI_SLAVE_UPPER=$(shell echo $(SDLOGGER_DIRECT_SPI_SLAVE) | tr a-z A-Z)
+
+        LOGGER_CONTROL_SWITCH ?= RADIO_AUX2
+
+        LOGGER_LED ?= none
+        ifneq ($(LOGGER_LED),none)
         ap.CFLAGS += -DLOGGER_LED=$(LOGGER_LED)
-      endif
+        endif
 
-      ap.srcs += subsystems/datalink/downlink.c subsystems/datalink/pprzlog_transport.c
+        ap.srcs += subsystems/datalink/downlink.c subsystems/datalink/pprzlog_transport.c
     </raw>
 
     <file name="sdcard_spi.c" dir="peripherals"/>

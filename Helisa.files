@@ -78,6 +78,7 @@
 /home/bart/paparazzi/sw/airborne/subsystems/radio_control/ppm.h
 /home/bart/paparazzi/sw/airborne/arch/stm32/subsystems/radio_control/ppm_arch.h
 /home/bart/paparazzi/var/aircrafts/Helisa/ap/generated/radio.h
+/home/bart/paparazzi/sw/airborne/subsystems/datalink/pprzlog_transport.h
 /home/bart/paparazzi/sw/airborne/peripherals/sdcard_spi.h
 /home/bart/paparazzi/sw/airborne/arch/stm32/mcu_periph/spi_arch.h
 /home/bart/paparazzi/sw/airborne/firmwares/rotorcraft/navigation.h
@@ -130,10 +131,8 @@
 /home/bart/paparazzi/sw/airborne/subsystems/datalink/pprz_transport.h
 /home/bart/paparazzi/sw/airborne/subsystems/datalink/datalink.h
 /home/bart/paparazzi/var/include/dl_protocol.h
-/home/bart/paparazzi/sw/airborne/subsystems/datalink/pprzlog_transport.h
 /home/bart/paparazzi/sw/airborne/subsystems/datalink/xbee.h
 /home/bart/paparazzi/sw/airborne/subsystems/datalink/xbee24.h
-/home/bart/paparazzi/sw/airborne/subsystems/datalink/w5100.h
 /home/bart/paparazzi/sw/airborne/firmwares/rotorcraft/stabilization.c
 /home/bart/paparazzi/sw/airborne/firmwares/rotorcraft/stabilization.h
 /home/bart/paparazzi/sw/airborne/firmwares/rotorcraft/stabilization/stabilization_none.c
@@ -166,6 +165,7 @@
 /home/bart/paparazzi/sw/airborne/subsystems/ins.h
 /home/bart/paparazzi/sw/airborne/subsystems/ins/ins_int.h
 /home/bart/paparazzi/var/aircrafts/Helisa/ap/generated/flight_plan.h
+/home/bart/paparazzi/sw/airborne/subsystems/datalink/w5100.h
 /home/bart/paparazzi/sw/airborne/subsystems/navigation/waypoints.c
 /home/bart/paparazzi/sw/airborne/subsystems/navigation/common_flight_plan.c
 /home/bart/paparazzi/sw/airborne/firmwares/rotorcraft/main.c
