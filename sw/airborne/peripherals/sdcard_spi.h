@@ -96,7 +96,7 @@ struct SDCard {
   uint8_t response_counter;                 /**< Response counter used at various locations */
   uint32_t timeout_counter;                 /**< Timeout counter used for initialization checks with ACMD41 */
   enum SDCardType card_type;                /**< Type of SDCard */
-  SDCardCallback external_callback;             /**< Callback to call when external operation finishes */
+  SDCardCallback external_callback;         /**< Callback to call when external operation finishes */
 };
 
 extern struct SDCard sdcard1;

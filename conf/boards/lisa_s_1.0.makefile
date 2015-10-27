@@ -28,7 +28,7 @@ FLASH_MODE ?= SWD
 #
 # default LED configuration
 #
-RADIO_CONTROL_LED  ?= none
+RADIO_CONTROL_LED  ?= 3
 BARO_LED           ?= none
 AHRS_ALIGNER_LED   ?= 2
 GPS_LED            ?= none

@@ -40,8 +40,6 @@
 #endif
 #endif
 
-#include "subsystems/datalink/pprzlog_transport.h"
-
 #if PERIODIC_TELEMETRY
 #include "subsystems/datalink/telemetry.h"
 
@@ -111,6 +109,7 @@ struct Imu imu;
 
 void imu_init(void)
 {
+
 #ifdef IMU_POWER_GPIO
   gpio_setup_output(IMU_POWER_GPIO);
   IMU_POWER_GPIO_ON(IMU_POWER_GPIO);

@@ -61,9 +61,6 @@
 #ifdef USE_UDP
 #include "mcu_periph/udp.h"
 #endif
-#ifdef USE_SDLOGGER_SPI_DIRECTTTT
-#include "modules/loggers/sdlogger_spi_direct.h"
-#endif
 #include "mcu_periph/uart.h"
 
 #endif /** !SITL */
