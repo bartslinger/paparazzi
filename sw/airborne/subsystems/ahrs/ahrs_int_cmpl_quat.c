@@ -32,7 +32,6 @@
 
 #include "subsystems/ahrs/ahrs_int_cmpl_quat.h"
 #include "subsystems/ahrs/ahrs_int_utils.h"
-#include "modules/loggers/sd_logger_spi_direct.h"
 
 #ifdef AHRS_USE_RPM_SENSOR_NOTCH
 #include "subsystems/sensors/rpm_sensor.h"
@@ -325,16 +324,16 @@ void ahrs_icq_update_accel(struct Int32Vect3 *accel, float dt)
     notch_filter_update(&acc_z2_notch, &zout1, &zout2);
 
     /* Log it! */
-    sd_logger_periodic();
+    //sd_logger_periodic();
 
     /* Set acceleration values to filtered values */
-#if 0
+#if 1
     accel->x = xout2;
     accel->y = yout2;
     accel->z = zout2;
 #endif
   } else {
-    sd_logger_periodic();
+    //sd_logger_periodic();
   }
 #endif
 
