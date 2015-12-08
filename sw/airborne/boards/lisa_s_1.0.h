@@ -82,6 +82,13 @@
 #define ADC_1_GPIO_PIN GPIO2
 #endif
 
+#if USE_ADC_2
+#define AD1_2_CHANNEL 3
+#define ADC_2 AD1_2
+#define ADC_2_GPIO_PORT GPIOA
+#define ADC_2_GPIO_PIN GPIO3
+#endif
+
 /* allow to define ADC_CHANNEL_VSUPPLY in the airframe file*/
 #ifndef ADC_CHANNEL_VSUPPLY
 #define ADC_CHANNEL_VSUPPLY ADC_1

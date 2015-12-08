@@ -135,8 +135,8 @@
     <define name="REF_MAX_RDOT" value="RadOfDeg(7000.)"/>
 
     <!-- feedback -->
-    <define name="PHI_PGAIN" value="5"/>
-    <define name="PHI_DGAIN" value="35"/>
+    <define name="PHI_PGAIN" value="3052"/>
+    <define name="PHI_DGAIN" value="108"/>
     <define name="PHI_IGAIN" value="0"/>
 
     <define name="THETA_PGAIN" value="3052"/>
@@ -197,6 +197,9 @@
      <configure name="LOGGER_CONTROL_SWITCH" value="RADIO_AUX2"/>
      <configure name="LOGGER_LED" value="3"/>
    </load>
+    <!--load name="adc_generic.xml">
+      <configure name="ADC_CHANNEL_GENERIC1" value="ADC_2"/>
+    </load-->
    <!--load name="sys_mon.xml"/-->
  </modules>
 

@@ -36,7 +36,8 @@
 #include "state.h"
 
 /* For identification experiment */
-#include RADIO_CONTROL_TYPE_H
+//#include RADIO_CONTROL_TYPE_H
+#include "subsystems/radio_control.h"
 
 struct Int32AttitudeGains stabilization_gains = {
   {STABILIZATION_ATTITUDE_PHI_PGAIN, STABILIZATION_ATTITUDE_THETA_PGAIN, STABILIZATION_ATTITUDE_PSI_PGAIN },
@@ -283,17 +284,17 @@ void stabilization_attitude_run(bool_t enable_integrator)
   /* compute the feed back command */
   attitude_run_fb(stabilization_att_fb_cmd, &stabilization_gains, &att_err, &rate_err, &stabilization_att_sum_err_quat);
 
-  /* Step input for identification experiment, on SD Logger switch */
+  /* Step input for identification experiment, on switch */
   /* Check if the switch is flipped to start or stop logging */
-#define SDLOG_FLIP_SWITCH_CHANNEL 6
+#define EXPERIMENT_FLIP_SWITCH_CH RADIO_FLAP
   static bool_t experiment_switch_state = FALSE;
   static bool_t experiment_step = FALSE;
   static uint32_t experiment_timer = 0;
-  if (USEC_OF_RC_PPM_TICKS(ppm_pulses[SDLOG_FLIP_SWITCH_CHANNEL]) < 1300 && USEC_OF_RC_PPM_TICKS(ppm_pulses[SDLOG_FLIP_SWITCH_CHANNEL]) > 900 && experiment_switch_state == FALSE) {
+  if (radio_control.values[EXPERIMENT_FLIP_SWITCH_CH] > 0 && experiment_switch_state == FALSE) {
     /* Start experiment */
     experiment_timer = 0;
     experiment_switch_state = TRUE;
-  } else if (USEC_OF_RC_PPM_TICKS(ppm_pulses[SDLOG_FLIP_SWITCH_CHANNEL]) > 1300 && experiment_switch_state == TRUE) {
+  } else if (radio_control.values[EXPERIMENT_FLIP_SWITCH_CH] < 0 && experiment_switch_state == TRUE) {
     /* Stop experiment */
     experiment_switch_state = FALSE;
   }
@@ -301,7 +302,7 @@ void stabilization_attitude_run(bool_t enable_integrator)
   experiment_step = FALSE;
   if (experiment_switch_state) {
     experiment_timer++;
-    if (experiment_timer > 512 && experiment_timer < 612) {
+    if (experiment_timer > 0 && experiment_timer < 130) {
       experiment_step = TRUE;
     }
   }
