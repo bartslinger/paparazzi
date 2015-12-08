@@ -44,8 +44,7 @@
     <set servo="CIC_FRONT" value="-$collective"/-->
     
     <set servo="GAS" value="$gas"/>
-    <set servo="TAIL" value="@YAW+0.4*$gas"/>
-    <!--set servo="TAIL" value="@YAW + $halfway * ((MAX_PPRZ*0.4) + @THRUST*0.2037) + (1 - $halfway) * (@THRUST * 1.4872) "/-->
+    <set servo="TAIL" value="@YAW + $halfway * ((MAX_PPRZ*0.4) + @THRUST*0.2037) + (1 - $halfway) * (@THRUST * 1.4872) "/>
     <!--set servo="TAIL" value="0"/-->
     
     <!--set servo="GAS" value="$gas"/>
@@ -55,7 +54,7 @@
 
   <section name="IMU" prefix="IMU_">
     <define name="BODY_TO_IMU_PHI" value="184." unit="deg"/>
-    <define name="BODY_TO_IMU_THETA" value="+4.5" unit="deg"/>
+    <define name="BODY_TO_IMU_THETA" value="-4.5" unit="deg"/>
     <define name="BODY_TO_IMU_PSI" value="0" unit="deg"/>
 
     <!-- From Delft MAVlab, quick calibration -->
@@ -85,9 +84,9 @@
   </section>
 
  <section name="AUTOPILOT">
-   <define name="MODE_AUTO2" value="AP_MODE_NAV"/> <!--AP_MODE_ATTITUDE_DIRECT-->
-   <define name="MODE_AUTO1" value="AP_MODE_RC_DIRECT"/>
-   <define name="MODE_MANUAL" value="AP_MODE_ATTITUDE_DIRECT"/> <!--AP_MODE_ATTITUDE_Z_HOLD-->
+   <define name="MODE_AUTO2" value="AP_MODE_RC_DIRECT"/> <!--AP_MODE_ATTITUDE_DIRECT-->
+   <define name="MODE_AUTO1" value="AP_MODE_ATTITUDE_DIRECT"/>
+   <define name="MODE_MANUAL" value="AP_MODE_KILL"/> <!--AP_MODE_ATTITUDE_Z_HOLD-->
  </section>
 
  <section name="BAT">
@@ -158,9 +157,6 @@
   </section>
 
   <section name="INS" prefix="INS_">
-    <!-- Use GPS altitude measurments and set the R gain -->
-    <!--define name="USE_GPS_ALT" value="1"/>
-    <define name="VFF_R_GPS" value="0.01"/-->
   </section>
 
  <section name="GUIDANCE_V" prefix="GUIDANCE_V_">
@@ -176,8 +172,6 @@
     <define name="H_Z" value=" 0.87161"/>
     <define name="USE_RPM_SENSOR_NOTCH" value="1"/>
     <define name="NOTCH_FILTER_BANDWIDTH" value="10.0"/>
-    <define name="USE_GPS_HEADING" value="0"/>
-    <define name="HEADING_UPDATE_GPS_MIN_SPEED" value="0"/>
   </section>
 
  <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
@@ -191,16 +185,17 @@
  </section>
 
  <modules main_freq="512">
-   <!--load name="gps_ubx_ucenter.xml"/-->
+   <load name="gps_ubx_ucenter.xml"/>
    <load name="send_imu_mag_current.xml"/>
-   <load name="sd_logger_spi_direct.xml"/>
+   <load name="logger_sd_spi_direct.xml">
+     <configure name="LOGGER_CONTROL_SWITCH" value="RADIO_AUX2"/>
+     <configure name="LOGGER_LED" value="3"/>
+   </load>
    <!--load name="sys_mon.xml"/-->
  </modules>
 
   <firmware name="rotorcraft">
     <target name="ap" board="lisa_s_1.0">
-      <configure name="USE_BARO_BOARD" value="0"/>
-      <configure name="USE_MAGNETOMETER" value="1"/>
       <!--subsystem name="radio_control" type="superbitrf_rc"-->
         <!--<define name="RADIO_TRANSMITTER_ID" value="2008496626"/>-->   <!-- TUDelft Dx6i: TX 4 -->
         <!--<define name="RADIO_TRANSMITTER_CHAN" value="6"/>-->
@@ -209,7 +204,6 @@
 	  <subsystem name="radio_control" type="ppm">
         <configure name="RADIO_CONTROL_PPM_PIN" value="SERVO6"/>
       </subsystem>
-      <define name="RADIO_KILL_SWITCH" value="RADIO_FLAP"/>
 
       <configure name="AHRS_PROPAGATE_FREQUENCY" value="500"/>
       <define name="USE_PERSISTENT_SETTINGS" value="TRUE"/>
@@ -225,10 +219,11 @@
 	  <configure name="MODEM_BAUD" value="B115200"/>
 	  <configure name="MODEM_PORT" value="UART1"/>
 	</subsystem>
+    <!--subsystem name="telemetry" type="superbitrf" /-->
     <subsystem name="imu" type="lisa_s_v1.0"/>
-    <!--subsystem name="gps" type="datalink"/--> <!-- was type="ublox" /-->
+    <subsystem name="gps" type="ublox"/>
     <subsystem name="stabilization" type="int_quat"/>
-    <subsystem name="rpm_sensor" type="eagletree"/>
+    <!--subsystem name="rpm_sensor" type="eagletree"/-->
     <subsystem name="ahrs" type="int_cmpl_quat"/>
     <subsystem name="ins"/>
   </firmware>

@@ -2,7 +2,7 @@
 #
 # elle0_1.0.makefile
 #
-# http://wiki.paparazziuav.org/wiki/ELLE0
+# http://wiki.paparazziuav.org/wiki/Elle0
 #
 
 BOARD=elle0
@@ -26,7 +26,7 @@ ifeq (,$(findstring $(HAS_LUFTBOOT),0 FALSE))
 $(TARGET).CFLAGS+=-DLUFTBOOT
 $(TARGET).LDFLAGS+=-Wl,-Ttext=0x8004000
 DFU_ADDR = 0x8004000
-DFU_PRODUCT = ELLE0
+DFU_PRODUCT = Elle0
 endif
 
 

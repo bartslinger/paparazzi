@@ -53,58 +53,57 @@ enum SDCardType {
 };
 
 enum SDCardStatus {
-  SDCard_UnInit,                            /**< 0  SDCard is not initialized */
-  SDCard_Error,                             /**< 1  An error has occured, sending debug message */
-  SDCard_Idle,                              /**< 2  Initialization sequence succesful */
-  SDCard_Busy,                              /**< 3  SDCard is busy with internal process */
-  SDCard_BeforeDummyClock,                  /**< 4  About to send dummy clock cycles to initialize spi mode */
-  SDCard_SendingDummyClock,                 /**< 5  Busy sending dummy clock cycles */
-  SDCard_SendingCMD0,                       /**< 6  Busy sending CMD0 */
-  SDCard_ReadingCMD0Resp,                   /**< 7  Reading R1 response to CMD0 byte by byte */
-  SDCard_SendingCMD8,                       /**< 8  Busy sending CMD8 */
-  SDCard_ReadingCMD8Resp,                   /**< 9  Reading R7 response to CMD8 byte by byte */
-  SDCard_ReadingCMD8Parameter,              /**< 10 Reading the 32-bit parameter after receiving 0x01 */
-  SDCard_SendingACMD41v2,                   /**< 11 Busy sending ACMD41 */
-  SDCard_ReadingACMD41v2Resp,               /**< 12 Reading R1 response to ACMD41 byte by byte */
-  SDCard_SendingCMD58,                      /**< 13 Busy sending CMD58 */
-  SDCard_ReadingCMD58Resp,                  /**< 14 Reading R3 response to CMD58 byte by byte */
-  SDCard_ReadingCMD58Parameter,             /**< 15 Reading the 32-bit parameter after receiving 0x00 from CMD58 */
-  SDCard_SendingCMD16,                      /**< 16 Busy sending CMD16 */
-  SDCard_ReadingCMD16Resp,                  /**< 17 Reading R1 response to CMD16 byte by byte */
-  SDCard_SendingCMD24,                      /**< 18 Busy sending CMD24 */
-  SDCard_ReadingCMD24Resp,                  /**< 19 Reading R1 response to CMD24 byte by byte */
-  SDCard_BeforeSendingDataBlock,            /**< 20 Start data block transfer */
-  SDCard_SendingDataBlock,                  /**< 21 Busy sending data block */
-  SDCard_SendingCMD17,                      /**< 22 Busy sending CMD17 (block read request) */
-  SDCard_ReadingCMD17Resp,                  /**< 23 Reading R1 response to CMD17 byte by byte */
-  SDCard_WaitingForDataToken,               /**< 24 Reading a byte each period until there is a data token or error */
-  SDCard_ReadingDataBlock,                  /**< 25 Busy reading data block */
-  SDCard_SendingCMD25,                      /**< 26 Busy sending CMD25 (multiwrite start command) */
-  SDCard_ReadingCMD25Resp,                  /**< 27 Reading R1 response to CMD25 byte by byte */
-  SDCard_MultiWriteIdle,                    /**< 28 CMD25 complete, ready to sent blocks */
-  SDCard_MultiWriteWriting,                 /**< 29 Busy with the SPI transfer in multiwrite */
-  SDCard_MultiWriteBusy,                    /**< 30 Busy flag after sending data block in multiwrite */
-  SDCard_MultiWriteStopping,                /**< 31 Busy sending the stop token */
+  SDCard_UnInit,                            /**< SDCard is not initialized */
+  SDCard_Error,                             /**< An error has occured, sending debug message */
+  SDCard_Idle,                              /**< Initialization sequence succesful */
+  SDCard_Busy,                              /**< SDCard is busy with internal process */
+  SDCard_BeforeDummyClock,                  /**< About to send dummy clock cycles to initialize spi mode */
+  SDCard_SendingDummyClock,                 /**< Busy sending dummy clock cycles */
+  SDCard_SendingCMD0,                       /**< Busy sending CMD0 */
+  SDCard_ReadingCMD0Resp,                   /**< Reading R1 response to CMD0 byte by byte */
+  SDCard_SendingCMD8,                       /**< Busy sending CMD8 */
+  SDCard_ReadingCMD8Resp,                   /**< Reading R7 response to CMD8 byte by byte */
+  SDCard_ReadingCMD8Parameter,              /**< Reading the 32-bit parameter after receiving 0x01 */
+  SDCard_SendingACMD41v2,                   /**< Busy sending ACMD41 */
+  SDCard_ReadingACMD41v2Resp,               /**< Reading R1 response to ACMD41 byte by byte */
+  SDCard_SendingCMD58,                      /**< Busy sending CMD58 */
+  SDCard_ReadingCMD58Resp,                  /**< Reading R3 response to CMD58 byte by byte */
+  SDCard_ReadingCMD58Parameter,             /**< Reading the 32-bit parameter after receiving 0x00 from CMD58 */
+  SDCard_SendingCMD16,                      /**< Busy sending CMD16 */
+  SDCard_ReadingCMD16Resp,                  /**< Reading R1 response to CMD16 byte by byte */
+  SDCard_SendingCMD24,                      /**< Busy sending CMD24 */
+  SDCard_ReadingCMD24Resp,                  /**< Reading R1 response to CMD24 byte by byte */
+  SDCard_BeforeSendingDataBlock,            /**< Start data block transfer */
+  SDCard_SendingDataBlock,                  /**< Busy sending data block */
+  SDCard_SendingCMD17,                      /**< Busy sending CMD17 (block read request) */
+  SDCard_ReadingCMD17Resp,                  /**< Reading R1 response to CMD17 byte by byte */
+  SDCard_WaitingForDataToken,               /**< Reading a byte each period until there is a data token or error */
+  SDCard_ReadingDataBlock,                  /**< Busy reading data block */
+  SDCard_SendingCMD25,                      /**< Busy sending CMD25 (multiwrite start command) */
+  SDCard_ReadingCMD25Resp,                  /**< Reading R1 response to CMD25 byte by byte */
+  SDCard_MultiWriteIdle,                    /**< CMD25 complete, ready to sent blocks */
+  SDCard_MultiWriteWriting,                 /**< Busy with the SPI transfer in multiwrite */
+  SDCard_MultiWriteBusy,                    /**< Busy flag after sending data block in multiwrite */
+  SDCard_MultiWriteStopping,                /**< Busy sending the stop token */
 };
 
-enum SDCardError {
-    SDCardError_None,                       /**< 0  No error */
-    SDCardError_TimeoutCMD0,                /**< 1  Timeout occured reading response of CMD0 */
-    SDCardError_TimeoutCMD8,                /**< 2  Timeout occured reading response of CMD8 */
-    SDCardError_OlderSDVersion,             /**< 3  Older SDCard version not supported */
-    SDCardError_NoResponseACMD41,           /**< 4  No response from ACMD41 */
-    SDCardError_TimeoutACMD41,              /**< 5  Timeout ACMD41 */
-    SDCardError_TimeoutCMD58,               /**< 6  Timeout from CMD58 */
-    SDCardError_CCSbitNotValid,             /**< 7  CCS bit is not valid */
-    SDCardError_TimeoutCMD16,               /**< 8  Timeout from CMD16 */
-    SDCardError_TimeoutCMD24,               /**< 9  Timeout from CMD24 */
-    SDCardError_SendingDataBlock,           /**< 10 Error sending datablock */
-    SDCardError_FinishingDataBlock,         /**< 11 Error in response after writign datablock */
-    SDCardError_TimeoutCMD17,               /**< 12 Timeout CMD17 */
-    SDCardError_TimeoutDataReadyToken,      /**< 13 Timout in receiving a token that data is ready */
-    SDCardError_TimeoutCMD25,               /**< 14 Timeout from CMD25 */
-    SDCardError_MultiwriteNotAccepted,      /**< 15 Written block during multiwrite is not accepted */
-    Bla
+enum SDCardErrorStatus {
+  SDCardError_None,
+  SDCardError_InitializationNoResponse,
+  SDCardError_CardInfoNoResponse,
+  SDCardError_InvalidCardInfo,
+  SDCardError_ACMD41Timeout,
+  SDCardError_ACMD41NoResponse,
+  SDCardError_CMD58NoResponse,
+  SDCardError_CCSBitInvalid,
+  SDCardError_SetBlockSizeNoResponse,
+  SDCardError_WriteBlockNoResponse,
+  SDCardError_SpiDriverError,
+  SDCardError_BlockWriteError,
+  SDCardError_ReadBlockNoResponse,
+  SDCardError_ReadBlockTimeout,
+  SDCardError_MultiWriteNoResponse,
+  SDCardError_MultiWriteError,
 };
 
 struct SDCard {
@@ -116,8 +115,8 @@ struct SDCard {
   uint8_t response_counter;                 /**< Response counter used at various locations */
   uint32_t timeout_counter;                 /**< Timeout counter used for initialization checks with ACMD41 */
   enum SDCardType card_type;                /**< Type of SDCard */
-  SDCardCallback read_callback;             /**< Callback to call when read operation finishes */
-  enum SDCardError error;                   /**< Error that has occured, or zero if none */
+  enum SDCardErrorStatus error_status;      /**< Contains information on where the error has occured */
+  SDCardCallback external_callback;         /**< Callback to call when external operation finishes */
 };
 
 extern struct SDCard sdcard1;
@@ -128,7 +127,7 @@ extern void sdcard_spi_periodic(struct SDCard *sdcard);
 extern void sdcard_spi_write_block(struct SDCard *sdcard, uint32_t addr);
 extern void sdcard_spi_read_block(struct SDCard *sdcard, uint32_t addr, SDCardCallback callback);
 extern void sdcard_spi_multiwrite_start(struct SDCard *sdcard, uint32_t addr);
-extern void sdcard_spi_multiwrite_next(struct SDCard *sdcard);
+extern void sdcard_spi_multiwrite_next(struct SDCard *sdcard, SDCardCallback callback);
 extern void sdcard_spi_multiwrite_stop(struct SDCard *sdcard);
 
 #endif // SDCARD_H_

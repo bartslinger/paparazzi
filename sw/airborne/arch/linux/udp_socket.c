@@ -78,6 +78,10 @@ int udp_socket_create(struct UdpSocket *sock, char *host, int port_out, int port
   int one = 1;
   // Enable reusing of address
   setsockopt(sock->sockfd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+#ifdef SO_REUSEPORT
+  // needed for OSX
+  setsockopt(sock->sockfd, SOL_SOCKET, SO_REUSEPORT, &one, sizeof(one));
+#endif
 
   // Enable broadcasting
   if (broadcast) {
@@ -120,7 +124,7 @@ int udp_socket_send(struct UdpSocket *sock, uint8_t *buffer, uint32_t len)
 
   ssize_t bytes_sent = sendto(sock->sockfd, buffer, len, 0,
                               (struct sockaddr *)&sock->addr_out, sizeof(sock->addr_out));
-  if (bytes_sent != len) {
+  if (bytes_sent != ((ssize_t)len)) {
     TRACE(TRACE_ERROR, "error sending to sock %d (%d)\n", (int)bytes_sent, strerror(errno));
   }
   return bytes_sent;

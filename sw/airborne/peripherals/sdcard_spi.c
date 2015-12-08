@@ -35,10 +35,16 @@
  * The following resource was used as implementation reference: http://elm-chan.org/docs/mmc/mmc_e.html
  * The initialization procedure is implemented according to the following diagram. Only the branches for SD ver.2 are currently included.
  * \image html airborne/sdinit.png
+ *
+ * Developed using Test Driven Development.
+ * Test code available at:
+ *   https://github.com/bartslinger/paparazzi-unittest
+ *
  * @todo CRC checksums are not implemented. Fake values of 0xFF are used and they are ignored by the card.
  */
 
 #include "sdcard_spi.h"
+
 /**
  * This is the definition of the SD card. Currently, only one SD card can be used.
  * Most of the functions are prepared for feature support of multiple SD cards, by taking a reference to the SDCard as parameter.
@@ -80,10 +86,10 @@ void sdcard_spi_init(struct SDCard *sdcard, struct spi_periph *spi_p, const uint
   sdcard->spi_t.output_buf = sdcard->output_buf;
   sdcard->spi_t.input_length = 0;
   sdcard->spi_t.output_length = 0;
-  sdcard->error = SDCardError_None;
 
   sdcard->status = SDCard_BeforeDummyClock;
   sdcard->card_type = SDCardType_Unknown;
+  sdcard->error_status = SDCardError_None;
 }
 
 /**
@@ -92,6 +98,7 @@ void sdcard_spi_init(struct SDCard *sdcard, struct spi_periph *spi_p, const uint
  */
 void sdcard_spi_periodic(struct SDCard *sdcard)
 {
+
   /* Do nothing if spi transaction is in progress */
   if (sdcard->spi_t.status == SPITransPending || sdcard->spi_t.status == SPITransRunning) {
     return;
@@ -173,7 +180,6 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_SendingCMD8;
       } else if (sdcard1.response_counter >= 9) {
         sdcard1.status = SDCard_Error;
-        sdcard1.error = SDCardError_TimeoutCMD0;
       } else {
         sdcard_spi_request_bytes(&sdcard1, 1);
       }
@@ -193,7 +199,6 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_ReadingCMD8Parameter;
       } else if (sdcard1.response_counter >= 9) {
         sdcard1.status = SDCard_Error;
-        sdcard1.error = SDCardError_TimeoutCMD8;
       } else {
         sdcard_spi_request_bytes(&sdcard1, 1);
       }
@@ -207,7 +212,6 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.timeout_counter = 0;
       } else {
         sdcard1.status = SDCard_Error;
-        sdcard1.error = SDCardError_OlderSDVersion;
       }
       break;
 
@@ -225,14 +229,12 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
           sdcard1.status = SDCard_SendingACMD41v2;
         } else {
           sdcard1.status = SDCard_Error;
-          sdcard1.error = SDCardError_NoResponseACMD41;
         }
       } else if (t->input_buf[0] == 0x00) {
         sdcard_spi_send_cmd(&sdcard1, 58, 0x00000000);
         sdcard1.status = SDCard_SendingCMD58;
       } else if (sdcard1.response_counter >= 9) {
         sdcard1.status = SDCard_Error;
-        sdcard1.error = SDCardError_TimeoutACMD41;
       } else {
         sdcard_spi_request_bytes(&sdcard1, 1);
       }
@@ -249,7 +251,6 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
     case SDCard_ReadingCMD58Resp:
       if (sdcard1.response_counter >= 9) {
         sdcard1.status = SDCard_Error;
-        sdcard1.error = SDCardError_TimeoutCMD58;
       } else if (sdcard1.input_buf[0] == 0x00) {
         sdcard_spi_request_bytes(&sdcard1, 4);
         sdcard1.status = SDCard_ReadingCMD58Parameter;
@@ -271,7 +272,6 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         }
       } else { // bit 31 not set, CCS bit is unvalid
         sdcard1.status = SDCard_Error;
-        sdcard1.error = SDCardError_CCSbitNotValid;
       }
       break;
 
@@ -288,7 +288,6 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_Idle;
       } else if (sdcard1.response_counter >= 9) {
         sdcard1.status = SDCard_Error;
-        sdcard1.error = SDCardError_TimeoutCMD16;
       } else {
         sdcard_spi_request_bytes(&sdcard1, 1);
       }
@@ -308,7 +307,6 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_BeforeSendingDataBlock;
       } else if (sdcard1.response_counter >= 9) {
         sdcard1.status = SDCard_Error;
-        sdcard1.error = SDCardError_TimeoutCMD24;
       } else {
         sdcard_spi_request_bytes(&sdcard1, 1);
       }
@@ -328,7 +326,6 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_SendingDataBlock;
       } else {
         sdcard1.status = SDCard_Error;
-        sdcard1.error = SDCardError_SendingDataBlock;
       }
       break;
 
@@ -338,7 +335,6 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_Busy;
       } else {
         sdcard1.status = SDCard_Error;
-        sdcard1.error = SDCardError_FinishingDataBlock;
       }
       sdcard1.spi_t.output_buf = sdcard1.output_buf;
       break;
@@ -364,7 +360,6 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_WaitingForDataToken;
       } else if (sdcard1.response_counter >= 9) {
         sdcard1.status = SDCard_Error;
-        sdcard1.error = SDCardError_TimeoutCMD17;
       } else {
         sdcard_spi_request_bytes(&sdcard1, 1);
       }
@@ -385,15 +380,14 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_ReadingDataBlock;
       } else if (sdcard1.timeout_counter > 498) {
         sdcard1.status = SDCard_Error;
-        sdcard1.error = SDCardError_TimeoutDataReadyToken;
       }
       break;
 
       /* Data block received in buffer, process data */
     case SDCard_ReadingDataBlock:
       sdcard1.status = SDCard_Idle;
-      if (sdcard1.read_callback != NULL) {
-        sdcard1.read_callback();
+      if (sdcard1.external_callback != NULL) {
+        sdcard1.external_callback();
       }
       break;
 
@@ -411,7 +405,6 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
         sdcard1.status = SDCard_MultiWriteIdle;
       } else if (sdcard1.response_counter >= 9) {
         sdcard1.status = SDCard_Error;
-        sdcard1.error = SDCardError_TimeoutCMD25;
       } else {
         sdcard_spi_request_bytes(&sdcard1, 1);
       }
@@ -421,9 +414,11 @@ void sdcard_spi_spicallback(struct spi_transaction *t)
     case SDCard_MultiWriteWriting:
       if ((sdcard1.input_buf[SD_BLOCK_SIZE + 3] & 0x0F) == 0x05 /* Data accepted */) {
         sdcard1.status = SDCard_MultiWriteBusy;
+        if(sdcard1.external_callback != NULL) {
+          sdcard1.external_callback();
+        }
       } else {
         sdcard1.status = SDCard_Error;
-        sdcard1.error = SDCardError_MultiwriteNotAccepted;
       }
       break;
 
@@ -590,7 +585,7 @@ void sdcard_spi_read_block(struct SDCard *sdcard, uint32_t addr, SDCardCallback 
   }
 
   /* Set function to be called after the read action has finished. */
-  sdcard->read_callback = callback;
+  sdcard->external_callback = callback;
 
   /* Send command 17 (read block) to the SDCard */
   sdcard_spi_send_cmd(sdcard, 17, addr);
@@ -625,7 +620,7 @@ void sdcard_spi_multiwrite_start(struct SDCard *sdcard, uint32_t addr)
  * Use only after sdcard_spi_multiwrite_start().
  * @param sdcard Pointer to the SDCard.
  */
-void sdcard_spi_multiwrite_next(struct SDCard *sdcard)
+void sdcard_spi_multiwrite_next(struct SDCard *sdcard, SDCardCallback callback)
 {
   /* Can only write next block if card is in multiwrite mode and not currently busy */
   if (sdcard->status != SDCard_MultiWriteIdle) {
@@ -641,6 +636,7 @@ void sdcard_spi_multiwrite_next(struct SDCard *sdcard)
 
   /* Set the callback */
   sdcard->spi_t.after_cb = &sdcard_spi_spicallback;
+  sdcard->external_callback = callback;
 
   /* Submit the spi transaction */
   spi_submit(sdcard->spi_p, &sdcard->spi_t);
