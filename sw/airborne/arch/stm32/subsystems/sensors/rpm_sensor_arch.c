@@ -64,12 +64,6 @@
 
 static uint8_t rpm_sensor_arch_overflow_cnt;
 
-static void send_rpm(struct transport_tx *trans, struct link_device *dev)
-{
-  pprz_msg_send_TCAS_DEBUG(trans, dev, AC_ID, 0, &rpm_sensor.motor_frequency);
-}
-
-
 void rpm_sensor_arch_init(void)
 {
   /* timer clock enable */
