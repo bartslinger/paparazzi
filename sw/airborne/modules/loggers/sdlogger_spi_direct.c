@@ -233,9 +233,6 @@ void sdlogger_spi_direct_index_received(void)
 
       /* Ready to start logging */
       sdlogger_spi.status = SDLogger_Ready;
-
-      /* Debug */
-      LOGGER_LED_ON;
       break;
 
     case SDLogger_GettingIndexForUpdate:

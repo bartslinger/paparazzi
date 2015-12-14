@@ -54,7 +54,7 @@
   </command_laws>
 
   <section name="IMU" prefix="IMU_">
-    <define name="BODY_TO_IMU_PHI" value="184." unit="deg"/>
+    <define name="BODY_TO_IMU_PHI" value="180." unit="deg"/> <!--was 184. /-->
     <define name="BODY_TO_IMU_THETA" value="+4.5" unit="deg"/>
     <define name="BODY_TO_IMU_PSI" value="+7.5" unit="deg"/>
 
@@ -194,12 +194,14 @@
    <!--load name="gps_ubx_ucenter.xml"/-->
    <load name="send_imu_mag_current.xml"/>
    <load name="logger_sd_spi_direct.xml">
+     <configure name="SDLOGGER_DIRECT_SPI_SLAVE" value="SPI_SLAVE3"/>
      <configure name="LOGGER_CONTROL_SWITCH" value="RADIO_AUX2"/>
      <configure name="LOGGER_LED" value="3"/>
    </load>
-    <!--load name="adc_generic.xml">
+    <load name="adc_generic.xml">
+      <configure name="ADC_CHANNEL_GENERIC_NB_SAMPLES" value="1"/>
       <configure name="ADC_CHANNEL_GENERIC1" value="ADC_2"/>
-    </load-->
+    </load>
    <!--load name="sys_mon.xml"/-->
  </modules>
 

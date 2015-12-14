@@ -2,7 +2,7 @@
 #include "mcu_periph/adc.h"
 #include "mcu_periph/uart.h"
 #include "messages.h"
-#include "subsystems/datalink/downlink.h"
+#include "subsystems/datalink/telemetry.h"
 #include BOARD_CONFIG
 
 uint16_t adc_generic_val1;
@@ -27,6 +27,14 @@ static struct adc_buf buf_generic1;
 static struct adc_buf buf_generic2;
 #endif
 
+static void send_adc_generic(struct transport_tx *trans, struct link_device *dev)
+{
+  uint16_t adc_watikwil = buf_generic1.sum;
+  pprz_msg_send_ADC_GENERIC(trans, dev, AC_ID,
+                                  &adc_watikwil,
+                                  &adc_generic_val2);
+}
+
 void adc_generic_init(void)
 {
 #ifdef ADC_CHANNEL_GENERIC1
@@ -35,6 +43,8 @@ void adc_generic_init(void)
 #ifdef ADC_CHANNEL_GENERIC2
   adc_buf_channel(ADC_CHANNEL_GENERIC2, &buf_generic2, ADC_CHANNEL_GENERIC_NB_SAMPLES);
 #endif
+
+  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_ADC_GENERIC, send_adc_generic);
 }
 
 void adc_generic_periodic(void)
@@ -46,6 +56,6 @@ void adc_generic_periodic(void)
   adc_generic_val2 = buf_generic2.sum / buf_generic2.av_nb_sample;
 #endif
 
-  DOWNLINK_SEND_ADC_GENERIC(DefaultChannel, DefaultDevice, &adc_generic_val1, &adc_generic_val2);
+  //DOWNLINK_SEND_ADC_GENERIC(DefaultChannel, DefaultDevice, &adc_generic_val1, &adc_generic_val2);
 }
 

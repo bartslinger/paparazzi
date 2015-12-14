@@ -290,10 +290,12 @@ void stabilization_attitude_run(bool_t enable_integrator)
   static bool_t experiment_switch_state = FALSE;
   static bool_t experiment_step = FALSE;
   static uint32_t experiment_timer = 0;
+  static int32_t pitch_hold = 0;
   if (radio_control.values[EXPERIMENT_FLIP_SWITCH_CH] > 0 && experiment_switch_state == FALSE) {
     /* Start experiment */
     experiment_timer = 0;
     experiment_switch_state = TRUE;
+    pitch_hold = stabilization_cmd[COMMAND_PITCH];
   } else if (radio_control.values[EXPERIMENT_FLIP_SWITCH_CH] < 0 && experiment_switch_state == TRUE) {
     /* Stop experiment */
     experiment_switch_state = FALSE;
@@ -310,10 +312,11 @@ void stabilization_attitude_run(bool_t enable_integrator)
   /* sum feedforward and feedback */
   if (experiment_step) {
     stabilization_cmd[COMMAND_ROLL] = 7000;
+    stabilization_cmd[COMMAND_PITCH] = pitch_hold;
   } else {
     stabilization_cmd[COMMAND_ROLL] = stabilization_att_fb_cmd[COMMAND_ROLL] + stabilization_att_ff_cmd[COMMAND_ROLL];
+    stabilization_cmd[COMMAND_PITCH] = stabilization_att_fb_cmd[COMMAND_PITCH] + stabilization_att_ff_cmd[COMMAND_PITCH];
   }
-  stabilization_cmd[COMMAND_PITCH] = stabilization_att_fb_cmd[COMMAND_PITCH] + stabilization_att_ff_cmd[COMMAND_PITCH];
   stabilization_cmd[COMMAND_YAW] = stabilization_att_fb_cmd[COMMAND_YAW] + stabilization_att_ff_cmd[COMMAND_YAW];
 
   /* bound the result */
