@@ -26,8 +26,8 @@
 #ifndef ADC_EXPANSION_UART_H
 #define ADC_EXPANSION_UART_H
 
-// extern void adc_expansion_uart_init();
-// extern void adc_expansion_uart_process_msg();
+extern void adc_expansion_uart_init(void);
+extern void adc_expansion_uart_process_msg(void);
 
 #endif
 

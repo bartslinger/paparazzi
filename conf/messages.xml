@@ -2523,6 +2523,13 @@
    <field name="servo_4" type="uint16"/>
  </message>
 
+
+  <message name="ADC_DATA" id="140">
+    <field name="adc_1" type="uint16"/>
+    <field name="adc_2" type="uint16"/>
+    <field name="adc_3" type="uint16"/>
+  </message>
+
  <message name="BOOZ2_FMS_COMMAND" id="149" link="forwarded">
    <field name="h_mode" type="uint8" values="KILL|RATE|ATTITUDE|HOVER|NAV"/>
    <field name="v_mode" type="uint8" values="KILL|DIRECT|CLIMB_RC|CLIMB|ALT|NAV"/>

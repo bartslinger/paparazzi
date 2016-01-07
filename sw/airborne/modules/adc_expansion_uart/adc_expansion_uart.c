@@ -25,7 +25,7 @@
 
 #include "modules/adc_expansion_uart/adc_expansion_uart.h"
 
-// void adc_expansion_uart_init() {}
-// void adc_expansion_uart_process_msg() {}
+void adc_expansion_uart_init() {}
+void adc_expansion_uart_process_msg() {}
 
 
