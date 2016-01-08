@@ -24,8 +24,37 @@
  */
 
 #include "modules/adc_expansion_uart/adc_expansion_uart.h"
+#include "subsystems/datalink/datalink.h"
 
-void adc_expansion_uart_init() {}
-void adc_expansion_uart_process_msg() {}
+uint16_t adc_uart_values[3];
+
+#if PERIODIC_TELEMETRY
+#include "subsystems/datalink/telemetry.h"
+
+static void send_adc_uart_values(struct transport_tx *trans, struct link_device *dev)
+{
+  pprz_msg_send_ADC_UART_DEBUG(trans, dev, AC_ID,
+                               &adc_uart_values[0],
+                               &adc_uart_values[1],
+                               &adc_uart_values[2]);
+}
+#endif
+
+void adc_expansion_uart_init() {
+  adc_uart_values[0] = 0;
+  adc_uart_values[1] = 0;
+  adc_uart_values[2] = 0;
+
+#if PERIODIC_TELEMETRY
+  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_ADC_UART_DEBUG, send_adc_uart_values);
+#endif
+}
+
+/* Process message with ADC values */
+void adc_expansion_uart_process_msg() {
+  adc_uart_values[0] = DL_ADC_DATA_adc_1(dl_buffer);
+  adc_uart_values[1] = DL_ADC_DATA_adc_2(dl_buffer);
+  adc_uart_values[2] = DL_ADC_DATA_adc_3(dl_buffer);
+}
 
 

@@ -2159,7 +2159,11 @@
       <field name="yaw_c"  type="float"/>
   </message>
 
-  <!-- 251 is free -->
+  <message name="ADC_UART_DEBUG" id="251">
+    <field name="adc_1" type="uint16"/>
+    <field name="adc_2" type="uint16"/>
+    <field name="adc_3" type="uint16"/>
+  </message>
   <!-- 252 is free -->
 
   <message name="I2C_ERRORS" id="253">

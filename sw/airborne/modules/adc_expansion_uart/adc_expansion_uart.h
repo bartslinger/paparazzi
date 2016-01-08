@@ -26,6 +26,10 @@
 #ifndef ADC_EXPANSION_UART_H
 #define ADC_EXPANSION_UART_H
 
+#include "std.h"
+
+extern uint16_t adc_uart_values[3];
+
 extern void adc_expansion_uart_init(void);
 extern void adc_expansion_uart_process_msg(void);
 
