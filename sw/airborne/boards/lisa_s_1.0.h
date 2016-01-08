@@ -109,6 +109,15 @@
 #define SPI_SELECT_SLAVE2_PORT GPIOB
 #define SPI_SELECT_SLAVE2_PIN GPIO12
 
+/* SD SS */
+#define SPI_SELECT_SLAVE3_PORT GPIOB
+#define SPI_SELECT_SLAVE3_PIN GPIO9
+
+/* SPI alternate function */
+#define SPI1_GPIO_AF 0
+#define SPI2_GPIO_AF 0
+#define SPI3_GPIO_AF 0
+
 /*
  * UART pin configuration
  *
@@ -189,7 +198,7 @@
  */
 
 /*
- * Default is PPM config 3, input on PA3 (Aux RX pin)
+ * Default is PPM config 2, input on GPIO01 (Servo pin 6)
  */
 
 #ifndef PPM_CONFIG
@@ -251,6 +260,20 @@
 #endif
 #define USE_AD_TIM1 1
 
+
+#elif PPM_CONFIG == 4
+/* Input on PC9 (SUPERBIT_RST) */
+#define USE_PPM_TIM3 1
+#define PPM_CHANNEL         TIM_IC4
+#define PPM_TIMER_INPUT     TIM_IC_IN_TI4
+#define PPM_IRQ             NVIC_TIM3_IRQ
+// Capture/Compare InteruptEnable and InterruptFlag
+#define PPM_CC_IE           TIM_DIER_CC4IE
+#define PPM_CC_IF           TIM_SR_CC4IF
+#define PPM_GPIO_PORT       GPIOC
+#define PPM_GPIO_PIN        GPIO9
+#define PPM_GPIO_AF         AFIO_MAPR_TIM3_REMAP_FULL_REMAP
+
 #else
 #error "Unknown PPM config"
 
@@ -274,6 +297,7 @@
  * PWM
  *
  */
+#define PWM_USE_TIM8 1
 #define PWM_USE_TIM4 1
 #define PWM_USE_TIM5 1
 
@@ -291,6 +315,7 @@
 #define ACTUATORS_PWM_NB 4
 #endif
 
+#define USE_PWM8 1
 #define USE_PWM3 1
 #define USE_PWM4 1
 
@@ -384,6 +409,18 @@
 
 #if USE_PWM6
 #define PWM_SERVO_6 3
+#define PWM_SERVO_6_TIMER TIM8
+#define PWM_SERVO_6_GPIO GPIOC
+#define PWM_SERVO_6_PIN GPIO9
+#define PWM_SERVO_6_AF 0
+#define PWM_SERVO_6_OC TIM_OC4
+#define PWM_SERVO_6_OC_BIT (1<<3)
+#endif
+
+/*
+ *
+#if USE_PWM6
+#define PWM_SERVO_6 3
 #define PWM_SERVO_6_TIMER TIM5
 #define PWM_SERVO_6_GPIO GPIOA
 #define PWM_SERVO_6_PIN GPIO1
@@ -402,13 +439,16 @@
 #define PWM_SERVO_6_OC_BIT (1<<1)
 #else
 #define PWM_SERVO_6_OC_BIT 0
-#endif
+#endif*/
+
 
 
 /* servos 1-4 or 3-4 on TIM4 depending on USE_SERVOS_1AND2 */
 #define PWM_TIM4_CHAN_MASK (PWM_SERVO_1_OC_BIT|PWM_SERVO_2_OC_BIT|PWM_SERVO_3_OC_BIT|PWM_SERVO_4_OC_BIT)
 /* servos 5-6 on TIM5 */
-#define PWM_TIM5_CHAN_MASK (PWM_SERVO_5_OC_BIT|PWM_SERVO_6_OC_BIT)
+#define PWM_TIM5_CHAN_MASK (PWM_SERVO_5_OC_BIT) //|PWM_SERVO_6_OC_BIT
+
+#define PWM_TIM8_CHAN_MASK (PWM_SERVO_6_OC_BIT)
 
 /* SuperbitRF mounted */
 #define SUPERBITRF_SPI_DEV spi2
