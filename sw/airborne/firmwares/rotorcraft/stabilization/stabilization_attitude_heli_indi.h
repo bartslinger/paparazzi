@@ -24,23 +24,32 @@
 
 #include "math/pprz_algebra_int.h"
 
-#define GAIN_DIVIDER_P 256
-#define GAIN_DIVIDER_D 256
+#include "filters/heli_rate_filter.h"
+
+#define GAIN_MULTIPLIER_P 256
+#define GAIN_MULTIPLIER_D 256
 
 struct HeliIndiGains {
-  uint32_t roll_p;
-  uint32_t pitch_p;
-  uint32_t yaw_p;
-  uint32_t yaw_d;
+  int32_t roll_p;
+  int32_t pitch_p;
+  int32_t yaw_p;
+  int32_t yaw_d;
 };
 
 struct HeliIndiStab {
-
+  float heli_roll_effectiveness_inv;
+  int32_t yawrate_setpoint;
+  int32_t yawrate_err;
+  int32_t filter_out;
+  int32_t yaw_incremental_cmd;
+  int32_t r_filt;
+  int32_t previous_r;
+  struct heli_rate_filter_t tail_model;
 };
 
 extern struct Int32Quat   stab_att_sp_quat;  ///< with #INT32_QUAT_FRAC
 extern struct Int32Eulers stab_att_sp_euler; ///< with #INT32_ANGLE_FRAC
-extern struct HeliIndiStab heli_indi_controller;
+extern struct HeliIndiStab heli_indi;
 extern struct HeliIndiGains heli_indi_gains;
 
 #endif /* STABILIZATION_ATTITUDE_QUAT_INT_H */

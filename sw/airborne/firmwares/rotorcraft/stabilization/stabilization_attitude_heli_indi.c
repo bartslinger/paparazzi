@@ -55,7 +55,8 @@ struct HeliIndiGains heli_indi_gains = {
   STABILIZATION_ATTITUDE_HELI_INDI_YAW_D
 };
 
-struct HeliIndiStab heli_indi_controller;
+#define HELI_INDI_YAWRATE_FILTSIZE 8
+struct HeliIndiStab heli_indi;
 
 #if PERIODIC_TELEMETRY
 #include "subsystems/datalink/telemetry.h"
@@ -131,20 +132,34 @@ void stabilization_attitude_run(bool_t enable_integrator)
   int32_quat_normalize(&att_err);
 
   /* rate error */
-  struct Int32Rates rate_err;
   struct Int32Rates *body_rate = stateGetBodyRates_i();
-  rate_err = *body_rate;
-  (void) rate_err;
+
+  /* Filter yaw rate, very simple first order IIR */
+  heli_indi.r_filt = ((heli_indi.r_filt * (HELI_INDI_YAWRATE_FILTSIZE-1)) + body_rate->r) / HELI_INDI_YAWRATE_FILTSIZE;
+
+  /* Calculate delta r measured */
+  int32_t delta_r_meas = heli_indi.r_filt - heli_indi.previous_r;
+  heli_indi.previous_r = heli_indi.r_filt;
 
   /* Linear controllers */
-  int32_t roll_virtual_control  = heli_indi_gains.roll_p * att_err.qx;
-  int32_t pitch_virtual_control = heli_indi_gains.pitch_p * att_err.qy;
-  int32_t yaw_virtual_control = (heli_indi_gains.yaw_p * att_err.qz - body_rate->r) * heli_indi_gains.yaw_d;
+  int32_t roll_virtual_control  = GAIN_MULTIPLIER_P * heli_indi_gains.roll_p * att_err.qx;
+  int32_t pitch_virtual_control = GAIN_MULTIPLIER_P * heli_indi_gains.pitch_p * att_err.qy;
+  int32_t yaw_virtual_control  = (GAIN_MULTIPLIER_P * heli_indi_gains.yaw_p * att_err.qz - heli_indi.r_filt) *
+                                 (GAIN_MULTIPLIER_D * heli_indi_gains.yaw_d);\
+  /* ------------------ */
+
+  /* INDI YAW */
+  /* Multiply with dt; this integrates virtual control (acceleration) to required change in rate */
+  int32_t delta_r_ref = yaw_virtual_control / 512;
+
+  int32_t delta_r_error = delta_r_ref - delta_r_meas;
+  int32_t delta_u = (delta_r_error * 512) / 48; /* equal to multiply with 10.6667, which is inv(B) */
+  /* -------- */
 
   /* set stabilization commands */
-  stabilization_cmd[COMMAND_ROLL] = 0;
-  stabilization_cmd[COMMAND_PITCH] = 0;
-  stabilization_cmd[COMMAND_YAW] = 0;
+  stabilization_cmd[COMMAND_ROLL] = roll_virtual_control;
+  stabilization_cmd[COMMAND_PITCH] = pitch_virtual_control;
+  stabilization_cmd[COMMAND_YAW] = yaw_virtual_control;
 
   /* bound the result */
   BoundAbs(stabilization_cmd[COMMAND_ROLL], MAX_PPRZ);
