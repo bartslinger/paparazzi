@@ -21,8 +21,8 @@
   </servos>
 
   <commands>
-    <axis name="PITCH" failsafe_value="0"/>
     <axis name="ROLL" failsafe_value="0"/>
+    <axis name="PITCH" failsafe_value="0"/>
     <axis name="YAW" failsafe_value="0"/>
     <axis name="THRUST" failsafe_value="0"/>
   </commands>
@@ -47,7 +47,7 @@
     <set servo="TAIL" value="@YAW + $halfway * ((MAX_PPRZ*0.4) + @THRUST*0.2037) + (1 - $halfway) * (@THRUST * 1.4872) "/>
     <!--set servo="TAIL" value="0"/-->
     
-    <!--set servo="GAS" value="$gas"/>
+    <!--set servo="GAS" value="$gas"/>  
     <set servo="TAIL" value="@YAW+0.4*$gas"/-->
     
   </command_laws>
@@ -108,6 +108,13 @@
     <define name="GAIN_R" value="350"/>
   </section>
 
+  <section name="STABILIZATION_ATTITUDE_HELI_INDI" prefix="STABILIZATION_ATTITUDE_HELI_INDI_">
+    <define name="ROLL_P" value="2" />
+    <define name="PITCH_P" value="2" />
+    <define name="YAW_P" value="2" />
+    <define name="YAW_D" value="2" />
+  </section>
+
   <section name="STABILIZATION_ATTITUDE" prefix="STABILIZATION_ATTITUDE_">
 
     <!-- setpoints -->
@@ -117,7 +124,7 @@
     <define name="DEADBAND_R" value="250"/>
     <define name="DEADBAND_A" value="250"/>
 
-    <!-- reference -->
+    <!-- reference
     <define name="REF_OMEGA_P" value="3000" unit="deg/s"/>
     <define name="REF_ZETA_P" value="0.85"/>
     <define name="REF_MAX_P" value="300." unit="deg/s"/>
@@ -131,7 +138,7 @@
     <define name="REF_OMEGA_R" value="3000" unit="deg/s"/>
     <define name="REF_ZETA_R" value="0.85"/>
     <define name="REF_MAX_R" value="300." unit="deg/s"/>
-    <define name="REF_MAX_RDOT" value="RadOfDeg(7000.)"/>
+    <define name="REF_MAX_RDOT" value="RadOfDeg(7000.)"/-->
 
     <!-- feedback -->
     <define name="PHI_PGAIN" value="3052"/>

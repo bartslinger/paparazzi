@@ -25,6 +25,7 @@
 
 #include "generated/airframe.h"
 
+#include "firmwares/rotorcraft/stabilization/stabilization_attitude_heli_indi.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_rc_setpoint.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_quat_transformations.h"
@@ -35,23 +36,26 @@
 #include "math/pprz_algebra_int.h"
 #include "state.h"
 
-/*
-struct Int32AttitudeGains stabilization_gains = {
-  {STABILIZATION_ATTITUDE_PHI_PGAIN, STABILIZATION_ATTITUDE_THETA_PGAIN, STABILIZATION_ATTITUDE_PSI_PGAIN },
-  {STABILIZATION_ATTITUDE_PHI_DGAIN, STABILIZATION_ATTITUDE_THETA_DGAIN, STABILIZATION_ATTITUDE_PSI_DGAIN },
-  {STABILIZATION_ATTITUDE_PHI_DDGAIN, STABILIZATION_ATTITUDE_THETA_DDGAIN, STABILIZATION_ATTITUDE_PSI_DDGAIN },
-  {STABILIZATION_ATTITUDE_PHI_IGAIN, STABILIZATION_ATTITUDE_THETA_IGAIN, STABILIZATION_ATTITUDE_PSI_IGAIN }
-};
-*/
+/* Check order of commands for effectiveness matrix */
+#if (COMMAND_ROLL   != 0 | \
+     COMMAND_PITCH  != 1 | \
+     COMMAND_YAW    != 2 | \
+     COMMAND_THRUST != 3)
+#warning "Order of commands incorrect"
+#endif
+
 
 struct Int32Quat   stab_att_sp_quat;
 struct Int32Eulers stab_att_sp_euler;
 
-#define IERROR_SCALE 128
-#define GAIN_PRESCALER_FF 48
-#define GAIN_PRESCALER_P 12
-#define GAIN_PRESCALER_D 3
-#define GAIN_PRESCALER_I 3
+struct HeliIndiGains heli_indi_gains = {
+  STABILIZATION_ATTITUDE_HELI_INDI_ROLL_P,
+  STABILIZATION_ATTITUDE_HELI_INDI_PITCH_P,
+  STABILIZATION_ATTITUDE_HELI_INDI_YAW_P,
+  STABILIZATION_ATTITUDE_HELI_INDI_YAW_D
+};
+
+struct HeliIndiStab heli_indi_controller;
 
 #if PERIODIC_TELEMETRY
 #include "subsystems/datalink/telemetry.h"
@@ -118,19 +122,24 @@ void stabilization_attitude_run(bool_t enable_integrator)
 {
   (void) enable_integrator;
 
-  /* attitude error                          */
+  /* attitude error */
   struct Int32Quat att_err;
   struct Int32Quat *att_quat = stateGetNedToBodyQuat_i();
   INT32_QUAT_INV_COMP(att_err, *att_quat, stab_att_sp_quat);
-  /* wrap it in the shortest direction       */
+  /* wrap it in the shortest direction */
   int32_quat_wrap_shortest(&att_err);
   int32_quat_normalize(&att_err);
 
-  /*  rate error                */
+  /* rate error */
   struct Int32Rates rate_err;
   struct Int32Rates *body_rate = stateGetBodyRates_i();
   rate_err = *body_rate;
   (void) rate_err;
+
+  /* Linear controllers */
+  int32_t roll_virtual_control  = heli_indi_gains.roll_p * att_err.qx;
+  int32_t pitch_virtual_control = heli_indi_gains.pitch_p * att_err.qy;
+  int32_t yaw_virtual_control = (heli_indi_gains.yaw_p * att_err.qz - body_rate->r) * heli_indi_gains.yaw_d;
 
   /* set stabilization commands */
   stabilization_cmd[COMMAND_ROLL] = 0;

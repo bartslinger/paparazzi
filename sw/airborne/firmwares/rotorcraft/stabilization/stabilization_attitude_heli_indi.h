@@ -24,7 +24,23 @@
 
 #include "math/pprz_algebra_int.h"
 
+#define GAIN_DIVIDER_P 256
+#define GAIN_DIVIDER_D 256
+
+struct HeliIndiGains {
+  uint32_t roll_p;
+  uint32_t pitch_p;
+  uint32_t yaw_p;
+  uint32_t yaw_d;
+};
+
+struct HeliIndiStab {
+
+};
+
 extern struct Int32Quat   stab_att_sp_quat;  ///< with #INT32_QUAT_FRAC
 extern struct Int32Eulers stab_att_sp_euler; ///< with #INT32_ANGLE_FRAC
+extern struct HeliIndiStab heli_indi_controller;
+extern struct HeliIndiGains heli_indi_gains;
 
 #endif /* STABILIZATION_ATTITUDE_QUAT_INT_H */
