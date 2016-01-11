@@ -22,35 +22,9 @@
 #ifndef STABILIZATION_ATTITUDE_QUAT_INT_H
 #define STABILIZATION_ATTITUDE_QUAT_INT_H
 
-#include "firmwares/rotorcraft/stabilization/stabilization_attitude_common_int.h"
-//#include "firmwares/rotorcraft/stabilization/stabilization_attitude_ref_quat_int.h"
-
 #include "math/pprz_algebra_int.h"
 
 extern struct Int32Quat   stab_att_sp_quat;  ///< with #INT32_QUAT_FRAC
 extern struct Int32Eulers stab_att_sp_euler; ///< with #INT32_ANGLE_FRAC
-
-extern struct AttRefQuatInt att_ref_quat_i;
-
-/* settings handlers for ref model params */
-#define stabilization_attitude_quat_int_SetOmegaP(_val) {   \
-    attitude_ref_quat_int_set_omega_p(&att_ref_quat_i, _val);   \
-  }
-#define stabilization_attitude_quat_int_SetOmegaQ(_val) {   \
-    attitude_ref_quat_int_set_omega_q(&att_ref_quat_i, _val);   \
-  }
-#define stabilization_attitude_quat_int_SetOmegaR(_val) {   \
-    attitude_ref_quat_int_set_omega_r(&att_ref_quat_i, _val);   \
-  }
-
-#define stabilization_attitude_quat_int_SetZetaP(_val) {    \
-    attitude_ref_quat_int_set_zeta_p(&att_ref_quat_i, _val);    \
-  }
-#define stabilization_attitude_quat_int_SetZetaQ(_val) {    \
-    attitude_ref_quat_int_set_zeta_q(&att_ref_quat_i, _val);    \
-  }
-#define stabilization_attitude_quat_int_SetZetaR(_val) {    \
-    attitude_ref_quat_int_set_zeta_r(&att_ref_quat_i, _val);    \
-  }
 
 #endif /* STABILIZATION_ATTITUDE_QUAT_INT_H */
