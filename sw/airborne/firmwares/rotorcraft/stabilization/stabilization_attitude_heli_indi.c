@@ -63,7 +63,7 @@ int32_t stabilization_att_ff_cmd[COMMANDS_NB];
 struct Int32Quat   stab_att_sp_quat;
 struct Int32Eulers stab_att_sp_euler;
 
-struct AttRefQuatInt att_ref_quat_i;
+//struct AttRefQuatInt att_ref_quat_i;
 
 #define IERROR_SCALE 128
 #define GAIN_PRESCALER_FF 48
@@ -98,6 +98,7 @@ static void send_att(struct transport_tx *trans, struct link_device *dev)   //FI
                                   &stabilization_cmd[COMMAND_YAW]);
 }
 
+/*
 static void send_att_ref(struct transport_tx *trans, struct link_device *dev)
 {
   // ref eulers in message are with REF_ANGLE_FRAC, convert
@@ -117,7 +118,9 @@ static void send_att_ref(struct transport_tx *trans, struct link_device *dev)
                                       &att_ref_quat_i.accel.q,
                                       &att_ref_quat_i.accel.r);
 }
+*/
 
+/*
 static void send_ahrs_ref_quat(struct transport_tx *trans, struct link_device *dev)
 {
   struct Int32Quat *quat = stateGetNedToBodyQuat_i();
@@ -131,19 +134,20 @@ static void send_ahrs_ref_quat(struct transport_tx *trans, struct link_device *d
                               &(quat->qy),
                               &(quat->qz));
 }
+*/
 #endif
 
 void stabilization_attitude_init(void)
 {
 
-  attitude_ref_quat_int_init(&att_ref_quat_i);
+  //attitude_ref_quat_int_init(&att_ref_quat_i);
 
   int32_quat_identity(&stabilization_att_sum_err_quat);
 
 #if PERIODIC_TELEMETRY
   register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_STAB_ATTITUDE_INT, send_att);
-  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_STAB_ATTITUDE_REF_INT, send_att_ref);
-  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_AHRS_REF_QUAT, send_ahrs_ref_quat);
+  //register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_STAB_ATTITUDE_REF_INT, send_att_ref);
+  //register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_AHRS_REF_QUAT, send_ahrs_ref_quat);
 #endif
 }
 
@@ -153,7 +157,7 @@ void stabilization_attitude_enter(void)
   /* reset psi setpoint to current psi angle */
   stab_att_sp_euler.psi = stabilization_attitude_get_heading_i();
 
-  attitude_ref_quat_int_enter(&att_ref_quat_i, stab_att_sp_euler.psi);
+  //attitude_ref_quat_int_enter(&att_ref_quat_i, stab_att_sp_euler.psi);
 
   int32_quat_identity(&stabilization_att_sum_err_quat);
 
@@ -197,14 +201,16 @@ void stabilization_attitude_set_earth_cmd_i(struct Int32Vect2 *cmd, int32_t head
 #define OFFSET_AND_ROUND(_a, _b) (((_a)+(1<<((_b)-1)))>>(_b))
 #define OFFSET_AND_ROUND2(_a, _b) (((_a)+(1<<((_b)-1))-((_a)<0?1:0))>>(_b))
 
+/*
 static void attitude_run_ff(int32_t ff_commands[], struct Int32AttitudeGains *gains, struct Int32Rates *ref_accel)
 {
-  /* Compute feedforward based on reference acceleration */
-
+   Compute feedforward based on reference acceleration */
+/*
   ff_commands[COMMAND_ROLL]  = GAIN_PRESCALER_FF * gains->dd.x * RATE_FLOAT_OF_BFP(ref_accel->p) / (1 << 7);
   ff_commands[COMMAND_PITCH] = GAIN_PRESCALER_FF * gains->dd.y * RATE_FLOAT_OF_BFP(ref_accel->q) / (1 << 7);
   ff_commands[COMMAND_YAW]   = GAIN_PRESCALER_FF * gains->dd.z * RATE_FLOAT_OF_BFP(ref_accel->r) / (1 << 7);
 }
+*/
 
 static void attitude_run_fb(int32_t fb_commands[], struct Int32AttitudeGains *gains, struct Int32Quat *att_err,
                             struct Int32Rates *rate_err, struct Int32Quat *sum_err)
@@ -235,8 +241,8 @@ void stabilization_attitude_run(bool_t enable_integrator)
    * Warning: dt is currently not used in the quat_int ref impl
    * PERIODIC_FREQUENCY is assumed to be 512Hz
    */
-  static const float dt = (1./PERIODIC_FREQUENCY);
-  attitude_ref_quat_int_update(&att_ref_quat_i, &stab_att_sp_quat, dt);
+  //static const float dt = (1./PERIODIC_FREQUENCY);
+  //attitude_ref_quat_int_update(&att_ref_quat_i, &stab_att_sp_quat, dt);
 
   /*
    * Compute errors for feedback
@@ -245,16 +251,16 @@ void stabilization_attitude_run(bool_t enable_integrator)
   /* attitude error                          */
   struct Int32Quat att_err;
   struct Int32Quat *att_quat = stateGetNedToBodyQuat_i();
-  INT32_QUAT_INV_COMP(att_err, *att_quat, att_ref_quat_i.quat);
+  INT32_QUAT_INV_COMP(att_err, *att_quat, stab_att_sp_quat);
   /* wrap it in the shortest direction       */
   int32_quat_wrap_shortest(&att_err);
   int32_quat_normalize(&att_err);
 
   /*  rate error                */
   const struct Int32Rates rate_ref_scaled = {
-    OFFSET_AND_ROUND(att_ref_quat_i.rate.p, (REF_RATE_FRAC - INT32_RATE_FRAC)),
-    OFFSET_AND_ROUND(att_ref_quat_i.rate.q, (REF_RATE_FRAC - INT32_RATE_FRAC)),
-    OFFSET_AND_ROUND(att_ref_quat_i.rate.r, (REF_RATE_FRAC - INT32_RATE_FRAC))
+    0,
+    0,
+    0
   };
   struct Int32Rates rate_err;
   struct Int32Rates *body_rate = stateGetBodyRates_i();
@@ -275,7 +281,7 @@ void stabilization_attitude_run(bool_t enable_integrator)
   }
 
   /* compute the feed forward command */
-  attitude_run_ff(stabilization_att_ff_cmd, &stabilization_gains, &att_ref_quat_i.accel);
+  //attitude_run_ff(stabilization_att_ff_cmd, &stabilization_gains, &att_ref_quat_i.accel);
 
   /* compute the feed back command */
   attitude_run_fb(stabilization_att_fb_cmd, &stabilization_gains, &att_err, &rate_err, &stabilization_att_sum_err_quat);
