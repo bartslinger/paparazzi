@@ -27,7 +27,6 @@
 #include "subsystems/datalink/datalink.h"
 
 uint16_t adc_uart_values[3];
-uint16_t adc_uart_buffer[3];
 
 #if PERIODIC_TELEMETRY
 #include "subsystems/datalink/telemetry.h"
@@ -53,43 +52,11 @@ void adc_expansion_uart_init() {
 
 /* Process message with ADC values */
 void adc_expansion_uart_process_msg() {
-  uint16_t new_data[3];
 
-  new_data[0] = DL_ADC_DATA_adc_1(dl_buffer);
-  new_data[1] = DL_ADC_DATA_adc_2(dl_buffer);
-  new_data[2] = DL_ADC_DATA_adc_3(dl_buffer);
+  uart_adc_values[0] = DL_ADC_DATA_adc_1(dl_buffer);
+  uart_adc_values[1] = DL_ADC_DATA_adc_2(dl_buffer);
+  uart_adc_values[2] = DL_ADC_DATA_adc_3(dl_buffer);
 
-  for (uint8_t i = 0; i < 3; i++) {
-    adc_uart_values[i] = new_data[i];
-  }
-
-  /* Filter spikes, only positive spikes exist */
-  /*
-  for (uint8_t i = 0; i < 3; i++) {
-    int16_t diff1 = adc_uart_buffer[i] - adc_uart_values[i];
-    int16_t diff2 = new_data[i] - adc_uart_buffer[i];
-    if (diff1 > 40 && diff2 < 0) {
-      // spike detected
-    }
-    else {
-      // pass on values
-      adc_uart_values[i] = adc_uart_buffer[i];
-      adc_uart_buffer[i] = new_data[i];
-    }
-  }
-  */
-
-  /*
-  for (uint8_t i=0; i<3;i++){
-    if (diff > 40) {
-      adc_uart_values[i] += 5;
-    } else if (diff < -100) {
-      adc_uart_values[i] -= 5;
-    } else {
-      adc_uart_values[i] = new_data[i];
-    }
-  }
-  */
 }
 
 
