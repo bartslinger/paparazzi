@@ -2164,6 +2164,7 @@
     <field name="adc_2" type="uint16"/>
     <field name="adc_3" type="uint16"/>
   </message>
+
   <!-- 252 is free -->
 
   <message name="I2C_ERRORS" id="253">
@@ -2526,7 +2527,6 @@
    <field name="servo_3" type="uint16"/>
    <field name="servo_4" type="uint16"/>
  </message>
-
 
   <message name="ADC_DATA" id="140">
     <field name="adc_1" type="uint16"/>
