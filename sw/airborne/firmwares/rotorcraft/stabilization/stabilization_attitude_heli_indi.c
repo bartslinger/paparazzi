@@ -29,6 +29,7 @@
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_rc_setpoint.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_quat_transformations.h"
+#include "filters/heli_rate_filter.h"
 
 #include "std.h"
 #include "paparazzi.h"
@@ -69,6 +70,14 @@ void stabilization_attitude_init(void)
 {
   /* Initialization code */
 
+  heli_indi.yawrate_setpoint = 0;
+  heli_indi.yawrate_err = 0;
+  heli_indi.filter_out = 0;
+  heli_indi.yaw_incremental_cmd = 0;
+  heli_indi.r_filt = 0;
+  heli_indi.previous_r = 0;
+  heli_indi.yawmodel_filtered = 0;
+  heli_rate_filter_initialize(&heli_indi.tail_model, 37, 0, 9600);
 
 #if PERIODIC_TELEMETRY
   //register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_<<MSG>>, function);
@@ -142,10 +151,10 @@ void stabilization_attitude_run(bool_t enable_integrator)
   heli_indi.previous_r = heli_indi.r_filt;
 
   /* Linear controllers */
-  int32_t roll_virtual_control  = GAIN_MULTIPLIER_P * heli_indi_gains.roll_p * att_err.qx;
-  int32_t pitch_virtual_control = GAIN_MULTIPLIER_P * heli_indi_gains.pitch_p * att_err.qy;
-  int32_t yaw_virtual_control  = (GAIN_MULTIPLIER_P * heli_indi_gains.yaw_p * att_err.qz - heli_indi.r_filt) *
-                                 (GAIN_MULTIPLIER_D * heli_indi_gains.yaw_d);\
+  int32_t roll_virtual_control  = (GAIN_MULTIPLIER_P * heli_indi_gains.roll_p * att_err.qx) >> 15;
+  int32_t pitch_virtual_control = (GAIN_MULTIPLIER_P * heli_indi_gains.pitch_p * att_err.qy) >> 15;
+  int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * att_err.qz - heli_indi.r_filt) *
+                                 (heli_indi_gains.yaw_d);
   /* ------------------ */
 
   /* INDI YAW */
@@ -154,12 +163,14 @@ void stabilization_attitude_run(bool_t enable_integrator)
 
   int32_t delta_r_error = delta_r_ref - delta_r_meas;
   int32_t delta_u = (delta_r_error * 512) / 48; /* equal to multiply with 10.6667, which is inv(B) */
+  int32_t model_output = heli_rate_filter_propagate(&heli_indi.tail_model, stabilization_cmd[COMMAND_YAW]);
+  heli_indi.yawmodel_filtered = ((heli_indi.yawmodel_filtered * (HELI_INDI_YAWRATE_FILTSIZE - 1)) + model_output) / HELI_INDI_YAWRATE_FILTSIZE;
   /* -------- */
 
   /* set stabilization commands */
   stabilization_cmd[COMMAND_ROLL] = roll_virtual_control;
   stabilization_cmd[COMMAND_PITCH] = pitch_virtual_control;
-  stabilization_cmd[COMMAND_YAW] = yaw_virtual_control;
+  stabilization_cmd[COMMAND_YAW] = heli_indi.yawmodel_filtered + delta_u;
 
   /* bound the result */
   BoundAbs(stabilization_cmd[COMMAND_ROLL], MAX_PPRZ);

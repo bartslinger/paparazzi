@@ -26,8 +26,8 @@
 
 #include "filters/heli_rate_filter.h"
 
-#define GAIN_MULTIPLIER_P 256
-#define GAIN_MULTIPLIER_D 256
+#define GAIN_MULTIPLIER_P 12
+#define GAIN_MULTIPLIER_D 3
 
 struct HeliIndiGains {
   int32_t roll_p;
@@ -45,6 +45,7 @@ struct HeliIndiStab {
   int32_t r_filt;
   int32_t previous_r;
   struct heli_rate_filter_t tail_model;
+  int32_t yawmodel_filtered;
 };
 
 extern struct Int32Quat   stab_att_sp_quat;  ///< with #INT32_QUAT_FRAC
