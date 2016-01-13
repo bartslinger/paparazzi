@@ -23,6 +23,8 @@
  * Get analog signals from expansion board to main autopilot over uart
  */
 
+#include "firmwares/rotorcraft/stabilization.h"
+#include "subsystems/actuators.h"
 #include "modules/adc_expansion_uart/adc_expansion_uart.h"
 #include "subsystems/datalink/datalink.h"
 
@@ -53,6 +55,7 @@ void adc_expansion_uart_init() {
 /* Process message with ADC values */
 void adc_expansion_uart_process_msg() {
 
+  /* Read the message */
   adc_uart_values[0] = DL_ADC_DATA_adc_1(dl_buffer);
   adc_uart_values[1] = DL_ADC_DATA_adc_2(dl_buffer);
   adc_uart_values[2] = DL_ADC_DATA_adc_3(dl_buffer);

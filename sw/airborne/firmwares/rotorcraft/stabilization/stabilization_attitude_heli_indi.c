@@ -30,6 +30,7 @@
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_rc_setpoint.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_quat_transformations.h"
 #include "filters/heli_rate_filter.h"
+#include "modules/adc_expansion_uart/adc_expansion_uart.h"
 
 #include "std.h"
 #include "paparazzi.h"
@@ -64,6 +65,20 @@ struct HeliIndiStab heli_indi;
 
 /* Telemetry messages here */
 
+static void send_indi_debug_values(struct transport_tx *trans, struct link_device *dev)
+{
+  struct Int32Rates *body_rate = stateGetBodyRates_i();
+  pprz_msg_send_STAB_INDI_DEBUG(trans, dev, AC_ID,
+                               &heli_indi.measured_cmd[0],
+                               &heli_indi.measured_cmd[1],
+                               &heli_indi.measured_cmd[2],
+                               &stabilization_cmd[COMMAND_PITCH],
+                               &stabilization_cmd[COMMAND_ROLL],
+                               &stabilization_cmd[COMMAND_THRUST],
+                               &body_rate->p,
+                               &body_rate->q,
+                               &body_rate->r);
+}
 #endif
 
 void stabilization_attitude_init(void)
@@ -74,12 +89,17 @@ void stabilization_attitude_init(void)
   heli_indi.yawrate_err = 0;
   heli_indi.filter_out = 0;
   heli_indi.yaw_incremental_cmd = 0;
-  heli_indi.r_filt = 0;
-  heli_indi.previous_r = 0;
+  heli_indi.rate_filt.p = 0;
+  heli_indi.rate_filt.q = 0;
+  heli_indi.rate_filt.r = 0;
+  heli_indi.rate_previous.p = 0;
+  heli_indi.rate_previous.q = 0;
+  heli_indi.rate_previous.r = 0;
   heli_indi.yawmodel_filtered = 0;
   heli_rate_filter_initialize(&heli_indi.tail_model, 37, 0, 9600);
 
 #if PERIODIC_TELEMETRY
+  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_STAB_INDI_DEBUG, send_indi_debug_values);
   //register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_<<MSG>>, function);
 #endif
 }
@@ -125,6 +145,34 @@ void stabilization_attitude_set_earth_cmd_i(struct Int32Vect2 *cmd, int32_t head
   quat_from_earth_cmd_i(&stab_att_sp_quat, cmd, heading);
 }
 
+void stabilization_attitude_get_measured_commands(){
+  /* Convert analog signals to corresponding steady-state PWM values */
+  int32_t servo_left  = adc_uart_values[0] * (float)0.54486 + 697;
+  int32_t servo_front = adc_uart_values[1] * (float)0.54827 + 703;
+  int32_t servo_right = adc_uart_values[2] * (float)0.54983 + 685;
+
+  /* Convert servo deflections back to pitch and roll commands */
+  servo_left  -= SERVO_CIC_LEFT_NEUTRAL;
+  servo_front -= SERVO_CIC_FRONT_NEUTRAL;
+  servo_right -= SERVO_CIC_RIGHT_NEUTRAL;
+
+  servo_left  *= servo_left>0 ?  SERVO_CIC_LEFT_TRAVEL_UP_DEN : SERVO_CIC_LEFT_TRAVEL_DOWN_DEN;
+  servo_front *= servo_front>0 ? SERVO_CIC_FRONT_TRAVEL_UP_DEN : SERVO_CIC_FRONT_TRAVEL_DOWN_DEN;
+  servo_right *= servo_right>0 ? SERVO_CIC_RIGHT_TRAVEL_UP_DEN : SERVO_CIC_RIGHT_TRAVEL_DOWN_DEN;
+
+  //  B = A*x (matrix multiply)
+  //  B = servo_values left, right, front
+  //  x = cmd pitch, cmd roll, var_collective
+  /* inverse (A) bitshifted <<16 =
+  //   24966      -24966      -49932
+  //  -51300      -51300           0
+  //  -21845       21845      -21845
+  */
+  heli_indi.measured_cmd[0] = (+ 24966 * servo_left - 24966 * servo_right - 49932 * servo_front) >> 16; // pitch
+  heli_indi.measured_cmd[1] = (- 51300 * servo_left - 51300 * servo_right) >> 16;                       // roll
+  heli_indi.measured_cmd[2] = (- 21845 * servo_left + 21845 * servo_right - 21845 * servo_front) >> 16; // var_collective
+}
+
 #define OFFSET_AND_ROUND(_a, _b) (((_a)+(1<<((_b)-1)))>>(_b))
 #define OFFSET_AND_ROUND2(_a, _b) (((_a)+(1<<((_b)-1))-((_a)<0?1:0))>>(_b))
 
@@ -144,16 +192,17 @@ void stabilization_attitude_run(bool_t enable_integrator)
   struct Int32Rates *body_rate = stateGetBodyRates_i();
 
   /* Filter yaw rate, very simple first order IIR */
-  heli_indi.r_filt = ((heli_indi.r_filt * (HELI_INDI_YAWRATE_FILTSIZE-1)) + body_rate->r) / HELI_INDI_YAWRATE_FILTSIZE;
+  heli_indi.rate_filt.r = ((heli_indi.rate_filt.r * (HELI_INDI_YAWRATE_FILTSIZE-1)) + body_rate->r) / HELI_INDI_YAWRATE_FILTSIZE;
 
-  /* Calculate delta r measured */
-  int32_t delta_r_meas = heli_indi.r_filt - heli_indi.previous_r;
-  heli_indi.previous_r = heli_indi.r_filt;
+  /* Calculate delta pqr measured */
+  struct Int32Rates delta_rate_meas;
+  delta_rate_meas.r = heli_indi.rate_filt.r - heli_indi.rate_previous.r;
+  heli_indi.rate_previous.r = heli_indi.rate_filt.r;
 
   /* Linear controllers */
   int32_t roll_virtual_control  = (GAIN_MULTIPLIER_P * heli_indi_gains.roll_p * att_err.qx) >> 15;
   int32_t pitch_virtual_control = (GAIN_MULTIPLIER_P * heli_indi_gains.pitch_p * att_err.qy) >> 15;
-  int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * att_err.qz - heli_indi.r_filt) *
+  int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * att_err.qz - heli_indi.rate_filt.r) *
                                  (heli_indi_gains.yaw_d);
   /* ------------------ */
 
@@ -161,11 +210,16 @@ void stabilization_attitude_run(bool_t enable_integrator)
   /* Multiply with dt; this integrates virtual control (acceleration) to required change in rate */
   int32_t delta_r_ref = yaw_virtual_control / 512;
 
-  int32_t delta_r_error = delta_r_ref - delta_r_meas;
+  int32_t delta_r_error = delta_r_ref - delta_rate_meas.r;
   int32_t delta_u = (delta_r_error * 512) / 48; /* equal to multiply with 10.6667, which is inv(B) */
   int32_t model_output = heli_rate_filter_propagate(&heli_indi.tail_model, stabilization_cmd[COMMAND_YAW]);
   heli_indi.yawmodel_filtered = ((heli_indi.yawmodel_filtered * (HELI_INDI_YAWRATE_FILTSIZE - 1)) + model_output) / HELI_INDI_YAWRATE_FILTSIZE;
   /* -------- */
+
+  /* Get measured pitch, roll, collective commands from adc measurements */
+  stabilization_attitude_get_measured_commands();
+
+  /* INDI PITCH + ROLL */
 
   /* set stabilization commands */
   stabilization_cmd[COMMAND_ROLL] = roll_virtual_control;

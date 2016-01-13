@@ -2165,7 +2165,17 @@
     <field name="adc_3" type="uint16"/>
   </message>
 
-  <!-- 252 is free -->
+  <message name="STAB_INDI_DEBUG" id="252">
+    <field name="measured_cmd_pitch" type="int16"/>
+    <field name="measured_cmd_roll" type="int16"/>
+    <field name="measured_cmd_collective" type="int16"/>
+    <field name="stab_cmd_pitch" type="int32"/>
+    <field name="stab_cmd_roll" type="int32"/>
+    <field name="stab_cmd_thrust" type="int32"/>
+    <field name="body_rate_p" type="int32"/>
+    <field name="body_rate_q" type="int32"/>
+    <field name="body_rate_r" type="int32"/>
+  </message>
 
   <message name="I2C_ERRORS" id="253">
     <field name="wd_reset_cnt"                type="uint16"/>
