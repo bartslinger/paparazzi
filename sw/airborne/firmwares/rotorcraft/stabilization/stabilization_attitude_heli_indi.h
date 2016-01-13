@@ -24,6 +24,7 @@
 
 #include "math/pprz_algebra_int.h"
 
+#include "filters/notch_filter.h"
 #include "filters/heli_rate_filter.h"
 
 #define GAIN_MULTIPLIER_P 12
@@ -45,6 +46,8 @@ struct HeliIndiStab {
   struct Int32Rates rate_filt;
   struct Int32Rates rate_previous;
   struct heli_rate_filter_t tail_model;
+  struct SecondOrderNotchFilter p_filter;
+  struct SecondOrderNotchFilter q_filter;
   int32_t yawmodel_filtered;
   int16_t measured_cmd[3];
 };

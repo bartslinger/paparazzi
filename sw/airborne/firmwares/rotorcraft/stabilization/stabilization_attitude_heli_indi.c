@@ -29,7 +29,6 @@
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_rc_setpoint.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_quat_transformations.h"
-#include "filters/heli_rate_filter.h"
 #include "modules/adc_expansion_uart/adc_expansion_uart.h"
 
 #include "std.h"
@@ -97,6 +96,8 @@ void stabilization_attitude_init(void)
   heli_indi.rate_previous.r = 0;
   heli_indi.yawmodel_filtered = 0;
   heli_rate_filter_initialize(&heli_indi.tail_model, 37, 0, 9600);
+
+  notch_filter_set_bandwidth(&heli_indi.p_filter, 10.0);
 
 #if PERIODIC_TELEMETRY
   register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_STAB_INDI_DEBUG, send_indi_debug_values);
