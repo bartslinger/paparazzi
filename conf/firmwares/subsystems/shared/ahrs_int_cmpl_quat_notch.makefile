@@ -35,7 +35,7 @@ AHRS_ICQ_CFLAGS += -DAHRS_TYPE_H=\"subsystems/ahrs/ahrs_int_cmpl_quat_wrapper.h\
 endif
 
 AHRS_ICQ_SRCS   += subsystems/ahrs.c
-AHRS_ICQ_SRCS   += subsystems/ahrs/ahrs_int_cmpl_quat.c
+AHRS_ICQ_SRCS   += subsystems/ahrs/ahrs_int_cmpl_quat_notch.c
 AHRS_ICQ_SRCS   += subsystems/ahrs/ahrs_int_cmpl_quat_wrapper.c
 AHRS_ICQ_SRCS   += subsystems/ahrs/ahrs_aligner.c
 

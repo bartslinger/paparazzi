@@ -32,7 +32,6 @@
 
 #include "subsystems/ahrs/ahrs_int_cmpl_quat.h"
 #include "subsystems/ahrs/ahrs_int_utils.h"
-#include "modules/loggers/sd_logger_spi_direct.h"
 
 #ifdef AHRS_USE_RPM_SENSOR_NOTCH
 #include "subsystems/sensors/rpm_sensor.h"
