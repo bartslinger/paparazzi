@@ -109,8 +109,8 @@
   </section>
 
   <section name="STABILIZATION_ATTITUDE_HELI_INDI" prefix="STABILIZATION_ATTITUDE_HELI_INDI_">
-    <define name="ROLL_P" value="3052" />
-    <define name="PITCH_P" value="3052" />
+    <define name="ROLL_P" value="1" /><!-- 3052 -->
+    <define name="PITCH_P" value="1" /><!-- 3052 -->
     <define name="YAW_P" value="2" />
     <define name="YAW_D" value="10" />
   </section>
@@ -231,7 +231,7 @@
     <subsystem name="imu" type="lisa_s_v1.0"/>
     <subsystem name="gps" type="ublox"/>
     <subsystem name="stabilization" type="heli_indi"/>
-    <!--subsystem name="rpm_sensor" type="eagletree"/-->
+    <subsystem name="rpm_sensor" type="eagletree"/>
     <subsystem name="ahrs" type="int_cmpl_quat_notch"/>
     <subsystem name="ins"/>
   </firmware>

@@ -43,13 +43,21 @@ struct HeliIndiStab {
   int32_t yawrate_err;
   int32_t filter_out;
   int32_t yaw_incremental_cmd;
+  struct Int32Rates rate_notched;
   struct Int32Rates rate_filt;
   struct Int32Rates rate_previous;
   struct heli_rate_filter_t tail_model;
+  struct heli_rate_filter_t roll_model; // haha woordgrapje
+  struct heli_rate_filter_t pitch_model;
   struct SecondOrderNotchFilter p_filter;
   struct SecondOrderNotchFilter q_filter;
-  int32_t yawmodel_filtered;
-  int16_t measured_cmd[3];
+  struct SecondOrderNotchFilter r_filter;
+  struct SecondOrderNotchFilter p_inner_filter;
+  struct SecondOrderNotchFilter q_inner_filter;
+  struct SecondOrderNotchFilter r_inner_filter;
+  struct Int32Rates inputmodel_notched;
+  struct Int32Rates inputmodel_filtered;
+  int32_t measured_cmd[3];
 };
 
 extern struct Int32Quat   stab_att_sp_quat;  ///< with #INT32_QUAT_FRAC

@@ -49,6 +49,7 @@
       <message name="IMU_MAG_RAW"       period=".05"/>
       <message name="BARO_RAW"          period=".1"/>
       <message name="ARDRONE_NAVDATA" period=".05"/>
+      <message name="TCAS_DEBUG"        period=".05"/>
     </mode>
 
     <mode name="scaled_sensors">

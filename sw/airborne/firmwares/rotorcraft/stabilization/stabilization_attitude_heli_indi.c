@@ -30,6 +30,7 @@
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_rc_setpoint.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_quat_transformations.h"
 #include "modules/adc_expansion_uart/adc_expansion_uart.h"
+#include "subsystems/sensors/rpm_sensor.h"
 
 #include "std.h"
 #include "paparazzi.h"
@@ -56,8 +57,13 @@ struct HeliIndiGains heli_indi_gains = {
   STABILIZATION_ATTITUDE_HELI_INDI_YAW_D
 };
 
+#define HELI_INDI_ROLLRATE_FILTSIZE 16
+#define HELI_INDI_PITCHRATE_FILTSIZE 16
 #define HELI_INDI_YAWRATE_FILTSIZE 8
+
 struct HeliIndiStab heli_indi;
+int32_t global_delta_u;
+int32_t global_pitch_model;
 
 #if PERIODIC_TELEMETRY
 #include "subsystems/datalink/telemetry.h"
@@ -67,10 +73,14 @@ struct HeliIndiStab heli_indi;
 static void send_indi_debug_values(struct transport_tx *trans, struct link_device *dev)
 {
   struct Int32Rates *body_rate = stateGetBodyRates_i();
+  int16_t meas_cmd[3];
+  meas_cmd[0] = heli_indi.measured_cmd[0];
+  meas_cmd[1] = heli_indi.measured_cmd[1];
+  meas_cmd[2] = heli_indi.measured_cmd[2];
   pprz_msg_send_STAB_INDI_DEBUG(trans, dev, AC_ID,
-                               &heli_indi.measured_cmd[0],
-                               &heli_indi.measured_cmd[1],
-                               &heli_indi.measured_cmd[2],
+                               &meas_cmd[0],
+                               &meas_cmd[1],
+                               &meas_cmd[2],
                                &stabilization_cmd[COMMAND_PITCH],
                                &stabilization_cmd[COMMAND_ROLL],
                                &stabilization_cmd[COMMAND_THRUST],
@@ -88,16 +98,40 @@ void stabilization_attitude_init(void)
   heli_indi.yawrate_err = 0;
   heli_indi.filter_out = 0;
   heli_indi.yaw_incremental_cmd = 0;
+  heli_indi.rate_notched.p = 0;
+  heli_indi.rate_notched.q = 0;
+  heli_indi.rate_notched.r = 0;
   heli_indi.rate_filt.p = 0;
   heli_indi.rate_filt.q = 0;
   heli_indi.rate_filt.r = 0;
   heli_indi.rate_previous.p = 0;
   heli_indi.rate_previous.q = 0;
   heli_indi.rate_previous.r = 0;
-  heli_indi.yawmodel_filtered = 0;
+  heli_indi.inputmodel_notched.p = 0;
+  heli_indi.inputmodel_notched.q = 0;
+  heli_indi.inputmodel_notched.r = 0;
+  heli_indi.inputmodel_filtered.p = 0;
+  heli_indi.inputmodel_filtered.q = 0;
+  heli_indi.inputmodel_filtered.r = 0;
   heli_rate_filter_initialize(&heli_indi.tail_model, 37, 0, 9600);
+  heli_rate_filter_initialize(&heli_indi.roll_model, 70, 9, 900);
+  heli_rate_filter_initialize(&heli_indi.pitch_model, 70, 9, 900);
 
+  /* Initialize notch filters */
+  notch_filter_set_sampling_frequency(&heli_indi.p_filter, PERIODIC_FREQUENCY);
   notch_filter_set_bandwidth(&heli_indi.p_filter, 10.0);
+  notch_filter_set_sampling_frequency(&heli_indi.p_inner_filter, PERIODIC_FREQUENCY);
+  notch_filter_set_bandwidth(&heli_indi.p_inner_filter, 10.0);
+
+  notch_filter_set_sampling_frequency(&heli_indi.q_filter, PERIODIC_FREQUENCY);
+  notch_filter_set_bandwidth(&heli_indi.q_filter, 10.0);
+  notch_filter_set_sampling_frequency(&heli_indi.q_inner_filter, PERIODIC_FREQUENCY);
+  notch_filter_set_bandwidth(&heli_indi.q_inner_filter, 10.0);
+
+  notch_filter_set_sampling_frequency(&heli_indi.r_filter, PERIODIC_FREQUENCY);
+  notch_filter_set_bandwidth(&heli_indi.r_filter, 10.0);
+  notch_filter_set_sampling_frequency(&heli_indi.r_inner_filter, PERIODIC_FREQUENCY);
+  notch_filter_set_bandwidth(&heli_indi.r_inner_filter, 10.0);
 
 #if PERIODIC_TELEMETRY
   register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_STAB_INDI_DEBUG, send_indi_debug_values);
@@ -192,19 +226,43 @@ void stabilization_attitude_run(bool_t enable_integrator)
   /* rate error */
   struct Int32Rates *body_rate = stateGetBodyRates_i();
 
-  /* Filter yaw rate, very simple first order IIR */
-  heli_indi.rate_filt.r = ((heli_indi.rate_filt.r * (HELI_INDI_YAWRATE_FILTSIZE-1)) + body_rate->r) / HELI_INDI_YAWRATE_FILTSIZE;
+  /* First notch, then IIR filter on MEASURED RATES */
+  if (rpm_sensor.motor_frequency > 25) {
+    notch_filter_set_filter_frequency(&heli_indi.p_filter, rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&heli_indi.p_inner_filter, rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&heli_indi.q_filter, rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&heli_indi.q_inner_filter, rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&heli_indi.r_filter, rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&heli_indi.r_inner_filter, rpm_sensor.motor_frequency);
+    notch_filter_update(&heli_indi.p_filter, &body_rate->p, &heli_indi.rate_notched.p);
+    notch_filter_update(&heli_indi.q_filter, &body_rate->q, &heli_indi.rate_notched.q);
+    notch_filter_update(&heli_indi.r_filter, &body_rate->r, &heli_indi.rate_notched.r);
+  } else {
+    /* Rotor spinning slowly, don't notch */
+    heli_indi.rate_filt.p = body_rate->p;
+    heli_indi.rate_filt.q = body_rate->q;
+    heli_indi.rate_filt.r = body_rate->r;
+  }
+  /* Always IIR, also if rotor not spinning faster than 25Hz */
+  heli_indi.rate_filt.p = ((heli_indi.rate_filt.p * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + heli_indi.rate_notched.p) / HELI_INDI_ROLLRATE_FILTSIZE;
+  heli_indi.rate_filt.q = ((heli_indi.rate_filt.q * (HELI_INDI_PITCHRATE_FILTSIZE-1)) + heli_indi.rate_notched.q) / HELI_INDI_PITCHRATE_FILTSIZE;
+  heli_indi.rate_filt.r = ((heli_indi.rate_filt.r * (HELI_INDI_YAWRATE_FILTSIZE-1)) + heli_indi.rate_notched.r) / HELI_INDI_YAWRATE_FILTSIZE;
 
   /* Calculate delta pqr measured */
   struct Int32Rates delta_rate_meas;
+  delta_rate_meas.p = heli_indi.rate_filt.p;
+  delta_rate_meas.q = heli_indi.rate_filt.q;
   delta_rate_meas.r = heli_indi.rate_filt.r - heli_indi.rate_previous.r;
   heli_indi.rate_previous.r = heli_indi.rate_filt.r;
 
   /* Linear controllers */
-  int32_t roll_virtual_control  = (GAIN_MULTIPLIER_P * heli_indi_gains.roll_p * att_err.qx) >> 15;
-  int32_t pitch_virtual_control = (GAIN_MULTIPLIER_P * heli_indi_gains.pitch_p * att_err.qy) >> 15;
+  int32_t roll_pid = (GAIN_MULTIPLIER_P * heli_indi_gains.roll_p * att_err.qx) >> 15;
+  int32_t pitch_pid = (GAIN_MULTIPLIER_P * heli_indi_gains.pitch_p * att_err.qy) >> 15;
+  int32_t roll_virtual_control  = (heli_indi_gains.roll_p * att_err.qx);
+  int32_t pitch_virtual_control = (heli_indi_gains.pitch_p * att_err.qy);
   int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * att_err.qz - heli_indi.rate_filt.r) *
                                  (heli_indi_gains.yaw_d);
+
   /* ------------------ */
 
   /* INDI YAW */
@@ -212,20 +270,60 @@ void stabilization_attitude_run(bool_t enable_integrator)
   int32_t delta_r_ref = yaw_virtual_control / 512;
 
   int32_t delta_r_error = delta_r_ref - delta_rate_meas.r;
-  int32_t delta_u = (delta_r_error * 512) / 48; /* equal to multiply with 10.6667, which is inv(B) */
-  int32_t model_output = heli_rate_filter_propagate(&heli_indi.tail_model, stabilization_cmd[COMMAND_YAW]);
-  heli_indi.yawmodel_filtered = ((heli_indi.yawmodel_filtered * (HELI_INDI_YAWRATE_FILTSIZE - 1)) + model_output) / HELI_INDI_YAWRATE_FILTSIZE;
+  int32_t delta_u_yaw = (delta_r_error * 512) / 48; /* equal to multiply with 10.6667, which is inv(B) */
+  int32_t yaw_model_output = heli_rate_filter_propagate(&heli_indi.tail_model, stabilization_cmd[COMMAND_YAW]);
+
+  /* Only notch above freq threshold */
+  if (rpm_sensor.motor_frequency > 25) {
+    notch_filter_update(&heli_indi.r_inner_filter, &yaw_model_output, &heli_indi.inputmodel_notched.r);
+  } else {
+    heli_indi.inputmodel_filtered.r = yaw_model_output;
+  }
+  /* Always IIR */
+  heli_indi.inputmodel_filtered.r = ((heli_indi.inputmodel_filtered.r * (HELI_INDI_YAWRATE_FILTSIZE - 1)) + heli_indi.inputmodel_notched.r) / HELI_INDI_YAWRATE_FILTSIZE;
   /* -------- */
 
+
+  /* INDI PITCH + ROLL */
+  /* ----------------- */
   /* Get measured pitch, roll, collective commands from adc measurements */
   stabilization_attitude_get_measured_commands();
 
-  /* INDI PITCH + ROLL */
+  int32_t delta_p_ref = roll_virtual_control;
+  int32_t delta_p_error = delta_p_ref - delta_rate_meas.p;
+  int32_t roll_model_output = heli_rate_filter_propagate(&heli_indi.roll_model, stabilization_cmd[COMMAND_ROLL]);
+
+  int32_t delta_q_ref = pitch_virtual_control;
+  int32_t delta_q_error = delta_q_ref - delta_rate_meas.q;
+  int32_t pitch_model_output = heli_rate_filter_propagate(&heli_indi.pitch_model, stabilization_cmd[COMMAND_PITCH]);
+  global_pitch_model = pitch_model_output;
+
+  /* from matlab identification procedure
+  59558       18324
+ -29230       34353
+  */
+
+  float delta_u_roll =  (59558.0 * (delta_p_error - 0) + 18324.0 * (delta_q_error + 0)) / 65536 /2;
+  float delta_u_pitch = (-29230.0 * (delta_p_error - 0) + 34353.0 * (delta_q_error + 0)) / 65536 /2;
+
+  global_delta_u = (int32_t) delta_u_pitch;
+
+  /* Notch on inner loop pitch and roll */
+  if (rpm_sensor.motor_frequency > 25) {
+    notch_filter_update(&heli_indi.p_inner_filter, &roll_model_output, &heli_indi.inputmodel_notched.p);
+    notch_filter_update(&heli_indi.q_inner_filter, &pitch_model_output, &heli_indi.inputmodel_notched.q);
+  } else {
+    heli_indi.inputmodel_filtered.p = roll_model_output;
+    heli_indi.inputmodel_filtered.q = pitch_model_output;
+  }
+  /*Always IIR */
+  heli_indi.inputmodel_filtered.p = ((heli_indi.inputmodel_filtered.p * (HELI_INDI_ROLLRATE_FILTSIZE - 1)) + heli_indi.inputmodel_notched.p) / HELI_INDI_ROLLRATE_FILTSIZE;
+  heli_indi.inputmodel_filtered.q = ((heli_indi.inputmodel_filtered.q * (HELI_INDI_PITCHRATE_FILTSIZE - 1)) + heli_indi.inputmodel_notched.q) / HELI_INDI_PITCHRATE_FILTSIZE;
 
   /* set stabilization commands */
-  stabilization_cmd[COMMAND_ROLL] = roll_virtual_control;
-  stabilization_cmd[COMMAND_PITCH] = pitch_virtual_control;
-  stabilization_cmd[COMMAND_YAW] = heli_indi.yawmodel_filtered + delta_u;
+  stabilization_cmd[COMMAND_ROLL] = heli_indi.inputmodel_filtered.p + delta_u_roll;
+  stabilization_cmd[COMMAND_PITCH] = heli_indi.inputmodel_filtered.q + delta_u_pitch;//(att_err.qy > 0) ? MAX_PPRZ : -MAX_PPRZ;//
+  stabilization_cmd[COMMAND_YAW] = heli_indi.inputmodel_filtered.r + delta_u_yaw;
 
   /* bound the result */
   BoundAbs(stabilization_cmd[COMMAND_ROLL], MAX_PPRZ);

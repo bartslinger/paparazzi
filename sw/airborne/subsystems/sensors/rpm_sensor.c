@@ -43,7 +43,7 @@ static void send_rpm(struct transport_tx *trans, struct link_device *dev)
 
 void rpm_sensor_init(void)
 {
-  register_periodic_telemetry(DefaultPeriodic, "TCAS_DEBUG", send_rpm);
+  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_TCAS_DEBUG, send_rpm);
   rpm_sensor_arch_init();
 }
 

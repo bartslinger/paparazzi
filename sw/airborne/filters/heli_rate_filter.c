@@ -84,7 +84,6 @@ int32_t heli_rate_filter_propagate(struct heli_rate_filter_t *f, int32_t input)
       f->buffer[next_idx] = prev - f->max_inc;
   }
 
-
   uint8_t req_idx = (f->idx - f->delay + HELI_RATE_FILTER_BUFFER_SIZE) % HELI_RATE_FILTER_BUFFER_SIZE;
   return f->buffer[req_idx];
 }
