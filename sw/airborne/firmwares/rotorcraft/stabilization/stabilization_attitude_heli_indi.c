@@ -258,8 +258,8 @@ void stabilization_attitude_run(bool_t enable_integrator)
   /* Linear controllers */
   int32_t roll_pid = (GAIN_MULTIPLIER_P * heli_indi_gains.roll_p * att_err.qx) >> 15;
   int32_t pitch_pid = (GAIN_MULTIPLIER_P * heli_indi_gains.pitch_p * att_err.qy) >> 15;
-  int32_t roll_virtual_control  = (heli_indi_gains.roll_p * att_err.qx);
-  int32_t pitch_virtual_control = (heli_indi_gains.pitch_p * att_err.qy);
+  int32_t roll_virtual_control  = (heli_indi_gains.roll_p * att_err.qx) / 16;
+  int32_t pitch_virtual_control = (heli_indi_gains.pitch_p * att_err.qy) / 16;
   int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * att_err.qz - heli_indi.rate_filt.r) *
                                  (heli_indi_gains.yaw_d);
 
@@ -303,8 +303,8 @@ void stabilization_attitude_run(bool_t enable_integrator)
  -29230       34353
   */
 
-  float delta_u_roll =  (59558.0 * (delta_p_error - 0) + 18324.0 * (delta_q_error + 0)) / 65536 /2;
-  float delta_u_pitch = (-29230.0 * (delta_p_error - 0) + 34353.0 * (delta_q_error + 0)) / 65536 /2;
+  float delta_u_roll =  (59558.0 * (delta_p_error - 0) + 18324.0 / 4 * (delta_q_error + 0)) / 65536 /2;
+  float delta_u_pitch = (-29230.0 / 4 * (delta_p_error - 0) + 34353.0 * (delta_q_error + 0)) / 65536 /2;
 
   global_delta_u = (int32_t) delta_u_pitch;
 
