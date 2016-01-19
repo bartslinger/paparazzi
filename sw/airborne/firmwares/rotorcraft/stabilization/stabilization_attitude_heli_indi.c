@@ -64,6 +64,7 @@ struct HeliIndiGains heli_indi_gains = {
 struct HeliIndiStab heli_indi;
 int32_t global_delta_u;
 int32_t global_pitch_model;
+struct Int32Vect3 global_body_accelerations;
 
 #if PERIODIC_TELEMETRY
 #include "subsystems/datalink/telemetry.h"
@@ -72,7 +73,7 @@ int32_t global_pitch_model;
 
 static void send_indi_debug_values(struct transport_tx *trans, struct link_device *dev)
 {
-  struct Int32Rates *body_rate = stateGetBodyRates_i();
+  //struct Int32Rates *body_rate = stateGetBodyRates_i();
   int16_t meas_cmd[3];
   meas_cmd[0] = heli_indi.measured_cmd[0];
   meas_cmd[1] = heli_indi.measured_cmd[1];
@@ -84,9 +85,9 @@ static void send_indi_debug_values(struct transport_tx *trans, struct link_devic
                                &stabilization_cmd[COMMAND_PITCH],
                                &stabilization_cmd[COMMAND_ROLL],
                                &stabilization_cmd[COMMAND_THRUST],
-                               &body_rate->p,
-                               &body_rate->q,
-                               &body_rate->r);
+                               &global_body_accelerations.x,
+                               &global_body_accelerations.y,
+                               &global_body_accelerations.z);
 }
 #endif
 
@@ -214,6 +215,16 @@ void stabilization_attitude_get_measured_commands(){
 void stabilization_attitude_run(bool_t enable_integrator)
 {
   (void) enable_integrator;
+
+  /* calculate acceleration in body frame */
+  //ins_int.ltp_accel.x = accel_meas_ltp.x;
+  //ins_int.ltp_accel.y = accel_meas_ltp.y;
+  struct NedCoor_i *ltp_accel_nedcoor = stateGetAccelNed_i();
+  struct Int32Vect3 ltp_accel;
+  ltp_accel.x = ltp_accel_nedcoor->x;
+  ltp_accel.y = ltp_accel_nedcoor->y;
+  ltp_accel.z = ltp_accel_nedcoor->z;
+  int32_rmat_vmult(&global_body_accelerations, stateGetNedToBodyRMat_i(), &ltp_accel);
 
   /* attitude error */
   struct Int32Quat att_err;
