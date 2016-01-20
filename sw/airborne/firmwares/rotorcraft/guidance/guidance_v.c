@@ -290,6 +290,10 @@ void guidance_v_run(bool_t in_flight)
       stabilization_cmd[COMMAND_THRUST] = guidance_v_rc_delta_t;
       break;
 
+    case GUIDANCE_V_MODE_HELI_INDI:
+      stabilization_cmd[COMMAND_THRUST] = 0; // just check if it disables :p
+      break;
+
     case GUIDANCE_V_MODE_RC_CLIMB:
       guidance_v_zd_sp = guidance_v_rc_zd_sp;
       gv_update_ref_from_zd_sp(guidance_v_zd_sp, stateGetPositionNed_i()->z);

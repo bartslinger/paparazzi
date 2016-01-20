@@ -53,6 +53,7 @@
 #define AP_MODE_MODULE            17
 #define AP_MODE_FLIP              18
 #define AP_MODE_GUIDED            19
+#define AP_MODE_HELI_INDI         20
 
 extern uint8_t autopilot_mode;
 extern uint8_t autopilot_mode_auto2;
