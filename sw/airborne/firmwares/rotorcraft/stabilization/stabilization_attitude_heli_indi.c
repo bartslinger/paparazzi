@@ -73,7 +73,7 @@ struct Int32Vect3 global_body_accelerations;
 
 static void send_indi_debug_values(struct transport_tx *trans, struct link_device *dev)
 {
-  //struct Int32Rates *body_rate = stateGetBodyRates_i();
+  struct Int32Rates *body_rate = stateGetBodyRates_i();
   int16_t meas_cmd[3];
   meas_cmd[0] = heli_indi.measured_cmd[0];
   meas_cmd[1] = heli_indi.measured_cmd[1];
@@ -82,12 +82,12 @@ static void send_indi_debug_values(struct transport_tx *trans, struct link_devic
                                &meas_cmd[0],
                                &meas_cmd[1],
                                &meas_cmd[2],
+                               &stabilization_cmd[COMMAND_YAW],
                                &stabilization_cmd[COMMAND_PITCH],
-                               &stabilization_cmd[COMMAND_ROLL],
                                &stabilization_cmd[COMMAND_THRUST],
-                               &global_body_accelerations.x,
-                               &global_body_accelerations.y,
-                               &global_body_accelerations.z);
+                               &body_rate->p,
+                               &body_rate->q,
+                               &body_rate->r);
 }
 #endif
 
@@ -115,6 +115,8 @@ void stabilization_attitude_init(void)
   heli_indi.inputmodel_filtered.q = 0;
   heli_indi.inputmodel_filtered.r = 0;
   heli_rate_filter_initialize(&heli_indi.tail_model, 37, 0, 9600);
+  heli_indi.alpha_tail_inc = heli_indi.tail_model.alpha;
+  heli_indi.alpha_tail_dec = (PERIODIC_FREQUENCY << 14)/(PERIODIC_FREQUENCY + 10); // OMEGA_DOWN = 10 rad/s, shift = 14
   heli_rate_filter_initialize(&heli_indi.roll_model, 70, 9, 900);
   heli_rate_filter_initialize(&heli_indi.pitch_model, 70, 9, 900);
 
@@ -250,9 +252,9 @@ void stabilization_attitude_run(bool_t enable_integrator)
     notch_filter_update(&heli_indi.r_filter, &body_rate->r, &heli_indi.rate_notched.r);
   } else {
     /* Rotor spinning slowly, don't notch */
-    heli_indi.rate_filt.p = body_rate->p;
-    heli_indi.rate_filt.q = body_rate->q;
-    heli_indi.rate_filt.r = body_rate->r;
+    heli_indi.rate_notched.p = body_rate->p;
+    heli_indi.rate_notched.q = body_rate->q;
+    heli_indi.rate_notched.r = body_rate->r;
   }
   /* Always IIR, also if rotor not spinning faster than 25Hz */
   heli_indi.rate_filt.p = ((heli_indi.rate_filt.p * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + heli_indi.rate_notched.p) / HELI_INDI_ROLLRATE_FILTSIZE;
@@ -271,24 +273,33 @@ void stabilization_attitude_run(bool_t enable_integrator)
   int32_t pitch_pid = (GAIN_MULTIPLIER_P * heli_indi_gains.pitch_p * att_err.qy) >> 15;
   int32_t roll_virtual_control  = (heli_indi_gains.roll_p * att_err.qx) / 16;
   int32_t pitch_virtual_control = (heli_indi_gains.pitch_p * att_err.qy) / 16;
-  int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * att_err.qz - heli_indi.rate_filt.r) *
-                                 (heli_indi_gains.yaw_d);
+  int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * att_err.qz) - (heli_indi.rate_filt.r * heli_indi_gains.yaw_d);
 
   /* ------------------ */
 
   /* INDI YAW */
   /* Multiply with dt; this integrates virtual control (acceleration) to required change in rate */
-  int32_t delta_r_ref = yaw_virtual_control / 512;
+  int32_t delta_r_ref = yaw_virtual_control * 512/512;
 
-  int32_t delta_r_error = delta_r_ref - delta_rate_meas.r;
-  int32_t delta_u_yaw = (delta_r_error * 512) / 48; /* equal to multiply with 10.6667, which is inv(B) */
+  int32_t delta_r_error = delta_r_ref - (delta_rate_meas.r*512);
+  int32_t delta_u_yaw = (delta_r_error * 512/512) / 48; /* equal to multiply with 10.6667, which is inv(B) */
+
+  /* Depending on direction, change filter coefficient */
+  int32_t prev = heli_indi.tail_model.buffer[heli_indi.tail_model.idx];
+  if(stabilization_cmd[COMMAND_YAW] - prev > 0) {
+    // Tail spinning up
+    heli_indi.tail_model.alpha = heli_indi.alpha_tail_inc;
+  } else {
+    // Tail spinning down
+    heli_indi.tail_model.alpha = heli_indi.alpha_tail_dec;
+  }
   int32_t yaw_model_output = heli_rate_filter_propagate(&heli_indi.tail_model, stabilization_cmd[COMMAND_YAW]);
 
   /* Only notch above freq threshold */
   if (rpm_sensor.motor_frequency > 25) {
     notch_filter_update(&heli_indi.r_inner_filter, &yaw_model_output, &heli_indi.inputmodel_notched.r);
   } else {
-    heli_indi.inputmodel_filtered.r = yaw_model_output;
+    heli_indi.inputmodel_notched.r = yaw_model_output;
   }
   /* Always IIR */
   heli_indi.inputmodel_filtered.r = ((heli_indi.inputmodel_filtered.r * (HELI_INDI_YAWRATE_FILTSIZE - 1)) + heli_indi.inputmodel_notched.r) / HELI_INDI_YAWRATE_FILTSIZE;

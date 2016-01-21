@@ -32,6 +32,8 @@
 #include "firmwares/rotorcraft/guidance/guidance_v_ref.h"
 #include "firmwares/rotorcraft/guidance/guidance_v_adapt.h"
 
+#include "filters/notch_filter.h"
+
 #define GUIDANCE_V_MODE_KILL      0
 #define GUIDANCE_V_MODE_RC_DIRECT 1
 #define GUIDANCE_V_MODE_RC_CLIMB  2
@@ -101,6 +103,8 @@ extern int32_t guidance_v_thrust_coeff;
 extern int32_t guidance_v_kp; ///< vertical control P-gain
 extern int32_t guidance_v_kd; ///< vertical control D-gain
 extern int32_t guidance_v_ki; ///< vertical control I-gain
+
+extern struct SecondOrderNotchFilter accel_z_notchfilter;
 
 extern void guidance_v_init(void);
 extern void guidance_v_read_rc(void);

@@ -47,6 +47,8 @@ struct HeliIndiStab {
   struct Int32Rates rate_filt;
   struct Int32Rates rate_previous;
   struct heli_rate_filter_t tail_model;
+  int32_t alpha_tail_inc;
+  int32_t alpha_tail_dec;
   struct heli_rate_filter_t roll_model; // haha woordgrapje
   struct heli_rate_filter_t pitch_model;
   struct SecondOrderNotchFilter p_filter;

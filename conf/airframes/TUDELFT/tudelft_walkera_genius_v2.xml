@@ -32,7 +32,7 @@
     <let var="hoverstick" value=".35*MAX_PPRZ"/>
     <let var="halfway" value="(@THRUST >= ($hoverstick) ? 1 : 0)"/>
     <let var="collective" value="@THRUST * 0.1258 + (MAX_PPRZ*0.2013)"/>
-    <!--let var="collective" value="@PITCH"/-->
+    <!--let var="collective" value="@THRUST"/-->
     <let var="gas" value="($hoverpower) + $halfway * (((@THRUST) - ($hoverstick)) * (MAX_PPRZ - ($hoverpower))) / (MAX_PPRZ - ($hoverstick))  + (1 - $halfway) * ((@THRUST - ($hoverstick)) * ($hoverpower)) / ($hoverstick)"/>
 
     <set servo="CIC_LEFT" value="((@PITCH*1.75*0.5*0.5)-(@ROLL*1.75*0.5*0.73))-($collective)"/>
@@ -44,8 +44,8 @@
     <set servo="CIC_FRONT" value="-$collective"/-->
     
     <set servo="GAS" value="$gas"/>
-    <set servo="TAIL" value="@YAW + $halfway * ((MAX_PPRZ*0.4) + @THRUST*0.2037) + (1 - $halfway) * (@THRUST * 1.4872) "/>
-    <!--set servo="TAIL" value="0"/-->
+    <!--set servo="TAIL" value="@YAW + $halfway * ((MAX_PPRZ*0.4) + @THRUST*0.2037) + (1 - $halfway) * (@THRUST * 1.4872) "/-->
+    <set servo="TAIL" value="@YAW"/>
     
     <!--set servo="GAS" value="$gas"/>  
     <set servo="TAIL" value="@YAW+0.4*$gas"/-->
@@ -111,8 +111,8 @@
   <section name="STABILIZATION_ATTITUDE_HELI_INDI" prefix="STABILIZATION_ATTITUDE_HELI_INDI_">
     <define name="ROLL_P" value="20" /><!-- 3052 -->
     <define name="PITCH_P" value="20" /><!-- 3052 -->
-    <define name="YAW_P" value="2" />
-    <define name="YAW_D" value="10" />
+    <define name="YAW_P" value="10" />
+    <define name="YAW_D" value="20" />
   </section>
 
   <section name="STABILIZATION_ATTITUDE" prefix="STABILIZATION_ATTITUDE_">

@@ -104,6 +104,27 @@ float guidance_v_nominal_throttle;
 bool_t guidance_v_adapt_throttle_enabled;
 
 
+
+
+
+/* HELI INDI STUFF */
+#include "filters/heli_rate_filter.h"
+#include "subsystems/sensors/rpm_sensor.h"
+
+#define HELI_INDI_ACCEL_Z_FILTSIZE 16
+struct SecondOrderNotchFilter accel_z_notchfilter;
+struct SecondOrderNotchFilter thrust_actuator_inner_notchfilter;
+int32_t inner_notch_output;
+int32_t inner_iir_output;
+int32_t accel_z_raw;
+int32_t accel_z_notched;
+int32_t accel_z_filtered;
+int32_t previous_accel_z;
+struct heli_rate_filter_t thrust_model;
+
+
+
+
 /** Direct throttle from radio control.
  *  range 0:#MAX_PPRZ
  */
@@ -139,6 +160,7 @@ int32_t guidance_v_thrust_coeff;
 
 static int32_t get_vertical_thrust_coeff(void);
 static void run_hover_loop(bool_t in_flight);
+static void run_indi_loop(void);
 
 #if PERIODIC_TELEMETRY
 #include "subsystems/datalink/telemetry.h"
@@ -164,10 +186,10 @@ static void send_vert_loop(struct transport_tx *trans, struct link_device *dev)
 static void send_tune_vert(struct transport_tx *trans, struct link_device *dev)
 {
   pprz_msg_send_TUNE_VERT(trans, dev, AC_ID,
-                          &guidance_v_z_sp,
-                          &(stateGetPositionNed_i()->z),
-                          &guidance_v_z_ref,
-                          &guidance_v_zd_ref);
+                          &accel_z_raw,
+                          &accel_z_notched,
+                          &accel_z_filtered,
+                          &accel_z_filtered);
 }
 #endif
 
@@ -186,6 +208,16 @@ void guidance_v_init(void)
   guidance_v_adapt_throttle_enabled = GUIDANCE_V_ADAPT_THROTTLE_ENABLED;
 
   gv_adapt_init();
+
+  /* Init INDI STUFF */
+  notch_filter_set_sampling_frequency(&accel_z_notchfilter, PERIODIC_FREQUENCY);
+  notch_filter_set_bandwidth(&accel_z_notchfilter, 10.0);
+  heli_rate_filter_initialize(&thrust_model, 70, 9, 450);
+  notch_filter_set_sampling_frequency(&thrust_actuator_inner_notchfilter, PERIODIC_FREQUENCY);
+  notch_filter_set_bandwidth(&thrust_actuator_inner_notchfilter, 10.0);
+
+  inner_notch_output = 0;
+  inner_iir_output = 0;
 
 #if GUIDANCE_V_MODE_MODULE_SETTING == GUIDANCE_V_MODE_MODULE
   guidance_v_module_init();
@@ -291,7 +323,8 @@ void guidance_v_run(bool_t in_flight)
       break;
 
     case GUIDANCE_V_MODE_HELI_INDI:
-      stabilization_cmd[COMMAND_THRUST] = 0; // just check if it disables :p
+      run_indi_loop();
+      stabilization_cmd[COMMAND_THRUST] = guidance_v_delta_t;
       break;
 
     case GUIDANCE_V_MODE_RC_CLIMB:
@@ -452,6 +485,58 @@ static void run_hover_loop(bool_t in_flight)
   /* bound the result */
   Bound(guidance_v_delta_t, 0, MAX_PPRZ);
 
+}
+
+/**
+ * @brief run_indi_loop
+ * Calculates required thrust to follow acceleration setpoint
+ * Acceleration setpoint can be set for example by the throttle stick.
+ */
+void run_indi_loop() {
+  struct NedCoor_i *ltp_accel_nedcoor = stateGetAccelNed_i();
+  struct Int32Vect3 ltp_accel;
+  struct Int32Vect3 body_accel; // Acceleration measurement in body frame
+  ltp_accel.x = ltp_accel_nedcoor->x;
+  ltp_accel.y = ltp_accel_nedcoor->y;
+  ltp_accel.z = ltp_accel_nedcoor->z;
+  int32_rmat_vmult(&body_accel, stateGetNedToBodyRMat_i(), &ltp_accel);
+  accel_z_raw = body_accel.z;
+
+  // Apply notch filter and IIR to body frame z-axis accelerations
+  /* First notch, then IIR filter on MEASURED ACCEL */
+  if (rpm_sensor.motor_frequency > 25) {
+    notch_filter_set_filter_frequency(&accel_z_notchfilter, rpm_sensor.motor_frequency);
+    notch_filter_update(&accel_z_notchfilter, &body_accel.z, &accel_z_notched);
+  } else {
+    /* Rotor spinning slowly, don't notch */
+    accel_z_notched = body_accel.z;
+  }
+  /* Always IIR, also if rotor not spinning faster than 25Hz */
+  accel_z_filtered = ((accel_z_filtered * (HELI_INDI_ACCEL_Z_FILTSIZE-1)) + accel_z_notched) / HELI_INDI_ACCEL_Z_FILTSIZE;
+
+  /* RADIO throttle stick value */
+  int32_t accel_z_sp = -1*((guidance_v_rc_delta_t - MAX_PPRZ/2) << INT32_ACCEL_FRAC) / (MAX_PPRZ/2);
+
+  /* Calculate delta z measured */
+  int32_t accel_z_err = accel_z_sp - accel_z_filtered;
+  int32_t delta_u = (accel_z_err * -1)/2; // approx. effectiveness inverse -0.5
+
+  /* Propagate actuator model */
+  int32_t thrust_model_output = heli_rate_filter_propagate(&thrust_model, guidance_v_delta_t);
+
+  /* Notch and IIR on actuator model */
+  if (rpm_sensor.motor_frequency > 25) {
+    notch_filter_set_sampling_frequency(&thrust_actuator_inner_notchfilter, rpm_sensor.motor_frequency);
+    notch_filter_update(&thrust_actuator_inner_notchfilter, &thrust_model_output, &inner_notch_output);
+  } else {
+    inner_notch_output = thrust_model_output;
+  }
+  inner_iir_output = ((inner_iir_output * (HELI_INDI_ACCEL_Z_FILTSIZE-1)) + inner_notch_output) / HELI_INDI_ACCEL_Z_FILTSIZE;
+
+  guidance_v_delta_t = inner_iir_output + delta_u;
+
+  /* bound the result */
+  Bound(guidance_v_delta_t, 1500, MAX_PPRZ);
 }
 
 bool_t guidance_v_set_guided_z(float z)
