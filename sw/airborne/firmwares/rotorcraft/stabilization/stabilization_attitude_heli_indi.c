@@ -287,7 +287,7 @@ void stabilization_attitude_run(bool_t enable_integrator)
   int32_t delta_r_ref = yaw_virtual_control * 512/512;
 
   int32_t delta_r_error = delta_r_ref - (delta_rate_meas.r*512);
-  int32_t delta_u_yaw = (delta_r_error * 512/512 + 1*69*delta_thrust_meas) / 21;
+  int32_t delta_u_yaw = (delta_r_error * 512/512 + 69*delta_thrust_meas) / 31;
 
   /* Depending on direction, change filter coefficient */
   int32_t prev = heli_indi.tail_model.buffer[heli_indi.tail_model.idx];

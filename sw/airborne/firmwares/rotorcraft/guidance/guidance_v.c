@@ -319,6 +319,7 @@ void guidance_v_run(bool_t in_flight)
 
     case GUIDANCE_V_MODE_RC_DIRECT:
       guidance_v_z_sp = stateGetPositionNed_i()->z; // for display only
+      run_indi_loop();
       stabilization_cmd[COMMAND_THRUST] = guidance_v_rc_delta_t;
       break;
 
@@ -519,7 +520,7 @@ void run_indi_loop() {
 
   /* Calculate delta z measured */
   int32_t accel_z_err = accel_z_sp - accel_z_filtered;
-  int32_t delta_u = (accel_z_err * -1)/2; // approx. effectiveness inverse -0.5
+  int32_t delta_u = (accel_z_err * -1)/4;//was /2 // approx. effectiveness inverse -0.5
 
   /* Propagate actuator model */
   int32_t thrust_model_output = heli_rate_filter_propagate(&thrust_model, guidance_v_delta_t);
