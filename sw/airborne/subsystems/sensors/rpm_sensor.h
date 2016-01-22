@@ -42,6 +42,7 @@ struct RpmSensor {
 };
 
 extern struct RpmSensor rpm_sensor;
+extern int32_t thrust_model_output_transferred;
 
 extern void rpm_sensor_init(void);
 extern void rpm_sensor_process_pulse(uint16_t cnt, uint8_t overflow_cnt);

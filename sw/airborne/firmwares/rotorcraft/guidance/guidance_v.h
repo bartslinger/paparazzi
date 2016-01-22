@@ -105,6 +105,7 @@ extern int32_t guidance_v_kd; ///< vertical control D-gain
 extern int32_t guidance_v_ki; ///< vertical control I-gain
 
 extern struct SecondOrderNotchFilter accel_z_notchfilter;
+extern int32_t inner_iir_output;
 
 extern void guidance_v_init(void);
 extern void guidance_v_read_rc(void);

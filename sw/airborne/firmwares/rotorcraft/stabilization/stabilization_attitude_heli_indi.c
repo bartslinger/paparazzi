@@ -64,6 +64,7 @@ struct HeliIndiGains heli_indi_gains = {
 struct HeliIndiStab heli_indi;
 int32_t global_delta_u;
 int32_t global_pitch_model;
+int32_t global_delta_thrust;
 struct Int32Vect3 global_body_accelerations;
 
 #if PERIODIC_TELEMETRY
@@ -83,7 +84,7 @@ static void send_indi_debug_values(struct transport_tx *trans, struct link_devic
                                &meas_cmd[1],
                                &meas_cmd[2],
                                &stabilization_cmd[COMMAND_YAW],
-                               &stabilization_cmd[COMMAND_PITCH],
+                               &thrust_model_output_transferred,
                                &stabilization_cmd[COMMAND_THRUST],
                                &body_rate->p,
                                &body_rate->q,
@@ -279,10 +280,14 @@ void stabilization_attitude_run(bool_t enable_integrator)
 
   /* INDI YAW */
   /* Multiply with dt; this integrates virtual control (acceleration) to required change in rate */
+  int32_t delta_thrust_meas = thrust_model_output_transferred - heli_indi.previous_thrust;
+  heli_indi.previous_thrust = thrust_model_output_transferred;
+  global_delta_thrust = delta_thrust_meas;
+
   int32_t delta_r_ref = yaw_virtual_control * 512/512;
 
   int32_t delta_r_error = delta_r_ref - (delta_rate_meas.r*512);
-  int32_t delta_u_yaw = (delta_r_error * 512/512) / 48; /* equal to multiply with 10.6667, which is inv(B) */
+  int32_t delta_u_yaw = (delta_r_error * 512/512 + 1*69*delta_thrust_meas) / 21;
 
   /* Depending on direction, change filter coefficient */
   int32_t prev = heli_indi.tail_model.buffer[heli_indi.tail_model.idx];

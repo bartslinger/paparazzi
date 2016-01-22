@@ -34,6 +34,7 @@
 #include "subsystems/sensors/rpm_sensor.h"
 
 struct RpmSensor rpm_sensor;
+int32_t thrust_model_output_transferred;
 
 
 static void send_rpm(struct transport_tx *trans, struct link_device *dev)

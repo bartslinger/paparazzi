@@ -43,6 +43,7 @@ struct HeliIndiStab {
   int32_t yawrate_err;
   int32_t filter_out;
   int32_t yaw_incremental_cmd;
+  int32_t previous_thrust;
   struct Int32Rates rate_notched;
   struct Int32Rates rate_filt;
   struct Int32Rates rate_previous;
@@ -61,6 +62,7 @@ struct HeliIndiStab {
   struct Int32Rates inputmodel_filtered;
   int32_t measured_cmd[3];
 };
+
 
 extern struct Int32Quat   stab_att_sp_quat;  ///< with #INT32_QUAT_FRAC
 extern struct Int32Eulers stab_att_sp_euler; ///< with #INT32_ANGLE_FRAC

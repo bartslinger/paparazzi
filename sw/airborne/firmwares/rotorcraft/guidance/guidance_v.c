@@ -515,7 +515,7 @@ void run_indi_loop() {
   accel_z_filtered = ((accel_z_filtered * (HELI_INDI_ACCEL_Z_FILTSIZE-1)) + accel_z_notched) / HELI_INDI_ACCEL_Z_FILTSIZE;
 
   /* RADIO throttle stick value */
-  int32_t accel_z_sp = -1*((guidance_v_rc_delta_t - MAX_PPRZ/2) << INT32_ACCEL_FRAC) / (MAX_PPRZ/2);
+  int32_t accel_z_sp = (-1)*3*((guidance_v_rc_delta_t - MAX_PPRZ/2) << INT32_ACCEL_FRAC) / (MAX_PPRZ/2);
 
   /* Calculate delta z measured */
   int32_t accel_z_err = accel_z_sp - accel_z_filtered;
@@ -523,6 +523,7 @@ void run_indi_loop() {
 
   /* Propagate actuator model */
   int32_t thrust_model_output = heli_rate_filter_propagate(&thrust_model, guidance_v_delta_t);
+  thrust_model_output_transferred = thrust_model_output;
 
   /* Notch and IIR on actuator model */
   if (rpm_sensor.motor_frequency > 25) {
