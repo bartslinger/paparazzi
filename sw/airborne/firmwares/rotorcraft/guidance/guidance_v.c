@@ -535,7 +535,28 @@ void run_indi_loop() {
   }
   inner_iir_output = ((inner_iir_output * (HELI_INDI_ACCEL_Z_FILTSIZE-1)) + inner_notch_output) / HELI_INDI_ACCEL_Z_FILTSIZE;
 
-  guidance_v_delta_t = inner_iir_output + delta_u;
+
+  int32_t old_thrust_setting = guidance_v_delta_t;
+  int32_t new_thrust_setting = inner_iir_output + delta_u;
+
+  /* verry nice, calculations are practically done now, but we want to make the control signal slower to match the tail rotor */
+
+  /* Different filters for up and down, because tail spins up faster.
+  Up:
+  0.93028
+  0.032866
+  Down:
+  0.98066
+  0.016579
+  */
+
+  if (new_thrust_setting > old_thrust_setting) {
+    // fast filter
+    new_thrust_setting = 0.93028f * old_thrust_setting + 0.032866f * new_thrust_setting;
+  } else {
+    // slow filter
+    new_thrust_setting = 0.98066f * old_thrust_setting + 0.016579f * new_thrust_setting;
+  }
 
   /* bound the result */
   Bound(guidance_v_delta_t, 1500, MAX_PPRZ);
