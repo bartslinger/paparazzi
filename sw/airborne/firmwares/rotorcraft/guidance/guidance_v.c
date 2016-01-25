@@ -122,7 +122,7 @@ int32_t accel_z_filtered;
 int32_t previous_accel_z;
 struct heli_rate_filter_t thrust_model;
 
-
+int32_t global_new_thrust;
 
 
 /** Direct throttle from radio control.
@@ -188,8 +188,8 @@ static void send_tune_vert(struct transport_tx *trans, struct link_device *dev)
   pprz_msg_send_TUNE_VERT(trans, dev, AC_ID,
                           &accel_z_raw,
                           &accel_z_notched,
-                          &accel_z_filtered,
-                          &accel_z_filtered);
+                          &guidance_v_delta_t,
+                          &global_new_thrust);
 }
 #endif
 
@@ -494,6 +494,8 @@ static void run_hover_loop(bool_t in_flight)
  * Acceleration setpoint can be set for example by the throttle stick.
  */
 void run_indi_loop() {
+
+
   struct NedCoor_i *ltp_accel_nedcoor = stateGetAccelNed_i();
   struct Int32Vect3 ltp_accel;
   struct Int32Vect3 body_accel; // Acceleration measurement in body frame
@@ -535,28 +537,48 @@ void run_indi_loop() {
   }
   inner_iir_output = ((inner_iir_output * (HELI_INDI_ACCEL_Z_FILTSIZE-1)) + inner_notch_output) / HELI_INDI_ACCEL_Z_FILTSIZE;
 
-
-  int32_t old_thrust_setting = guidance_v_delta_t;
   int32_t new_thrust_setting = inner_iir_output + delta_u;
+  global_new_thrust = new_thrust_setting;
 
   /* verry nice, calculations are practically done now, but we want to make the control signal slower to match the tail rotor */
 
   /* Different filters for up and down, because tail spins up faster.
-  Up:
-  0.93028
-  0.032866
-  Down:
-  0.98066
-  0.016579
+    Up:
+    0.93028
+    0.032866
+    1
+    0.52857
+    Down:
+    0.98066
+    0.016579
+    1
+    0.14286
+
+Up:
+0.93028
+0.032866
+1
+0.52857
+Down:
+0.98066
+0.016579
+1
+0.14286
   */
 
-  if (new_thrust_setting > old_thrust_setting) {
-    // fast filter
-    new_thrust_setting = 0.93028f * old_thrust_setting + 0.032866f * new_thrust_setting;
-  } else {
-    // slow filter
-    new_thrust_setting = 0.98066f * old_thrust_setting + 0.016579f * new_thrust_setting;
-  }
+  static float leadlag_comp_state = 0;
+
+//  // TODO BOUND LEADLAG COMPENSATOR STATE
+//  if (new_thrust_setting > guidance_v_delta_t) {
+//    // fast filter
+//    leadlag_comp_state = (0.93028f * leadlag_comp_state) + (0.032866f * new_thrust_setting);
+//    guidance_v_delta_t = (int32_t)(leadlag_comp_state + (0.52857f * new_thrust_setting));
+//  } else {
+//    // slow filter
+//  }
+
+  leadlag_comp_state = (0.98066f * leadlag_comp_state) + (0.016579f * new_thrust_setting);
+  guidance_v_delta_t = (int32_t)(leadlag_comp_state + (0.14286f * new_thrust_setting));
 
   /* bound the result */
   Bound(guidance_v_delta_t, 1500, MAX_PPRZ);
