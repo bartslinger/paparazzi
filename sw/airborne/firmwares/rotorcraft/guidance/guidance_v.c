@@ -123,7 +123,7 @@ int32_t previous_accel_z;
 struct heli_rate_filter_t thrust_model;
 
 int32_t global_new_thrust;
-
+int32_t global_old_thrust;
 
 /** Direct throttle from radio control.
  *  range 0:#MAX_PPRZ
@@ -186,10 +186,10 @@ static void send_vert_loop(struct transport_tx *trans, struct link_device *dev)
 static void send_tune_vert(struct transport_tx *trans, struct link_device *dev)
 {
   pprz_msg_send_TUNE_VERT(trans, dev, AC_ID,
-                          &accel_z_raw,
-                          &accel_z_notched,
+                          &global_old_thrust,
+                          &global_new_thrust,
                           &guidance_v_delta_t,
-                          &global_new_thrust);
+                          &guidance_v_thrust_coeff);
 }
 #endif
 
@@ -520,6 +520,8 @@ void run_indi_loop() {
   /* RADIO throttle stick value */
   int32_t accel_z_sp = (-1)*3*((guidance_v_rc_delta_t - MAX_PPRZ/2) << INT32_ACCEL_FRAC) / (MAX_PPRZ/2);
 
+  accel_z_sp = ((accel_z_sp << INT32_TRIG_FRAC) / guidance_v_thrust_coeff);
+
   /* Calculate delta z measured */
   int32_t accel_z_err = accel_z_sp - accel_z_filtered;
   int32_t delta_u = (accel_z_err * -1)/4;//was /2 // approx. effectiveness inverse -0.5
@@ -566,10 +568,11 @@ Down:
 0.14286
   */
 
+  static int32_t old_thrust_setting = 0;
   static float leadlag_comp_state = 0;
 
 //  // TODO BOUND LEADLAG COMPENSATOR STATE
-//  if (new_thrust_setting > guidance_v_delta_t) {
+//  if (new_thrust_setting > old_thrust_setting) {
 //    // fast filter
 //    leadlag_comp_state = (0.93028f * leadlag_comp_state) + (0.032866f * new_thrust_setting);
 //    guidance_v_delta_t = (int32_t)(leadlag_comp_state + (0.52857f * new_thrust_setting));
@@ -582,6 +585,8 @@ Down:
 
   /* bound the result */
   Bound(guidance_v_delta_t, 1500, MAX_PPRZ);
+  old_thrust_setting = guidance_v_delta_t;
+  global_old_thrust = old_thrust_setting;
 }
 
 bool_t guidance_v_set_guided_z(float z)

@@ -1857,10 +1857,10 @@
   </message>
 
   <message name="TUNE_VERT" id="213">
-    <field name="z_sp"      type="int32" alt_unit="m"    alt_unit_coef="0.0039063"/>
-    <field name="est_z"     type="int32" alt_unit="m"    alt_unit_coef="0.0039063"/>
-    <field name="ref_z"     type="int32" alt_unit="m"    alt_unit_coef="0.0039063"/>
-    <field name="ref_zd"    type="int32" alt_unit="m/s"  alt_unit_coef="0.0000019"/>
+    <field name="old_thrust_setting"      type="int32"/>
+    <field name="new_thrust_setting"     type="int32"/>
+    <field name="guidance_v_delta_t"     type="int32"/>
+    <field name="thrust_coefficient"    type="int32" alt_unit_coef="0.000061035"/>
   </message>
 
   <message name="MF_DAQ_STATE" id="214">
