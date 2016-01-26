@@ -1858,7 +1858,7 @@
 
   <message name="TUNE_VERT" id="213">
     <field name="old_thrust_setting"      type="int32"/>
-    <field name="new_thrust_setting"     type="int32"/>
+    <field name="accel_z_filtered"     type="int32"/>
     <field name="guidance_v_delta_t"     type="int32"/>
     <field name="thrust_coefficient"    type="int32" alt_unit_coef="0.000061035"/>
   </message>

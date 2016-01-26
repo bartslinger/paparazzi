@@ -187,7 +187,7 @@ static void send_tune_vert(struct transport_tx *trans, struct link_device *dev)
 {
   pprz_msg_send_TUNE_VERT(trans, dev, AC_ID,
                           &global_old_thrust,
-                          &global_new_thrust,
+                          &accel_z_filtered,
                           &guidance_v_delta_t,
                           &guidance_v_thrust_coeff);
 }
@@ -574,14 +574,16 @@ Down:
 //  // TODO BOUND LEADLAG COMPENSATOR STATE
 //  if (new_thrust_setting > old_thrust_setting) {
 //    // fast filter
-//    leadlag_comp_state = (0.93028f * leadlag_comp_state) + (0.032866f * new_thrust_setting);
-//    guidance_v_delta_t = (int32_t)(leadlag_comp_state + (0.52857f * new_thrust_setting));
+//  leadlag_comp_state = (0.93028f * leadlag_comp_state) + (0.032866f * new_thrust_setting);
+//  guidance_v_delta_t = (int32_t)(leadlag_comp_state + (0.52857f * new_thrust_setting));
 //  } else {
 //    // slow filter
 //  }
 
+
   leadlag_comp_state = (0.98066f * leadlag_comp_state) + (0.016579f * new_thrust_setting);
   guidance_v_delta_t = (int32_t)(leadlag_comp_state + (0.14286f * new_thrust_setting));
+  //guidance_v_delta_t = new_thrust_setting; // use unfiltered thrust
 
   /* bound the result */
   Bound(guidance_v_delta_t, 1500, MAX_PPRZ);
