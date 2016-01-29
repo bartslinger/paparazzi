@@ -61,6 +61,7 @@ struct HeliIndiGains heli_indi_gains = {
 #define HELI_INDI_PITCHRATE_FILTSIZE 16
 #define HELI_INDI_YAWRATE_FILTSIZE 8
 
+struct IndiController_int new_heli_indi;
 struct HeliIndiStab heli_indi;
 int32_t global_delta_u;
 int32_t global_pitch_model;
@@ -92,50 +93,125 @@ static void send_indi_debug_values(struct transport_tx *trans, struct link_devic
 }
 #endif
 
+static inline void indi_subtract_vect(int32_t _out[], int32_t _in1[], int32_t _in2[])
+{
+  for (uint8_t i = 0; i < INDI_DOF; i++) {
+    _out[i] = _in1[i] - _in2[i];
+  }
+}
+
+static inline void indi_add_vect(int32_t _out[], int32_t _in1[], int32_t _in2[])
+{
+  for (uint8_t i = 0; i < INDI_DOF; i++) {
+    _out[i] = _in1[i] + _in2[i];
+  }
+}
+
+static inline void indi_matrix_multiply_vector(int32_t _out[], int32_t _matrix[][INDI_DOF], int32_t _vector[])
+{
+  for (uint8_t i = 0; i < INDI_DOF; i++) {
+    _out[i] = 0;
+    for (uint8_t j = 0; i < INDI_DOF; j++) {
+      _out[i] += _matrix[i][j] + _vector[j];
+    }
+  }
+}
+
+static inline void indi_copy_vect(int32_t _out[], int32_t _in[])
+{
+  for (uint8_t i = 0; i < INDI_DOF; i++) {
+    _out[i] = _in[i];
+  }
+}
+
+static inline void indi_set_identity(int32_t _matrix[][INDI_DOF])
+{
+  for (uint8_t i = 0; i < INDI_DOF; i++) {
+    for (uint8_t j = 0; j < INDI_DOF; j++) {
+      _matrix[i][j] = (i==j) ? 1 : 0;
+    }
+  }
+}
+
+/* Filter functions referenced to */
+struct heli_rate_filter_t actuator_model[INDI_DOF];
+int32_t alpha_yaw_inc;
+int32_t alpha_yaw_dec;
+static inline void indi_apply_actuator_models(int32_t _out[], int32_t _in[])
+{
+  _out[INDI_ROLL]   = _in[INDI_ROLL];
+  _out[INDI_PITCH]  = _in[INDI_PITCH];
+  _out[INDI_YAW]    = _in[INDI_YAW];
+  _out[INDI_THRUST] = _in[INDI_THRUST];
+}
+
+static inline void indi_apply_compensator_filters(int32_t _out[], int32_t _in[])
+{
+  _out[INDI_ROLL]   = _in[INDI_ROLL];
+  _out[INDI_PITCH]  = _in[INDI_PITCH];
+  _out[INDI_YAW]    = _in[INDI_YAW];
+  _out[INDI_THRUST] = _in[INDI_THRUST];
+}
+
+struct SecondOrderNotchFilter actuator_notchfilter[INDI_DOF];
+struct SecondOrderNotchFilter measurement_notchfilter[INDI_DOF];
+static inline void indi_apply_notch_filters(int32_t _out[], int32_t _in[])
+{
+  _out[INDI_ROLL]   = _in[INDI_ROLL];
+  _out[INDI_PITCH]  = _in[INDI_PITCH];
+  _out[INDI_YAW]    = _in[INDI_YAW];
+  _out[INDI_THRUST] = _in[INDI_THRUST];
+}
+
+static inline void indi_apply_lowpass_filters(int32_t _out[], int32_t _in[])
+{
+  _out[INDI_ROLL]   = _in[INDI_ROLL];
+  _out[INDI_PITCH]  = _in[INDI_PITCH];
+  _out[INDI_YAW]    = _in[INDI_YAW];
+  _out[INDI_THRUST] = _in[INDI_THRUST];
+}
+
 void stabilization_attitude_init(void)
 {
-  /* Initialization code */
+  /* Initialization code INDI */
+  struct IndiController_int* c = &new_heli_indi;
 
-  heli_indi.yawrate_setpoint = 0;
-  heli_indi.yawrate_err = 0;
-  heli_indi.filter_out = 0;
-  heli_indi.yaw_incremental_cmd = 0;
-  heli_indi.rate_notched.p = 0;
-  heli_indi.rate_notched.q = 0;
-  heli_indi.rate_notched.r = 0;
-  heli_indi.rate_filt.p = 0;
-  heli_indi.rate_filt.q = 0;
-  heli_indi.rate_filt.r = 0;
-  heli_indi.rate_previous.p = 0;
-  heli_indi.rate_previous.q = 0;
-  heli_indi.rate_previous.r = 0;
-  heli_indi.inputmodel_notched.p = 0;
-  heli_indi.inputmodel_notched.q = 0;
-  heli_indi.inputmodel_notched.r = 0;
-  heli_indi.inputmodel_filtered.p = 0;
-  heli_indi.inputmodel_filtered.q = 0;
-  heli_indi.inputmodel_filtered.r = 0;
-  heli_rate_filter_initialize(&heli_indi.tail_model, 37, 0, 9600);
-  heli_indi.alpha_tail_inc = heli_indi.tail_model.alpha;
-  heli_indi.alpha_tail_dec = (PERIODIC_FREQUENCY << 14)/(PERIODIC_FREQUENCY + 10); // OMEGA_DOWN = 10 rad/s, shift = 14
-  heli_rate_filter_initialize(&heli_indi.roll_model, 70, 9, 900);
-  heli_rate_filter_initialize(&heli_indi.pitch_model, 70, 9, 900);
+  /* Initialize model matrices */
+  indi_set_identity(c->D);
 
-  /* Initialize notch filters */
-  notch_filter_set_sampling_frequency(&heli_indi.p_filter, PERIODIC_FREQUENCY);
-  notch_filter_set_bandwidth(&heli_indi.p_filter, 10.0);
-  notch_filter_set_sampling_frequency(&heli_indi.p_inner_filter, PERIODIC_FREQUENCY);
-  notch_filter_set_bandwidth(&heli_indi.p_inner_filter, 10.0);
+  c->invG[0][0] = 0; c->invG[0][1] = 0; c->invG[0][2] = 0; c->invG[0][3] = 0;
+  c->invG[1][0] = 0; c->invG[1][1] = 0; c->invG[1][2] = 0; c->invG[1][3] = 0;
+  c->invG[2][0] = 0; c->invG[2][1] = 0; c->invG[2][2] = 0; c->invG[2][3] = 0;
+  c->invG[3][0] = 0; c->invG[3][1] = 0; c->invG[3][2] = 0; c->invG[3][3] = 0;
 
-  notch_filter_set_sampling_frequency(&heli_indi.q_filter, PERIODIC_FREQUENCY);
-  notch_filter_set_bandwidth(&heli_indi.q_filter, 10.0);
-  notch_filter_set_sampling_frequency(&heli_indi.q_inner_filter, PERIODIC_FREQUENCY);
-  notch_filter_set_bandwidth(&heli_indi.q_inner_filter, 10.0);
+  /* Actuator filter initialization */
+  heli_rate_filter_initialize(&actuator_model[INDI_ROLL], 70, 9, 900);
+  heli_rate_filter_initialize(&actuator_model[INDI_PITCH], 70, 9, 900);
+  heli_rate_filter_initialize(&actuator_model[INDI_YAW], 37, 0, 9600);
+  heli_rate_filter_initialize(&actuator_model[INDI_THRUST], 70, 9, 450);
+  // Different dynamics for up and down
+  alpha_yaw_inc = actuator_model[INDI_YAW].alpha;
+  alpha_yaw_dec = (PERIODIC_FREQUENCY << 14)/(PERIODIC_FREQUENCY + 10); // OMEGA_DOWN = 10 rad/s, shift = 14
 
-  notch_filter_set_sampling_frequency(&heli_indi.r_filter, PERIODIC_FREQUENCY);
-  notch_filter_set_bandwidth(&heli_indi.r_filter, 10.0);
-  notch_filter_set_sampling_frequency(&heli_indi.r_inner_filter, PERIODIC_FREQUENCY);
-  notch_filter_set_bandwidth(&heli_indi.r_inner_filter, 10.0);
+  /* Notch filter initialization */
+  for (uint8_t i = 0; i < INDI_DOF; i++) {
+    // Sampe parameters in each degree of freedom */
+    notch_filter_set_sampling_frequency(&actuator_notchfilter[i], PERIODIC_FREQUENCY);
+    notch_filter_set_bandwidth(&actuator_notchfilter[i], 10.0);
+    notch_filter_set_sampling_frequency(&measurement_notchfilter[i], PERIODIC_FREQUENCY);
+    notch_filter_set_bandwidth(&measurement_notchfilter[i], 10.0);
+  }
+
+  /* Low pass filter initialization */
+  //----- not now ;-p
+
+  /* Setup filter functions: */
+  c->apply_actuator_models = &indi_apply_actuator_models;
+  c->apply_compensator_filters = &indi_apply_compensator_filters;
+  c->apply_measurement_filters[0] = &indi_apply_notch_filters;
+  c->apply_measurement_filters[1] = &indi_apply_lowpass_filters;
+
+  // AND ITS GONE (the old stuff)
 
 #if PERIODIC_TELEMETRY
   register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_STAB_INDI_DEBUG, send_indi_debug_values);
@@ -215,9 +291,55 @@ void stabilization_attitude_get_measured_commands(){
 #define OFFSET_AND_ROUND(_a, _b) (((_a)+(1<<((_b)-1)))>>(_b))
 #define OFFSET_AND_ROUND2(_a, _b) (((_a)+(1<<((_b)-1))-((_a)<0?1:0))>>(_b))
 
-void stabilization_attitude_run(bool_t enable_integrator)
+void stabilization_attitude_run(bool_t in_flight)
+{
+  (void) in_flight; // unused variable
+  struct IndiController_int *c = &new_heli_indi;
+
+  /* First, should run P(D) control to generate references */
+  c->reference[INDI_ROLL]   = 0;
+  c->reference[INDI_PITCH]  = 0;
+  c->reference[INDI_YAW]    = 0;
+  c->reference[INDI_THRUST] = 0;
+
+  /* Apply actuator dynamics model to previously commanded values
+   * input  = actuator command in previous cycle
+   * output = actual actuator position right now
+   */
+  c->apply_actuator_models(c->actuator_out, c->command_out[__k-1]);
+
+  /* Apply a set of filters, both to the actuator and the measurement */
+  c->apply_actuator_filters[0](c->filtered_actuator[0], c->actuator_out);
+  c->apply_measurement_filters[0](c->filtered_measurement[0], c->measurement);
+  for (uint8_t i = 1; i < INDI_NR_FILTERS; i++) {
+    c->apply_actuator_filters[i](c->filtered_actuator[i], c->filtered_actuator[i-1]);
+    c->apply_measurement_filters[i](c->filtered_measurement[i], c->filtered_measurement[i-1]);
+  }
+
+  /* Apply model dynamics matrix, is diagonal of ones when model dynamics are neglected. */
+  indi_matrix_multiply_vector(c->dynamics_compensated_measurement, c->D, c->filtered_measurement[INDI_NR_FILTERS-1]);
+
+  /* Subtract (filtered) measurement from reference to get the error */
+  indi_subtract_vect(c->error, c->reference, c->dynamics_compensated_measurement);
+
+  /* Multiply error with inverse of actuator effectiveness, to get delta u (required increment in input) */
+  indi_matrix_multiply_vector(c->du, c->invG, c->error);
+
+  /* Take the current (filtered) actuator position and add the incremental value. */
+  indi_add_vect(c->u_setpoint, c->filtered_actuator[INDI_NR_FILTERS-1], c->du);
+
+  /* Apply a compensator to the actuator setpoint to obtain actuator command */
+  c->apply_compensator_filters(c->command_out[__k], c->u_setpoint);
+
+
+  /* At the end, set 'previous' output to current output */
+  indi_copy_vect(c->command_out[__k-1], c->command_out[__k]);
+}
+
+void stabilization_attitude_run_old(bool_t enable_integrator)
 {
   (void) enable_integrator;
+  struct HeliIndiStab *c = &heli_indi;
 
   /* calculate acceleration in body frame */
   //ins_int.ltp_accel.x = accel_meas_ltp.x;

@@ -494,8 +494,6 @@ static void run_hover_loop(bool_t in_flight)
  * Acceleration setpoint can be set for example by the throttle stick.
  */
 void run_indi_loop() {
-
-
   struct NedCoor_i *ltp_accel_nedcoor = stateGetAccelNed_i();
   struct Int32Vect3 ltp_accel;
   struct Int32Vect3 body_accel; // Acceleration measurement in body frame

@@ -64,6 +64,37 @@ struct HeliIndiStab {
 };
 
 
+#define __k 1
+#define INDI_NR_FILTERS 2
+#define INDI_DOF 4
+#define INDI_ROLL 0
+#define INDI_PITCH 1
+#define INDI_YAW 2
+#define INDI_THRUST 3
+
+// All these values are in the struct to make it easier for logging */
+struct IndiController_int {
+  int32_t reference[INDI_DOF];                              ///< Range -MAX_PPRZ:MAX_PPRZ
+  int32_t dynamics_compensated_measurement[INDI_DOF];
+  int32_t error[INDI_DOF];                                  ///<
+  int32_t invG[INDI_DOF][INDI_DOF];                         ///< Inverse control effectiveness matrix
+  int32_t D[INDI_DOF][INDI_DOF];                            ///< Dynamics matrix, use identity matrix if not compensating for dynamics
+  int32_t du[INDI_DOF];
+  int32_t u_setpoint[INDI_DOF];                             ///< Actuator setpoint without compensator
+  void (*apply_compensator_filters)(int32_t _out[], int32_t _in[]);
+  int32_t command_out[2][INDI_DOF];                         ///< Command and command from previous measurement
+  void (*apply_actuator_models)(int32_t _out[], int32_t _in[]);
+  void (*apply_actuator_filters[INDI_NR_FILTERS])(int32_t _out[], int32_t _in[]);
+  int32_t actuator_out[INDI_DOF];
+  void (*apply_measurement_filters[INDI_NR_FILTERS])(int32_t _out[], int32_t _in[]);
+  int32_t filtered_actuator[INDI_NR_FILTERS][INDI_DOF];
+  int32_t measurement[INDI_DOF];
+  int32_t filtered_measurement[INDI_NR_FILTERS][INDI_DOF];
+};
+
+extern struct IndiController_int new_heli_indi;
+
+
 extern struct Int32Quat   stab_att_sp_quat;  ///< with #INT32_QUAT_FRAC
 extern struct Int32Eulers stab_att_sp_euler; ///< with #INT32_ANGLE_FRAC
 extern struct HeliIndiStab heli_indi;
