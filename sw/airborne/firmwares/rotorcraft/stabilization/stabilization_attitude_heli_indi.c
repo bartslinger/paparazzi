@@ -111,7 +111,7 @@ static inline void indi_matrix_multiply_vector(int32_t _out[], int32_t _matrix[]
 {
   for (uint8_t i = 0; i < INDI_DOF; i++) {
     _out[i] = 0;
-    for (uint8_t j = 0; i < INDI_DOF; j++) {
+    for (uint8_t j = 0; j < INDI_DOF; j++) {
       _out[i] += _matrix[i][j] + _vector[j];
     }
   }
@@ -179,10 +179,10 @@ void stabilization_attitude_init(void)
   /* Initialize model matrices */
   indi_set_identity(c->D);
 
-  c->invG[0][0] = 0; c->invG[0][1] = 0; c->invG[0][2] = 0; c->invG[0][3] = 0;
-  c->invG[1][0] = 0; c->invG[1][1] = 0; c->invG[1][2] = 0; c->invG[1][3] = 0;
-  c->invG[2][0] = 0; c->invG[2][1] = 0; c->invG[2][2] = 0; c->invG[2][3] = 0;
-  c->invG[3][0] = 0; c->invG[3][1] = 0; c->invG[3][2] = 0; c->invG[3][3] = 0;
+  c->invG[0][0] = +59558/2; c->invG[0][1] = 18324/8; c->invG[0][2] = 0; c->invG[0][3] = 0;
+  c->invG[1][0] = -29230/8; c->invG[1][1] = 34353/2; c->invG[1][2] = 0; c->invG[1][3] = 0;
+  c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] = 0; c->invG[2][3] = 0;
+  c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] = 0; c->invG[3][3] = 0;
 
   /* Actuator filter initialization */
   heli_rate_filter_initialize(&actuator_model[INDI_ROLL], 70, 9, 900);
@@ -210,6 +210,8 @@ void stabilization_attitude_init(void)
   c->apply_compensator_filters = &indi_apply_compensator_filters;
   c->apply_measurement_filters[0] = &indi_apply_notch_filters;
   c->apply_measurement_filters[1] = &indi_apply_lowpass_filters;
+  c->apply_actuator_filters[0] = &indi_apply_notch_filters;
+  c->apply_actuator_filters[1] = &indi_apply_lowpass_filters;
 
   // AND ITS GONE (the old stuff)
 
@@ -260,6 +262,7 @@ void stabilization_attitude_set_earth_cmd_i(struct Int32Vect2 *cmd, int32_t head
   quat_from_earth_cmd_i(&stab_att_sp_quat, cmd, heading);
 }
 
+#if 0
 void stabilization_attitude_get_measured_commands(){
   /* Convert analog signals to corresponding steady-state PWM values */
   int32_t servo_left  = adc_uart_values[0] * (float)0.54486 + 697;
@@ -287,20 +290,47 @@ void stabilization_attitude_get_measured_commands(){
   heli_indi.measured_cmd[1] = (- 51300 * servo_left - 51300 * servo_right) >> 16;                       // roll
   heli_indi.measured_cmd[2] = (- 21845 * servo_left + 21845 * servo_right - 21845 * servo_front) >> 16; // var_collective
 }
+#endif
 
 #define OFFSET_AND_ROUND(_a, _b) (((_a)+(1<<((_b)-1)))>>(_b))
 #define OFFSET_AND_ROUND2(_a, _b) (((_a)+(1<<((_b)-1))-((_a)<0?1:0))>>(_b))
 
 void stabilization_attitude_run(bool_t in_flight)
 {
+
+  /* Set stabilization commands to output values of the INDI controller */
+  stabilization_cmd[COMMAND_ROLL] = 9600;//*c->command_out[INDI_ROLL];
+  stabilization_cmd[COMMAND_PITCH] = 9600;//*c->command_out[INDI_PITCH];
+  stabilization_cmd[COMMAND_YAW] = 0;
+  stabilization_cmd[COMMAND_THRUST] = 0;
+
   (void) in_flight; // unused variable
   struct IndiController_int *c = &new_heli_indi;
 
-  /* First, should run P(D) control to generate references */
-  c->reference[INDI_ROLL]   = 0;
-  c->reference[INDI_PITCH]  = 0;
-  c->reference[INDI_YAW]    = 0;
-  c->reference[INDI_THRUST] = 0;
+  /* calculate acceleration in body frame */
+  /*
+  struct NedCoor_i *ltp_accel_nedcoor = stateGetAccelNed_i();
+  struct Int32Vect3 ltp_accel;
+  ltp_accel.x = ltp_accel_nedcoor->x;
+  ltp_accel.y = ltp_accel_nedcoor->y;
+  ltp_accel.z = ltp_accel_nedcoor->z;
+  int32_rmat_vmult(&global_body_accelerations, stateGetNedToBodyRMat_i(), &ltp_accel);
+   */
+
+  /* attitude error */
+  struct Int32Quat att_err;
+  struct Int32Quat *att_quat = stateGetNedToBodyQuat_i();
+  INT32_QUAT_INV_COMP(att_err, *att_quat, stab_att_sp_quat);
+  /* wrap it in the shortest direction */
+  int32_quat_wrap_shortest(&att_err);
+  int32_quat_normalize(&att_err);
+
+  /* rate error (setpoint for rates = 0) */
+  struct Int32Rates *body_rate = stateGetBodyRates_i();
+
+  /* Inform INDI about the measurement */
+  c->measurement[INDI_ROLL]  = body_rate->p;
+  c->measurement[INDI_PITCH] = body_rate->q;
 
   /* Apply actuator dynamics model to previously commanded values
    * input  = actuator command in previous cycle
@@ -317,7 +347,19 @@ void stabilization_attitude_run(bool_t in_flight)
   }
 
   /* Apply model dynamics matrix, is diagonal of ones when model dynamics are neglected. */
-  indi_matrix_multiply_vector(c->dynamics_compensated_measurement, c->D, c->filtered_measurement[INDI_NR_FILTERS-1]);
+  indi_matrix_multiply_vector(c->dynamics_compensated_measurement, c->D, c->error);// c->filtered_measurement[INDI_NR_FILTERS-1]);
+  return;
+
+  /* Use the filtered measurements for PID control as well */
+  int32_t roll_virtual_control  = (heli_indi_gains.roll_p * att_err.qx) / 16;
+  int32_t pitch_virtual_control = (heli_indi_gains.pitch_p * att_err.qy) / 16;
+  //int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * att_err.qz) - (heli_indi.rate_filt.r * heli_indi_gains.yaw_d);
+
+  /* Run P(D) control to generate references */
+  c->reference[INDI_ROLL]   = roll_virtual_control;
+  c->reference[INDI_PITCH]  = pitch_virtual_control;
+  c->reference[INDI_YAW]    = 0;//yaw_virtual_control;
+  c->reference[INDI_THRUST] = 0;
 
   /* Subtract (filtered) measurement from reference to get the error */
   indi_subtract_vect(c->error, c->reference, c->dynamics_compensated_measurement);
@@ -325,21 +367,37 @@ void stabilization_attitude_run(bool_t in_flight)
   /* Multiply error with inverse of actuator effectiveness, to get delta u (required increment in input) */
   indi_matrix_multiply_vector(c->du, c->invG, c->error);
 
+  /* Bitshift back */
+  c->du[INDI_ROLL]  >>= 16;
+  c->du[INDI_PITCH] >>= 16;
+
   /* Take the current (filtered) actuator position and add the incremental value. */
   indi_add_vect(c->u_setpoint, c->filtered_actuator[INDI_NR_FILTERS-1], c->du);
 
   /* Apply a compensator to the actuator setpoint to obtain actuator command */
   c->apply_compensator_filters(c->command_out[__k], c->u_setpoint);
 
-
   /* At the end, set 'previous' output to current output */
   indi_copy_vect(c->command_out[__k-1], c->command_out[__k]);
+
+  /* Set stabilization commands to output values of the INDI controller */
+  stabilization_cmd[COMMAND_ROLL] = 9600;//*c->command_out[INDI_ROLL];
+  stabilization_cmd[COMMAND_PITCH] = 9600;//*c->command_out[INDI_PITCH];
+  stabilization_cmd[COMMAND_YAW] = 0;
+  stabilization_cmd[COMMAND_THRUST] = 0;
+
+  /* bound the result */
+  BoundAbs(stabilization_cmd[COMMAND_ROLL], MAX_PPRZ);
+  BoundAbs(stabilization_cmd[COMMAND_PITCH], MAX_PPRZ);
+  BoundAbs(stabilization_cmd[COMMAND_YAW], MAX_PPRZ);
+  Bound(stabilization_cmd[COMMAND_THRUST], 0, MAX_PPRZ);
 }
 
-void stabilization_attitude_run_old(bool_t enable_integrator)
+#if 0
+static inline void stabilization_attitude_run_old(bool_t enable_integrator)
 {
   (void) enable_integrator;
-  struct HeliIndiStab *c = &heli_indi;
+  //struct HeliIndiStab *c = &heli_indi;
 
   /* calculate acceleration in body frame */
   //ins_int.ltp_accel.x = accel_meas_ltp.x;
@@ -392,8 +450,8 @@ void stabilization_attitude_run_old(bool_t enable_integrator)
   heli_indi.rate_previous.r = heli_indi.rate_filt.r;
 
   /* Linear controllers */
-  int32_t roll_pid = (GAIN_MULTIPLIER_P * heli_indi_gains.roll_p * att_err.qx) >> 15;
-  int32_t pitch_pid = (GAIN_MULTIPLIER_P * heli_indi_gains.pitch_p * att_err.qy) >> 15;
+  //int32_t roll_pid = (GAIN_MULTIPLIER_P * heli_indi_gains.roll_p * att_err.qx) >> 15;
+  //int32_t pitch_pid = (GAIN_MULTIPLIER_P * heli_indi_gains.pitch_p * att_err.qy) >> 15;
   int32_t roll_virtual_control  = (heli_indi_gains.roll_p * att_err.qx) / 16;
   int32_t pitch_virtual_control = (heli_indi_gains.pitch_p * att_err.qy) / 16;
   int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * att_err.qz) - (heli_indi.rate_filt.r * heli_indi_gains.yaw_d);
@@ -479,6 +537,7 @@ void stabilization_attitude_run_old(bool_t enable_integrator)
   BoundAbs(stabilization_cmd[COMMAND_PITCH], MAX_PPRZ);
   BoundAbs(stabilization_cmd[COMMAND_YAW], MAX_PPRZ);
 }
+#endif
 
 void stabilization_attitude_read_rc(bool_t in_flight, bool_t in_carefree, bool_t coordinated_turn)
 {
