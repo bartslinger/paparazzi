@@ -210,14 +210,6 @@ void guidance_v_init(void)
   gv_adapt_init();
 
   /* Init INDI STUFF */
-  notch_filter_set_sampling_frequency(&accel_z_notchfilter, PERIODIC_FREQUENCY);
-  notch_filter_set_bandwidth(&accel_z_notchfilter, 10.0);
-  heli_rate_filter_initialize(&thrust_model, 70, 9, 450);
-  notch_filter_set_sampling_frequency(&thrust_actuator_inner_notchfilter, PERIODIC_FREQUENCY);
-  notch_filter_set_bandwidth(&thrust_actuator_inner_notchfilter, 10.0);
-
-  inner_notch_output = 0;
-  inner_iir_output = 0;
 
 #if GUIDANCE_V_MODE_MODULE_SETTING == GUIDANCE_V_MODE_MODULE
   guidance_v_module_init();
@@ -317,15 +309,10 @@ void guidance_v_run(bool_t in_flight)
 
   switch (guidance_v_mode) {
 
+    case GUIDANCE_V_MODE_HELI_INDI:
     case GUIDANCE_V_MODE_RC_DIRECT:
       guidance_v_z_sp = stateGetPositionNed_i()->z; // for display only
-      run_indi_loop();
       stabilization_cmd[COMMAND_THRUST] = guidance_v_rc_delta_t;
-      break;
-
-    case GUIDANCE_V_MODE_HELI_INDI:
-      run_indi_loop();
-      stabilization_cmd[COMMAND_THRUST] = guidance_v_delta_t;
       break;
 
     case GUIDANCE_V_MODE_RC_CLIMB:
@@ -493,7 +480,7 @@ static void run_hover_loop(bool_t in_flight)
  * Calculates required thrust to follow acceleration setpoint
  * Acceleration setpoint can be set for example by the throttle stick.
  */
-void run_indi_loop() {
+static inline void run_indi_loop() {
   struct NedCoor_i *ltp_accel_nedcoor = stateGetAccelNed_i();
   struct Int32Vect3 ltp_accel;
   struct Int32Vect3 body_accel; // Acceleration measurement in body frame
