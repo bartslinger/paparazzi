@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (C) 2008-2009 Antoine Drouin <poinix@gmail.com>
  *
  * This file is part of paparazzi.
@@ -139,10 +139,21 @@ int32_t alpha_yaw_inc;
 int32_t alpha_yaw_dec;
 static inline void indi_apply_actuator_models(int32_t _out[], int32_t _in[])
 {
-  _out[INDI_ROLL]   = _in[INDI_ROLL];
-  _out[INDI_PITCH]  = _in[INDI_PITCH];
-  _out[INDI_YAW]    = _in[INDI_YAW];
-  _out[INDI_THRUST] = _in[INDI_THRUST];
+  _out[INDI_ROLL] = heli_rate_filter_propagate(&actuator_model[INDI_ROLL], _in[INDI_ROLL]);
+  _out[INDI_PITCH] = heli_rate_filter_propagate(&actuator_model[INDI_PITCH], _in[INDI_PITCH]);
+
+  /* Depending on yaw direction, change filter coefficient */
+  int32_t prev = actuator_model[INDI_YAW].buffer[actuator_model[INDI_YAW].idx];
+  if(_in[INDI_YAW] - prev > 0) {
+    // Tail spinning up
+    actuator_model[INDI_YAW].alpha = heli_indi.alpha_tail_inc;
+  } else {
+    // Tail spinning down
+    actuator_model[INDI_YAW].alpha = heli_indi.alpha_tail_dec;
+  }
+  _out[INDI_YAW] = heli_rate_filter_propagate(&actuator_model[INDI_YAW], _in[INDI_YAW]);
+
+  _out[INDI_THRUST] = heli_rate_filter_propagate(&actuator_model[INDI_THRUST], _in[INDI_THRUST]);
 }
 
 static inline void indi_apply_compensator_filters(int32_t _out[], int32_t _in[])
@@ -155,20 +166,50 @@ static inline void indi_apply_compensator_filters(int32_t _out[], int32_t _in[])
 
 struct SecondOrderNotchFilter actuator_notchfilter[INDI_DOF];
 struct SecondOrderNotchFilter measurement_notchfilter[INDI_DOF];
-static inline void indi_apply_notch_filters(int32_t _out[], int32_t _in[])
+static inline void indi_apply_actuator_notch_filters(int32_t _out[], int32_t _in[])
 {
-  _out[INDI_ROLL]   = _in[INDI_ROLL];
-  _out[INDI_PITCH]  = _in[INDI_PITCH];
-  _out[INDI_YAW]    = _in[INDI_YAW];
-  _out[INDI_THRUST] = _in[INDI_THRUST];
+  if (rpm_sensor.motor_frequency > 25.0f) {
+    notch_filter_update(&actuator_notchfilter[INDI_ROLL], &_in[INDI_ROLL], &_out[INDI_ROLL]);
+    notch_filter_update(&actuator_notchfilter[INDI_PITCH], &_in[INDI_PITCH], &_out[INDI_PITCH]);
+    notch_filter_update(&actuator_notchfilter[INDI_YAW], &_in[INDI_YAW], &_out[INDI_YAW]);
+    notch_filter_update(&actuator_notchfilter[INDI_THRUST], &_in[INDI_THRUST], &_out[INDI_THRUST]);
+  } else {
+    _out[INDI_ROLL]   = _in[INDI_ROLL];
+    _out[INDI_PITCH]  = _in[INDI_PITCH];
+    _out[INDI_YAW]    = _in[INDI_YAW];
+    _out[INDI_THRUST] = _in[INDI_THRUST];
+  }
 }
 
-static inline void indi_apply_lowpass_filters(int32_t _out[], int32_t _in[])
+static inline void indi_apply_measurement_notch_filters(int32_t _out[], int32_t _in[])
 {
-  _out[INDI_ROLL]   = _in[INDI_ROLL];
-  _out[INDI_PITCH]  = _in[INDI_PITCH];
-  _out[INDI_YAW]    = _in[INDI_YAW];
-  _out[INDI_THRUST] = _in[INDI_THRUST];
+  if (rpm_sensor.motor_frequency > 25.0f) {
+    notch_filter_update(&measurement_notchfilter[INDI_ROLL], &_in[INDI_ROLL], &_out[INDI_ROLL]);
+    notch_filter_update(&measurement_notchfilter[INDI_PITCH], &_in[INDI_PITCH], &_out[INDI_PITCH]);
+    notch_filter_update(&measurement_notchfilter[INDI_YAW], &_in[INDI_YAW], &_out[INDI_YAW]);
+    notch_filter_update(&measurement_notchfilter[INDI_THRUST], &_in[INDI_THRUST], &_out[INDI_THRUST]);
+  } else {
+    _out[INDI_ROLL]   = _in[INDI_ROLL];
+    _out[INDI_PITCH]  = _in[INDI_PITCH];
+    _out[INDI_YAW]    = _in[INDI_YAW];
+    _out[INDI_THRUST] = _in[INDI_THRUST];
+  }
+}
+
+static inline void indi_apply_actuator_lowpass_filters(int32_t _out[], int32_t _in[])
+{
+  _out[INDI_ROLL]   = ((_out[INDI_ROLL] * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + _in[INDI_ROLL]) / HELI_INDI_ROLLRATE_FILTSIZE;
+  _out[INDI_PITCH]   = ((_out[INDI_PITCH] * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + _in[INDI_PITCH]) / HELI_INDI_ROLLRATE_FILTSIZE;
+  _out[INDI_YAW]   = ((_out[INDI_YAW] * (HELI_INDI_YAWRATE_FILTSIZE-1)) + _in[INDI_YAW]) / HELI_INDI_YAWRATE_FILTSIZE;
+  _out[INDI_THRUST]   = ((_out[INDI_THRUST] * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + _in[INDI_THRUST]) / HELI_INDI_ROLLRATE_FILTSIZE;
+}
+
+static inline void indi_apply_measurement_lowpass_filters(int32_t _out[], int32_t _in[])
+{
+  _out[INDI_ROLL]   = ((_out[INDI_ROLL] * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + _in[INDI_ROLL]) / HELI_INDI_ROLLRATE_FILTSIZE;
+  _out[INDI_PITCH]   = ((_out[INDI_PITCH] * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + _in[INDI_PITCH]) / HELI_INDI_ROLLRATE_FILTSIZE;
+  _out[INDI_YAW]   = ((_out[INDI_YAW] * (HELI_INDI_YAWRATE_FILTSIZE-1)) + _in[INDI_YAW]) / HELI_INDI_YAWRATE_FILTSIZE;
+  _out[INDI_THRUST]   = ((_out[INDI_THRUST] * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + _in[INDI_THRUST]) / HELI_INDI_ROLLRATE_FILTSIZE;
 }
 
 void stabilization_attitude_init(void)
@@ -179,10 +220,10 @@ void stabilization_attitude_init(void)
   /* Initialize model matrices */
   indi_set_identity(c->D);
 
-  c->invG[0][0] = +59558/2; c->invG[0][1] =       0; c->invG[0][2] = 0; c->invG[0][3] = 0;
-  c->invG[1][0] =        0; c->invG[1][1] = 34353/2; c->invG[1][2] = 0; c->invG[1][3] = 0;
-  c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] = 0; c->invG[2][3] = 0;
-  c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] = 0; c->invG[3][3] = 0;
+  c->invG[0][0] = +59558/2; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =      0;
+  c->invG[1][0] =        0; c->invG[1][1] = 34353/2; c->invG[1][2] =    0; c->invG[1][3] =      0;
+  c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] = 2114; c->invG[2][3] = 145870;
+  c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] =      0;
 
   /* Actuator filter initialization */
   heli_rate_filter_initialize(&actuator_model[INDI_ROLL], 70, 9, 900);
@@ -208,10 +249,10 @@ void stabilization_attitude_init(void)
   /* Assign filter functions: */
   c->apply_actuator_models = &indi_apply_actuator_models;
   c->apply_compensator_filters = &indi_apply_compensator_filters;
-  c->apply_measurement_filters[0] = &indi_apply_notch_filters;
-  c->apply_measurement_filters[1] = &indi_apply_lowpass_filters;
-  c->apply_actuator_filters[0] = &indi_apply_notch_filters;
-  c->apply_actuator_filters[1] = &indi_apply_lowpass_filters;
+  c->apply_measurement_filters[0] = &indi_apply_measurement_notch_filters;
+  c->apply_measurement_filters[1] = &indi_apply_measurement_lowpass_filters;
+  c->apply_actuator_filters[0] = &indi_apply_actuator_notch_filters;
+  c->apply_actuator_filters[1] = &indi_apply_actuator_lowpass_filters;
 
   // AND ITS GONE (the old stuff)
 
@@ -321,9 +362,13 @@ void stabilization_attitude_run(bool_t in_flight)
   /* rate error (setpoint for rates = 0) */
   struct Int32Rates *body_rate = stateGetBodyRates_i();
 
+  static int32_t previous_yawrate = 0;
+
   /* Inform INDI about the measurement */
   c->measurement[INDI_ROLL]  = body_rate->p;
   c->measurement[INDI_PITCH] = body_rate->q;
+  c->measurement[INDI_YAW]   = 512*(body_rate->r - previous_yawrate);
+  previous_yawrate = body_rate->r;
 
   /* Apply actuator dynamics model to previously commanded values
    * input  = actuator command in previous cycle
@@ -340,18 +385,17 @@ void stabilization_attitude_run(bool_t in_flight)
   }
 
   /* Apply model dynamics matrix, is diagonal of ones when model dynamics are neglected. */
-  //indi_matrix_multiply_vector(c->dynamics_compensated_measurement, c->D, c->filtered_measurement[INDI_NR_FILTERS-1]);
-  //indi_copy_vect(c->dynamics_compensated_measurement, c->filtered_actuator[INDI_NR_FILTERS-1]);
+  indi_matrix_multiply_vector(c->dynamics_compensated_measurement, c->D, c->filtered_measurement[INDI_NR_FILTERS-1]);
 
   /* Use the filtered measurements for PID control as well */
-  int32_t roll_virtual_control  = (heli_indi_gains.roll_p * att_err.qx) * 512 / 16;
-  int32_t pitch_virtual_control = (heli_indi_gains.pitch_p * att_err.qy) * 512 / 16;
-  //int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * att_err.qz) - (heli_indi.rate_filt.r * heli_indi_gains.yaw_d);
+  int32_t roll_virtual_control  = (heli_indi_gains.roll_p * att_err.qx)  / 16;
+  int32_t pitch_virtual_control = (heli_indi_gains.pitch_p * att_err.qy) / 16;
+  int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * att_err.qz) - (body_rate->r * heli_indi_gains.yaw_d);
 
   /* Run P(D) control to generate references */
   c->reference[INDI_ROLL]   = roll_virtual_control;
   c->reference[INDI_PITCH]  = pitch_virtual_control;
-  c->reference[INDI_YAW]    = 0;//yaw_virtual_control;
+  c->reference[INDI_YAW]    = yaw_virtual_control;
   c->reference[INDI_THRUST] = 0;
 
   /* Subtract (filtered) measurement from reference to get the error */
@@ -363,7 +407,7 @@ void stabilization_attitude_run(bool_t in_flight)
   /* Bitshift back */
   c->du[INDI_ROLL]  >>= 16;
   c->du[INDI_PITCH] >>= 16;
-  c->du[INDI_PITCH] = 0;
+  c->du[INDI_YAW]   >>= 16;
 
   /* Take the current (filtered) actuator position and add the incremental value. */
   indi_add_vect(c->u_setpoint, c->filtered_actuator[INDI_NR_FILTERS-1], c->du);
@@ -380,12 +424,11 @@ void stabilization_attitude_run(bool_t in_flight)
   /* At the end, set 'previous' output to current output */
   indi_copy_vect(c->command_out[__k-1], c->command_out[__k]);
 
-
   /* Set stabilization commands to output values of the INDI controller */
   stabilization_cmd[COMMAND_ROLL] = c->command_out[__k][INDI_ROLL];
-  stabilization_cmd[COMMAND_PITCH] = 0;//c->command_out[__k][INDI_PITCH];
-  stabilization_cmd[COMMAND_YAW] = 0;
-  stabilization_cmd[COMMAND_THRUST] = 0;
+  stabilization_cmd[COMMAND_PITCH] = c->command_out[__k][INDI_PITCH];
+  stabilization_cmd[COMMAND_YAW] = c->command_out[__k][INDI_YAW];
+  //stabilization_cmd[COMMAND_THRUST] = 0;
 }
 
 #if 0
