@@ -75,21 +75,16 @@ struct Int32Vect3 global_body_accelerations;
 
 static void send_indi_debug_values(struct transport_tx *trans, struct link_device *dev)
 {
-  struct Int32Rates *body_rate = stateGetBodyRates_i();
-  int16_t meas_cmd[3];
-  meas_cmd[0] = heli_indi.measured_cmd[0];
-  meas_cmd[1] = heli_indi.measured_cmd[1];
-  meas_cmd[2] = heli_indi.measured_cmd[2];
   pprz_msg_send_STAB_INDI_DEBUG(trans, dev, AC_ID,
-                               &meas_cmd[0],
-                               &meas_cmd[1],
-                               &meas_cmd[2],
-                               &stabilization_cmd[COMMAND_YAW],
-                               &thrust_model_output_transferred,
+                               &new_heli_indi.reference[INDI_YAW],
+                               &new_heli_indi.measurement[INDI_YAW],
+                               &new_heli_indi.filtered_measurement[0][INDI_YAW],
+                               &new_heli_indi.filtered_measurement[1][INDI_YAW],
+                               &new_heli_indi.dynamics_compensated_measurement[INDI_YAW],
                                &stabilization_cmd[COMMAND_THRUST],
-                               &body_rate->p,
-                               &body_rate->q,
-                               &body_rate->r);
+                               &new_heli_indi.reference[INDI_YAW],
+                               &new_heli_indi.dynamics_compensated_measurement[INDI_YAW],
+                               &stabilization_cmd[COMMAND_THRUST]);
 }
 #endif
 
@@ -169,6 +164,10 @@ struct SecondOrderNotchFilter measurement_notchfilter[INDI_DOF];
 static inline void indi_apply_actuator_notch_filters(int32_t _out[], int32_t _in[])
 {
   if (rpm_sensor.motor_frequency > 25.0f) {
+    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_ROLL], rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_PITCH], rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_YAW], rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_THRUST], rpm_sensor.motor_frequency);
     notch_filter_update(&actuator_notchfilter[INDI_ROLL], &_in[INDI_ROLL], &_out[INDI_ROLL]);
     notch_filter_update(&actuator_notchfilter[INDI_PITCH], &_in[INDI_PITCH], &_out[INDI_PITCH]);
     notch_filter_update(&actuator_notchfilter[INDI_YAW], &_in[INDI_YAW], &_out[INDI_YAW]);
@@ -184,6 +183,10 @@ static inline void indi_apply_actuator_notch_filters(int32_t _out[], int32_t _in
 static inline void indi_apply_measurement_notch_filters(int32_t _out[], int32_t _in[])
 {
   if (rpm_sensor.motor_frequency > 25.0f) {
+    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_ROLL], rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_PITCH], rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_YAW], rpm_sensor.motor_frequency);
+    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_THRUST], rpm_sensor.motor_frequency);
     notch_filter_update(&measurement_notchfilter[INDI_ROLL], &_in[INDI_ROLL], &_out[INDI_ROLL]);
     notch_filter_update(&measurement_notchfilter[INDI_PITCH], &_in[INDI_PITCH], &_out[INDI_PITCH]);
     notch_filter_update(&measurement_notchfilter[INDI_YAW], &_in[INDI_YAW], &_out[INDI_YAW]);
@@ -201,7 +204,7 @@ static inline void indi_apply_actuator_lowpass_filters(int32_t _out[], int32_t _
   _out[INDI_ROLL]   = ((_out[INDI_ROLL] * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + _in[INDI_ROLL]) / HELI_INDI_ROLLRATE_FILTSIZE;
   _out[INDI_PITCH]   = ((_out[INDI_PITCH] * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + _in[INDI_PITCH]) / HELI_INDI_ROLLRATE_FILTSIZE;
   _out[INDI_YAW]   = ((_out[INDI_YAW] * (HELI_INDI_YAWRATE_FILTSIZE-1)) + _in[INDI_YAW]) / HELI_INDI_YAWRATE_FILTSIZE;
-  _out[INDI_THRUST]   = ((_out[INDI_THRUST] * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + _in[INDI_THRUST]) / HELI_INDI_ROLLRATE_FILTSIZE;
+  _out[INDI_THRUST]   = ((_out[INDI_THRUST] * (HELI_INDI_YAWRATE_FILTSIZE-1)) + _in[INDI_THRUST]) / HELI_INDI_YAWRATE_FILTSIZE;
 }
 
 static inline void indi_apply_measurement_lowpass_filters(int32_t _out[], int32_t _in[])
@@ -209,7 +212,7 @@ static inline void indi_apply_measurement_lowpass_filters(int32_t _out[], int32_
   _out[INDI_ROLL]   = ((_out[INDI_ROLL] * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + _in[INDI_ROLL]) / HELI_INDI_ROLLRATE_FILTSIZE;
   _out[INDI_PITCH]   = ((_out[INDI_PITCH] * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + _in[INDI_PITCH]) / HELI_INDI_ROLLRATE_FILTSIZE;
   _out[INDI_YAW]   = ((_out[INDI_YAW] * (HELI_INDI_YAWRATE_FILTSIZE-1)) + _in[INDI_YAW]) / HELI_INDI_YAWRATE_FILTSIZE;
-  _out[INDI_THRUST]   = ((_out[INDI_THRUST] * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + _in[INDI_THRUST]) / HELI_INDI_ROLLRATE_FILTSIZE;
+  _out[INDI_THRUST]   = ((_out[INDI_THRUST] * (HELI_INDI_YAWRATE_FILTSIZE-1)) + _in[INDI_THRUST]) / HELI_INDI_YAWRATE_FILTSIZE;
 }
 
 void stabilization_attitude_init(void)
@@ -222,7 +225,7 @@ void stabilization_attitude_init(void)
 
   c->invG[0][0] = +59558/2; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =      0;
   c->invG[1][0] =        0; c->invG[1][1] = 34353/2; c->invG[1][2] =    0; c->invG[1][3] =      0;
-  c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] = 2114; c->invG[2][3] = 145870;
+  c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] = 2114; c->invG[2][3] = 0*145870;
   c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] =      0;
 
   /* Actuator filter initialization */
@@ -362,13 +365,13 @@ void stabilization_attitude_run(bool_t in_flight)
   /* rate error (setpoint for rates = 0) */
   struct Int32Rates *body_rate = stateGetBodyRates_i();
 
-  static int32_t previous_yawrate = 0;
-
   /* Inform INDI about the measurement */
   c->measurement[INDI_ROLL]  = body_rate->p;
   c->measurement[INDI_PITCH] = body_rate->q;
-  c->measurement[INDI_YAW]   = 512*(body_rate->r - previous_yawrate);
-  previous_yawrate = body_rate->r;
+  c->measurement[INDI_YAW]   = body_rate->r;
+  //c->measurement[INDI_YAW]   = 512*(body_rate->r - previous_yawrate);
+  //previous_yawrate = body_rate->r;
+
 
   /* Apply actuator dynamics model to previously commanded values
    * input  = actuator command in previous cycle
@@ -384,13 +387,24 @@ void stabilization_attitude_run(bool_t in_flight)
     c->apply_measurement_filters[i](c->filtered_measurement[i], c->filtered_measurement[i-1]);
   }
 
+  /* Transform yaw into a delta yaw while keeping filtered yawrate (kinda hacky)*/
+  int32_t filtered_measurement_vector[INDI_DOF];
+  indi_copy_vect(filtered_measurement_vector, c->filtered_measurement[INDI_NR_FILTERS-1]);
+  static int32_t previous_filt_yawrate = 0;
+  filtered_measurement_vector[INDI_YAW] = 512*(c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW] - previous_filt_yawrate);
+  previous_filt_yawrate = c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW];
+
+  static int32_t previous_thrust = 0;
+  int32_t delta_thrust_meas = c->filtered_actuator[1][INDI_THRUST] - previous_thrust;
+  previous_thrust = c->filtered_actuator[1][INDI_THRUST];
+
   /* Apply model dynamics matrix, is diagonal of ones when model dynamics are neglected. */
-  indi_matrix_multiply_vector(c->dynamics_compensated_measurement, c->D, c->filtered_measurement[INDI_NR_FILTERS-1]);
+  indi_matrix_multiply_vector(c->dynamics_compensated_measurement, c->D, filtered_measurement_vector);
 
   /* Use the filtered measurements for PID control as well */
   int32_t roll_virtual_control  = (heli_indi_gains.roll_p * att_err.qx)  / 16;
   int32_t pitch_virtual_control = (heli_indi_gains.pitch_p * att_err.qy) / 16;
-  int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * att_err.qz) - (body_rate->r * heli_indi_gains.yaw_d);
+  int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * att_err.qz) - (c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW] * heli_indi_gains.yaw_d);
 
   /* Run P(D) control to generate references */
   c->reference[INDI_ROLL]   = roll_virtual_control;
@@ -401,6 +415,8 @@ void stabilization_attitude_run(bool_t in_flight)
   /* Subtract (filtered) measurement from reference to get the error */
   indi_subtract_vect(c->error, c->reference, c->dynamics_compensated_measurement);
 
+  c->error[INDI_THRUST] = delta_thrust_meas;
+
   /* Multiply error with inverse of actuator effectiveness, to get delta u (required increment in input) */
   indi_matrix_multiply_vector(c->du, c->invG, c->error);
 
@@ -408,9 +424,11 @@ void stabilization_attitude_run(bool_t in_flight)
   c->du[INDI_ROLL]  >>= 16;
   c->du[INDI_PITCH] >>= 16;
   c->du[INDI_YAW]   >>= 16;
+  c->du[INDI_YAW] = (c->error[INDI_YAW] * 512/512 + 69*delta_thrust_meas) / 31;
 
   /* Take the current (filtered) actuator position and add the incremental value. */
   indi_add_vect(c->u_setpoint, c->filtered_actuator[INDI_NR_FILTERS-1], c->du);
+  c->u_setpoint[INDI_THRUST] = stabilization_cmd[COMMAND_THRUST];
 
   /* bound the result */
   BoundAbs(c->u_setpoint[INDI_ROLL], MAX_PPRZ);

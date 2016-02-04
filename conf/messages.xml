@@ -2166,15 +2166,15 @@
   </message>
 
   <message name="STAB_INDI_DEBUG" id="252">
-    <field name="measured_cmd_pitch" type="int16"/>
-    <field name="measured_cmd_roll" type="int16"/>
-    <field name="measured_cmd_collective" type="int16"/>
-    <field name="stab_cmd_yaw" type="int32"/>
-    <field name="stab_cmd_pitch" type="int32"/>
-    <field name="stab_cmd_thrust" type="int32"/>
-    <field name="roll_p" type="int32"/>
-    <field name="roll_q" type="int32"/>
-    <field name="roll_r" type="int32"/>
+    <field name="i1" type="int32"/>
+    <field name="i2" type="int32"/>
+    <field name="i3" type="int32"/>
+    <field name="i4" type="int32"/>
+    <field name="i5" type="int32"/>
+    <field name="i6" type="int32"/>
+    <field name="i7" type="int32"/>
+    <field name="i8" type="int32"/>
+    <field name="i9" type="int32"/>
   </message>
 
   <message name="I2C_ERRORS" id="253">
