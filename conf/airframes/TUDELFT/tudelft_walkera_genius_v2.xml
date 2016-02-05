@@ -109,10 +109,10 @@
   </section>
 
   <section name="STABILIZATION_ATTITUDE_HELI_INDI" prefix="STABILIZATION_ATTITUDE_HELI_INDI_">
-    <define name="ROLL_P" value="20" /><!-- 3052 -->
-    <define name="PITCH_P" value="20" /><!-- 3052 -->
-    <define name="YAW_P" value="10" />
-    <define name="YAW_D" value="20" />
+    <define name="ROLL_P" value="5" /><!--20 3052 -->
+    <define name="PITCH_P" value="5" /><!--20 3052 -->
+    <define name="YAW_P" value="30" />
+    <define name="YAW_D" value="10" />
   </section>
 
   <section name="STABILIZATION_ATTITUDE" prefix="STABILIZATION_ATTITUDE_">
@@ -204,6 +204,7 @@
 
   <firmware name="rotorcraft">
     <target name="ap" board="lisa_s_1.0">
+      <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="0"/>
       <!--subsystem name="radio_control" type="superbitrf_rc"-->
         <!--<define name="RADIO_TRANSMITTER_ID" value="2008496626"/>-->   <!-- TUDelft Dx6i: TX 4 -->
         <!--<define name="RADIO_TRANSMITTER_CHAN" value="6"/>-->

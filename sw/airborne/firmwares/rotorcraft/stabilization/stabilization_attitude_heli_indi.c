@@ -222,10 +222,12 @@ void stabilization_attitude_init(void)
 
   /* Initialize model matrices */
   indi_set_identity(c->D);
-
-  c->invG[0][0] = +59558/2; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =      0;
-  c->invG[1][0] =        0; c->invG[1][1] = 34353/2; c->invG[1][2] =    0; c->invG[1][3] =      0;
-  c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] = 2114; c->invG[2][3] = 0*145870;
+  // matlab new method
+  //  47948       14952
+  // -31016       27170
+  c->invG[0][0] =   +47948; c->invG[0][1] =  +14952/2; c->invG[0][2] =    0; c->invG[0][3] =      0;
+  c->invG[1][0] =   -31016/2; c->invG[1][1] =  +27170; c->invG[1][2] =    0; c->invG[1][3] =      0;
+  c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] = 2114; c->invG[2][3] = 145870;
   c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] =      0;
 
   /* Actuator filter initialization */
@@ -394,9 +396,10 @@ void stabilization_attitude_run(bool_t in_flight)
   filtered_measurement_vector[INDI_YAW] = 512*(c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW] - previous_filt_yawrate);
   previous_filt_yawrate = c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW];
 
+
   static int32_t previous_thrust = 0;
-  int32_t delta_thrust_meas = c->filtered_actuator[1][INDI_THRUST] - previous_thrust;
-  previous_thrust = c->filtered_actuator[1][INDI_THRUST];
+  int32_t delta_thrust_meas = c->filtered_actuator[0][INDI_THRUST] - previous_thrust;
+  previous_thrust = c->filtered_actuator[0][INDI_THRUST];
 
   /* Apply model dynamics matrix, is diagonal of ones when model dynamics are neglected. */
   indi_matrix_multiply_vector(c->dynamics_compensated_measurement, c->D, filtered_measurement_vector);
@@ -424,7 +427,7 @@ void stabilization_attitude_run(bool_t in_flight)
   c->du[INDI_ROLL]  >>= 16;
   c->du[INDI_PITCH] >>= 16;
   c->du[INDI_YAW]   >>= 16;
-  c->du[INDI_YAW] = (c->error[INDI_YAW] * 512/512 + 69*delta_thrust_meas) / 31;
+  //c->du[INDI_YAW] = (c->error[INDI_YAW] * 512/512 + 69*delta_thrust_meas) / 31;
 
   /* Take the current (filtered) actuator position and add the incremental value. */
   indi_add_vect(c->u_setpoint, c->filtered_actuator[INDI_NR_FILTERS-1], c->du);
