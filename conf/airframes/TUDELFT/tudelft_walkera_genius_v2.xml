@@ -109,8 +109,8 @@
   </section>
 
   <section name="STABILIZATION_ATTITUDE_HELI_INDI" prefix="STABILIZATION_ATTITUDE_HELI_INDI_">
-    <define name="ROLL_P" value="5" /><!--20 3052 -->
-    <define name="PITCH_P" value="5" /><!--20 3052 -->
+    <define name="ROLL_P" value="20" /><!--20 3052 -->
+    <define name="PITCH_P" value="20" /><!--20 3052 -->
     <define name="YAW_P" value="30" />
     <define name="YAW_D" value="10" />
   </section>

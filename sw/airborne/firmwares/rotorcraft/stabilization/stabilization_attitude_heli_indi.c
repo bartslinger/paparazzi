@@ -31,6 +31,7 @@
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_quat_transformations.h"
 #include "modules/adc_expansion_uart/adc_expansion_uart.h"
 #include "subsystems/sensors/rpm_sensor.h"
+#include "filters/low_pass_filter.h"
 
 #include "std.h"
 #include "paparazzi.h"
@@ -215,6 +216,23 @@ static inline void indi_apply_measurement_lowpass_filters(int32_t _out[], int32_
   _out[INDI_THRUST]   = ((_out[INDI_THRUST] * (HELI_INDI_YAWRATE_FILTSIZE-1)) + _in[INDI_THRUST]) / HELI_INDI_YAWRATE_FILTSIZE;
 }
 
+Butterworth2LowPass_int actuator_lowpass_filters[INDI_DOF];
+Butterworth2LowPass_int measurement_lowpass_filters[INDI_DOF];
+
+static inline void indi_apply_actuator_butterworth_filters(int32_t _out[], int32_t _in[])
+{
+  for (uint8_t i = 0; i < INDI_DOF; i++) {
+    _out[i] = update_butterworth_2_low_pass_int(&actuator_lowpass_filters[i], _in[i]);
+  }
+}
+
+static inline void indi_apply_measurement_butterworth_filters(int32_t _out[], int32_t _in[])
+{
+  for (uint8_t i = 0; i < INDI_DOF; i++) {
+    _out[i] = update_butterworth_2_low_pass_int(&measurement_lowpass_filters[i], _in[i]);
+  }
+}
+
 void stabilization_attitude_init(void)
 {
   /* Initialization code INDI */
@@ -225,8 +243,8 @@ void stabilization_attitude_init(void)
   // matlab new method
   //  47948       14952
   // -31016       27170
-  c->invG[0][0] =   +47948; c->invG[0][1] =  +14952/2; c->invG[0][2] =    0; c->invG[0][3] =      0;
-  c->invG[1][0] =   -31016/2; c->invG[1][1] =  +27170; c->invG[1][2] =    0; c->invG[1][3] =      0;
+  c->invG[0][0] =   +53609*2/5; c->invG[0][1] =  +14952*0; c->invG[0][2] =    0; c->invG[0][3] =      0;
+  c->invG[1][0] =   -31016*0; c->invG[1][1] =  +48618*2/5; c->invG[1][2] =    0; c->invG[1][3] =      0;
   c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] = 2114; c->invG[2][3] = 145870;
   c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] =      0;
 
@@ -249,15 +267,19 @@ void stabilization_attitude_init(void)
   }
 
   /* Low pass filter initialization */
-  //----- not now ;-p
+  for (uint8_t i = 0; i < INDI_DOF; i++) {
+    // Cutoff frequencies are in Hz!!!
+    init_butterworth_2_low_pass_int(&actuator_lowpass_filters[i], 40, 1.0/PERIODIC_FREQUENCY, 0);
+    init_butterworth_2_low_pass_int(&measurement_lowpass_filters[i], 40, 1.0/PERIODIC_FREQUENCY, 0);
+  }
 
   /* Assign filter functions: */
   c->apply_actuator_models = &indi_apply_actuator_models;
   c->apply_compensator_filters = &indi_apply_compensator_filters;
   c->apply_measurement_filters[0] = &indi_apply_measurement_notch_filters;
-  c->apply_measurement_filters[1] = &indi_apply_measurement_lowpass_filters;
+  c->apply_measurement_filters[1] = &indi_apply_measurement_butterworth_filters;
   c->apply_actuator_filters[0] = &indi_apply_actuator_notch_filters;
-  c->apply_actuator_filters[1] = &indi_apply_actuator_lowpass_filters;
+  c->apply_actuator_filters[1] = &indi_apply_actuator_butterworth_filters;
 
   // AND ITS GONE (the old stuff)
 

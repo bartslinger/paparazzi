@@ -66,7 +66,7 @@ server.opt :  $(SERVERCMX) $(LIBPPRZCMXA)
 
 link : link.cmo $(LIBMULTIMONCMA) $(LIBPPRZCMA)
 	@echo OL $@
-	$(Q)$(OCAMLC) $(INCLUDES) -o $@ $(LINKPKG) $(LIBMULTIMONDLL) $<
+	$(Q)$(OCAMLC) $(INCLUDES) -g -o $@ $(LINKPKG) $(LIBMULTIMONDLL) $<
 
 
 ivy_tcp_aircraft : ivy_tcp_aircraft.cmo  $(LIBMULTIMONCMA) $(LIBPPRZCMA)
