@@ -47,6 +47,11 @@
 
 float care_free_heading = 0;
 
+enum DOUBLET_STATES {
+  doublet_idle,
+  doublet_active,
+  doublet_done
+};
 
 static int32_t get_rc_roll(void)
 {
@@ -82,7 +87,50 @@ static int32_t get_rc_yaw(void)
 
 static float get_rc_roll_f(void)
 {
+  static uint8_t doublet_state = doublet_idle;
+  static int32_t cnt = 0;
+  static int32_t saved_roll;
+#define doublet_time 12
+#define doublet_deflection 7000
+
   int32_t roll = radio_control.values[RADIO_ROLL];
+  switch(doublet_state) {
+    case doublet_idle:
+      if(radio_control.values[SDLOGGER_CONTROL_SWITCH] > 0) {
+        saved_roll = roll;
+        doublet_state = doublet_active;
+      }
+      break;
+    case doublet_active:
+      cnt++;
+      if (cnt < 30) {
+        roll = saved_roll;
+      }
+      else if (cnt < 30 + doublet_time) {
+        roll = saved_roll + doublet_deflection;
+      }
+      else if (cnt < 30 + doublet_time*3) {
+        roll = saved_roll - doublet_deflection;
+      }
+      else if (cnt < 30 + doublet_time*4) {
+        roll = saved_roll + doublet_deflection;
+      }
+      else {
+        /* continue to done */
+        cnt = 0;
+        doublet_state = doublet_done;
+      }
+      break;
+    case doublet_done:
+      if (radio_control.values[SDLOGGER_CONTROL_SWITCH] < 0) {
+        /* switch off, return to idle*/
+        doublet_state = doublet_idle;
+      }
+      break;
+    default:
+      break;
+  }
+
 #if STABILIZATION_ATTITUDE_DEADBAND_A
   DeadBand(roll, STABILIZATION_ATTITUDE_DEADBAND_A);
   return roll * STABILIZATION_ATTITUDE_SP_MAX_PHI / (MAX_PPRZ - STABILIZATION_ATTITUDE_DEADBAND_A);

@@ -32,6 +32,7 @@
 #include "modules/adc_expansion_uart/adc_expansion_uart.h"
 #include "subsystems/sensors/rpm_sensor.h"
 #include "filters/low_pass_filter.h"
+#include "subsystems/radio_control.h"
 
 #include "std.h"
 #include "paparazzi.h"
@@ -58,16 +59,17 @@ struct HeliIndiGains heli_indi_gains = {
   STABILIZATION_ATTITUDE_HELI_INDI_YAW_D
 };
 
+
 #define HELI_INDI_ROLLRATE_FILTSIZE 16
 #define HELI_INDI_PITCHRATE_FILTSIZE 16
 #define HELI_INDI_YAWRATE_FILTSIZE 8
 
 struct IndiController_int new_heli_indi;
-struct HeliIndiStab heli_indi;
-int32_t global_delta_u;
-int32_t global_pitch_model;
-int32_t global_delta_thrust;
-struct Int32Vect3 global_body_accelerations;
+//struct HeliIndiStab heli_indi;
+//int32_t global_delta_u;
+//int32_t global_pitch_model;
+//int32_t global_delta_thrust;
+//struct Int32Vect3 global_body_accelerations;
 
 #if PERIODIC_TELEMETRY
 #include "subsystems/datalink/telemetry.h"
@@ -142,10 +144,10 @@ static inline void indi_apply_actuator_models(int32_t _out[], int32_t _in[])
   int32_t prev = actuator_model[INDI_YAW].buffer[actuator_model[INDI_YAW].idx];
   if(_in[INDI_YAW] - prev > 0) {
     // Tail spinning up
-    actuator_model[INDI_YAW].alpha = heli_indi.alpha_tail_inc;
+    actuator_model[INDI_YAW].alpha = alpha_yaw_inc;
   } else {
     // Tail spinning down
-    actuator_model[INDI_YAW].alpha = heli_indi.alpha_tail_dec;
+    actuator_model[INDI_YAW].alpha = alpha_yaw_dec;
   }
   _out[INDI_YAW] = heli_rate_filter_propagate(&actuator_model[INDI_YAW], _in[INDI_YAW]);
 
