@@ -99,9 +99,9 @@
 
 
   <section name="STABILIZATION_RATE" prefix="STABILIZATION_RATE_">
-    <define name="SP_MAX_P" value="360" unit="deg/s"/>
-    <define name="SP_MAX_Q" value="360" unit="deg/s"/>
-    <define name="SP_MAX_R" value="360" unit="deg/s"/>
+    <define name="SP_MAX_P"   value="360" unit="deg/s"/>
+    <define name="SP_MAX_Q"   value="360" unit="deg/s"/>
+    <define name="SP_MAX_R"   value="360" unit="deg/s"/>
 
     <define name="GAIN_P" value="400"/>
     <define name="GAIN_Q" value="400"/>
@@ -109,10 +109,10 @@
   </section>
 
   <section name="STABILIZATION_ATTITUDE_HELI_INDI" prefix="STABILIZATION_ATTITUDE_HELI_INDI_">
-    <define name="ROLL_P" value="20"/><!--20 3052 -->
-    <define name="PITCH_P" value="20"/><!--20 3052 -->
-    <define name="YAW_P" value="20"/>
-    <define name="YAW_D" value="5"/>
+    <define name="ROLL_P" value="20" /><!--20 3052 -->
+    <define name="PITCH_P" value="20" /><!--20 3052 -->
+    <define name="YAW_P" value="20" />
+    <define name="YAW_D" value="5" />
   </section>
 
   <section name="STABILIZATION_ATTITUDE" prefix="STABILIZATION_ATTITUDE_">
@@ -170,8 +170,8 @@
   </section>
 
  <section name="GUIDANCE_V" prefix="GUIDANCE_V_">
-   <define name="HOVER_KP" value="241"/>
-   <define name="HOVER_KD" value="104"/>
+   <define name="HOVER_KP" value="281"/>
+   <define name="HOVER_KD" value="66"/>
    <define name="HOVER_KI" value="0"/>
    <define name="GUIDANCE_V_NOMINAL_HOVER_THROTTLE" value="0.9"/>
   </section>
@@ -189,9 +189,9 @@
   </section>
 
  <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
-   <define name="PGAIN" value="301"/>
-   <define name="DGAIN" value="185"/>
-   <define name="IGAIN" value="31"/>
+   <define name="PGAIN" value="50"/>
+   <define name="DGAIN" value="50"/>
+   <define name="IGAIN" value="0"/>
  </section>
 
  <section name="RPM_SENSOR" prefix="RPM_SENSOR_">
