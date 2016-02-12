@@ -79,15 +79,15 @@ struct IndiController_int new_heli_indi;
 static void send_indi_debug_values(struct transport_tx *trans, struct link_device *dev)
 {
   pprz_msg_send_STAB_INDI_DEBUG(trans, dev, AC_ID,
-                               &new_heli_indi.reference[INDI_YAW],
-                               &new_heli_indi.measurement[INDI_YAW],
-                               &new_heli_indi.filtered_measurement[0][INDI_YAW],
-                               &new_heli_indi.filtered_measurement[1][INDI_YAW],
-                               &new_heli_indi.dynamics_compensated_measurement[INDI_YAW],
-                               &stabilization_cmd[COMMAND_THRUST],
-                               &new_heli_indi.reference[INDI_YAW],
-                               &new_heli_indi.dynamics_compensated_measurement[INDI_YAW],
-                               &stabilization_cmd[COMMAND_THRUST]);
+                                &new_heli_indi.reference[INDI_ROLL],
+                                &new_heli_indi.measurement[INDI_ROLL],
+                                &new_heli_indi.filtered_measurement[0][INDI_ROLL],
+                                &new_heli_indi.filtered_measurement[1][INDI_ROLL],
+                                &stabilization_cmd[COMMAND_ROLL],
+                                &new_heli_indi.reference[INDI_PITCH],
+                                &new_heli_indi.measurement[INDI_PITCH],
+                                &new_heli_indi.filtered_measurement[0][INDI_PITCH],
+                                &new_heli_indi.filtered_measurement[1][INDI_PITCH]);
 }
 #endif
 
@@ -245,8 +245,8 @@ void stabilization_attitude_init(void)
   // matlab new method
   //  47948       14952
   // -31016       27170
-  c->invG[0][0] =   +53609*2/5; c->invG[0][1] =  +14952*0; c->invG[0][2] =    0; c->invG[0][3] =      0;
-  c->invG[1][0] =   -31016*0; c->invG[1][1] =  +48618*2/5; c->invG[1][2] =    0; c->invG[1][3] =      0;
+  c->invG[0][0] =   +22000; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =      0;
+  c->invG[1][0] =        0; c->invG[1][1] =  +20000; c->invG[1][2] =    0; c->invG[1][3] =      0;
   c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] = 2114; c->invG[2][3] = 145870;
   c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] =      0;
 
@@ -271,8 +271,8 @@ void stabilization_attitude_init(void)
   /* Low pass filter initialization */
   for (uint8_t i = 0; i < INDI_DOF; i++) {
     // Cutoff frequencies are in Hz!!!
-    init_butterworth_2_low_pass_int(&actuator_lowpass_filters[i], 40, 1.0/PERIODIC_FREQUENCY, 0);
-    init_butterworth_2_low_pass_int(&measurement_lowpass_filters[i], 40, 1.0/PERIODIC_FREQUENCY, 0);
+    init_butterworth_2_low_pass_int(&actuator_lowpass_filters[i], 20, 1.0/PERIODIC_FREQUENCY, 0);
+    init_butterworth_2_low_pass_int(&measurement_lowpass_filters[i], 20, 1.0/PERIODIC_FREQUENCY, 0);
   }
 
   /* Assign filter functions: */
