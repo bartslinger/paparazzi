@@ -84,12 +84,12 @@ static void send_indi_debug_values(struct transport_tx *trans, struct link_devic
 {
   pprz_msg_send_STAB_INDI_DEBUG(trans, dev, AC_ID,
                                 &new_heli_indi.reference[INDI_THRUST],
-                                &new_heli_indi.measurement[INDI_THRUST],
-                                &new_heli_indi.filtered_measurement[0][INDI_THRUST],
                                 &new_heli_indi.filtered_measurement[1][INDI_THRUST],
                                 &stabilization_cmd[COMMAND_THRUST],
-                                &new_heli_indi.reference[INDI_YAW],
-                                &new_heli_indi.measurement[INDI_YAW],
+                                &new_heli_indi.u_setpoint[INDI_THRUST],
+                                &new_heli_indi.command_out[__k][INDI_THRUST],
+                                &new_heli_indi.error[INDI_YAW],
+                                &new_heli_indi.error[INDI_THRUST],
                                 &new_heli_indi.filtered_measurement[1][INDI_YAW],
                                 &stabilization_cmd[COMMAND_YAW]);
 }
@@ -162,8 +162,41 @@ static inline void indi_apply_compensator_filters(int32_t _out[], int32_t _in[])
 {
   _out[INDI_ROLL]   = _in[INDI_ROLL];
   _out[INDI_PITCH]  = _in[INDI_PITCH];
-  _out[INDI_YAW]    = _in[INDI_YAW];
-  _out[INDI_THRUST] = _in[INDI_THRUST];
+
+  /* Delay the tail by 9 samples */
+#define YAW_BUFFER_SIZE 9
+  static int32_t yaw_output_buffer[YAW_BUFFER_SIZE];
+  static uint8_t buf_idx = 0;
+
+  buf_idx %= (YAW_BUFFER_SIZE-1);
+  _out[INDI_YAW] = yaw_output_buffer[buf_idx];
+  yaw_output_buffer[buf_idx] = _in[INDI_YAW];
+  buf_idx++;
+
+  _out[INDI_YAW] = _in[INDI_YAW];
+
+  /* Thrust compensated for slow tail dynamics:
+   * Step 1. What would be the next output of the system if the thrust cmd would be applied to the tail dynamics?
+   * Step 2. What input is required to obtain this output when assuming dynamics of thrust actuator?
+   *
+   * We can re-use alpha_yaw_dec and alpha_yaw_inc
+   */
+  static int32_t prev_thrust_out = 0;
+  int32_t alpha;
+  if (_in[INDI_THRUST] - prev_thrust_out > 0) {
+    alpha = alpha_yaw_inc;
+  } else {
+    alpha = alpha_yaw_dec;
+  }
+  int32_t output_target = (alpha*prev_thrust_out + ((1<<14) - alpha)*_in[INDI_THRUST]) >> 14;
+
+  /* Now the target output is known, the collective dynamics is known. What input is required? */
+  int32_t alpha_thrust = actuator_model[INDI_THRUST].alpha;
+  _out[INDI_THRUST] = ((output_target << 14) - alpha_thrust*prev_thrust_out) / ((1<<14) - alpha_thrust);
+
+  prev_thrust_out =_out[INDI_THRUST];
+
+  //_out[INDI_THRUST] = _in[INDI_THRUST];
 }
 
 struct SecondOrderNotchFilter actuator_notchfilter[INDI_DOF];
@@ -249,10 +282,10 @@ void stabilization_attitude_init(void)
   // matlab new method
   //  47948       14952
   // -31016       27170
-  c->invG[0][0] =   +22000; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =      0;
-  c->invG[1][0] =        0; c->invG[1][1] =  +20000; c->invG[1][2] =    0; c->invG[1][3] =      0;
-  c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] = 2114; c->invG[2][3] = -150000;
-  c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] = -50000;
+  c->invG[0][0] =   +22000; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =       0;
+  c->invG[1][0] =        0; c->invG[1][1] =  +20000; c->invG[1][2] =    0; c->invG[1][3] =       0;
+  c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] = 2114; c->invG[2][3] = -130000;
+  c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] =  -50000;
 
   /* Actuator filter initialization */
   heli_rate_filter_initialize(&actuator_model[INDI_ROLL], 70, 9, 900);
@@ -273,11 +306,14 @@ void stabilization_attitude_init(void)
   }
 
   /* Low pass filter initialization */
-  for (uint8_t i = 0; i < INDI_DOF; i++) {
+  for (uint8_t i = 0; i < INDI_DOF-1; i++) {
     // Cutoff frequencies are in Hz!!!
     init_butterworth_2_low_pass_int(&actuator_lowpass_filters[i], 20, 1.0/PERIODIC_FREQUENCY, 0);
     init_butterworth_2_low_pass_int(&measurement_lowpass_filters[i], 20, 1.0/PERIODIC_FREQUENCY, 0);
   }
+  init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_THRUST], 10, 1.0/PERIODIC_FREQUENCY, 0);
+  init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_THRUST], 10, 1.0/PERIODIC_FREQUENCY, 0);
+
 
   /* Assign filter functions: */
   c->apply_actuator_models = &indi_apply_actuator_models;
