@@ -44,6 +44,7 @@
 #define GUIDANCE_V_MODE_FLIP      7
 #define GUIDANCE_V_MODE_GUIDED    8
 #define GUIDANCE_V_MODE_HELI_INDI 9
+#define GUIDANCE_V_MODE_HELI_INDI_4DOF 10
 
 extern uint8_t guidance_v_mode;
 

@@ -87,13 +87,18 @@ static int32_t get_rc_yaw(void)
 
 static float get_rc_roll_f(void)
 {
+#if 0
+#define DOUBLET_ACTIVE 1
   static uint8_t doublet_state = doublet_idle;
   static int32_t cnt = 0;
   static int32_t saved_roll;
 #define doublet_time 12
 #define doublet_deflection 7000
+#endif
 
   int32_t roll = radio_control.values[RADIO_ROLL];
+  //DISABLE DOUBLET COMPLETELY
+#if DOUBLET_ACTIVE
   switch(doublet_state) {
     case doublet_idle:
       if(radio_control.values[SDLOGGER_CONTROL_SWITCH] > 0) {
@@ -130,6 +135,7 @@ static float get_rc_roll_f(void)
     default:
       break;
   }
+#endif
 
 #if STABILIZATION_ATTITUDE_DEADBAND_A
   DeadBand(roll, STABILIZATION_ATTITUDE_DEADBAND_A);

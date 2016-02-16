@@ -310,6 +310,7 @@ void guidance_v_run(bool_t in_flight)
   switch (guidance_v_mode) {
 
     case GUIDANCE_V_MODE_HELI_INDI:
+    case GUIDANCE_V_MODE_HELI_INDI_4DOF:  // vertical command will be overwritten in stabilization heli indi
     case GUIDANCE_V_MODE_RC_DIRECT:
       guidance_v_z_sp = stateGetPositionNed_i()->z; // for display only
       stabilization_cmd[COMMAND_THRUST] = guidance_v_rc_delta_t;

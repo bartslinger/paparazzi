@@ -34,6 +34,10 @@
 #include "filters/low_pass_filter.h"
 #include "subsystems/radio_control.h"
 
+/* This is a beun hack to the max, but that is perfectly in line with the rest of pprz */
+#include "firmwares/rotorcraft/guidance/guidance_v.h"
+extern int32_t guidance_v_rc_delta_t; // private variable of stabilization_v.c
+
 #include "std.h"
 #include "paparazzi.h"
 #include "math/pprz_algebra_float.h"
@@ -79,15 +83,15 @@ struct IndiController_int new_heli_indi;
 static void send_indi_debug_values(struct transport_tx *trans, struct link_device *dev)
 {
   pprz_msg_send_STAB_INDI_DEBUG(trans, dev, AC_ID,
-                                &new_heli_indi.reference[INDI_ROLL],
-                                &new_heli_indi.measurement[INDI_ROLL],
-                                &new_heli_indi.filtered_measurement[0][INDI_ROLL],
-                                &new_heli_indi.filtered_measurement[1][INDI_ROLL],
-                                &stabilization_cmd[COMMAND_ROLL],
-                                &new_heli_indi.reference[INDI_PITCH],
-                                &new_heli_indi.measurement[INDI_PITCH],
-                                &new_heli_indi.filtered_measurement[0][INDI_PITCH],
-                                &new_heli_indi.filtered_measurement[1][INDI_PITCH]);
+                                &new_heli_indi.reference[INDI_THRUST],
+                                &new_heli_indi.measurement[INDI_THRUST],
+                                &new_heli_indi.filtered_measurement[0][INDI_THRUST],
+                                &new_heli_indi.filtered_measurement[1][INDI_THRUST],
+                                &stabilization_cmd[COMMAND_THRUST],
+                                &new_heli_indi.reference[INDI_YAW],
+                                &new_heli_indi.measurement[INDI_YAW],
+                                &new_heli_indi.filtered_measurement[1][INDI_YAW],
+                                &stabilization_cmd[COMMAND_YAW]);
 }
 #endif
 
@@ -247,8 +251,8 @@ void stabilization_attitude_init(void)
   // -31016       27170
   c->invG[0][0] =   +22000; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =      0;
   c->invG[1][0] =        0; c->invG[1][1] =  +20000; c->invG[1][2] =    0; c->invG[1][3] =      0;
-  c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] = 2114; c->invG[2][3] = 145870;
-  c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] =      0;
+  c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] = 2114; c->invG[2][3] = -150000;
+  c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] = -50000;
 
   /* Actuator filter initialization */
   heli_rate_filter_initialize(&actuator_model[INDI_ROLL], 70, 9, 900);
@@ -371,14 +375,13 @@ void stabilization_attitude_run(bool_t in_flight)
   struct IndiController_int *c = &new_heli_indi;
 
   /* calculate acceleration in body frame */
-  /*
   struct NedCoor_i *ltp_accel_nedcoor = stateGetAccelNed_i();
   struct Int32Vect3 ltp_accel;
+  struct Int32Vect3 body_accel; // Acceleration measurement in body frame
   ltp_accel.x = ltp_accel_nedcoor->x;
   ltp_accel.y = ltp_accel_nedcoor->y;
   ltp_accel.z = ltp_accel_nedcoor->z;
-  int32_rmat_vmult(&global_body_accelerations, stateGetNedToBodyRMat_i(), &ltp_accel);
-   */
+  int32_rmat_vmult(&body_accel, stateGetNedToBodyRMat_i(), &ltp_accel);
 
   /* attitude error */
   struct Int32Quat att_err;
@@ -395,9 +398,7 @@ void stabilization_attitude_run(bool_t in_flight)
   c->measurement[INDI_ROLL]  = body_rate->p;
   c->measurement[INDI_PITCH] = body_rate->q;
   c->measurement[INDI_YAW]   = body_rate->r;
-  //c->measurement[INDI_YAW]   = 512*(body_rate->r - previous_yawrate);
-  //previous_yawrate = body_rate->r;
-
+  c->measurement[INDI_THRUST]= body_accel.z;
 
   /* Apply actuator dynamics model to previously commanded values
    * input  = actuator command in previous cycle
@@ -413,17 +414,20 @@ void stabilization_attitude_run(bool_t in_flight)
     c->apply_measurement_filters[i](c->filtered_measurement[i], c->filtered_measurement[i-1]);
   }
 
+  /* RADIO throttle stick value */
+  int32_t accel_z_sp = (-1)*3*((guidance_v_rc_delta_t - MAX_PPRZ/2) << INT32_ACCEL_FRAC) / (MAX_PPRZ/2);
+  accel_z_sp = ((accel_z_sp << INT32_TRIG_FRAC) / guidance_v_thrust_coeff);
+
   /* Transform yaw into a delta yaw while keeping filtered yawrate (kinda hacky)*/
   int32_t filtered_measurement_vector[INDI_DOF];
   indi_copy_vect(filtered_measurement_vector, c->filtered_measurement[INDI_NR_FILTERS-1]);
   static int32_t previous_filt_yawrate = 0;
-  filtered_measurement_vector[INDI_YAW] = 512*(c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW] - previous_filt_yawrate);
+  filtered_measurement_vector[INDI_YAW] = 512*(c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW] - previous_filt_yawrate);  // = approximately yaw acceleration error
   previous_filt_yawrate = c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW];
 
-
-  static int32_t previous_thrust = 0;
-  int32_t delta_thrust_meas = c->filtered_actuator[0][INDI_THRUST] - previous_thrust;
-  previous_thrust = c->filtered_actuator[0][INDI_THRUST];
+  //static int32_t previous_thrust = 0;
+  //int32_t delta_thrust_meas = c->filtered_actuator[0][INDI_THRUST] - previous_thrust;
+  //previous_thrust = c->filtered_actuator[0][INDI_THRUST];
 
   /* Apply model dynamics matrix, is diagonal of ones when model dynamics are neglected. */
   indi_matrix_multiply_vector(c->dynamics_compensated_measurement, c->D, filtered_measurement_vector);
@@ -437,12 +441,12 @@ void stabilization_attitude_run(bool_t in_flight)
   c->reference[INDI_ROLL]   = roll_virtual_control;
   c->reference[INDI_PITCH]  = pitch_virtual_control;
   c->reference[INDI_YAW]    = yaw_virtual_control;
-  c->reference[INDI_THRUST] = 0;
+  c->reference[INDI_THRUST] = accel_z_sp;
 
   /* Subtract (filtered) measurement from reference to get the error */
   indi_subtract_vect(c->error, c->reference, c->dynamics_compensated_measurement);
 
-  c->error[INDI_THRUST] = delta_thrust_meas;
+  //c->error[INDI_THRUST] = delta_thrust_meas;
 
   /* Multiply error with inverse of actuator effectiveness, to get delta u (required increment in input) */
   indi_matrix_multiply_vector(c->du, c->invG, c->error);
@@ -451,17 +455,18 @@ void stabilization_attitude_run(bool_t in_flight)
   c->du[INDI_ROLL]  >>= 16;
   c->du[INDI_PITCH] >>= 16;
   c->du[INDI_YAW]   >>= 16;
-  //c->du[INDI_YAW] = (c->error[INDI_YAW] * 512/512 + 69*delta_thrust_meas) / 31;
+  c->du[INDI_THRUST]>>= 16;  // to get -1/4
+  //c->du[INDI_YAW] = (c->error[INDI_YAW] + 69*delta_thrust_meas) / 31;
 
   /* Take the current (filtered) actuator position and add the incremental value. */
   indi_add_vect(c->u_setpoint, c->filtered_actuator[INDI_NR_FILTERS-1], c->du);
-  c->u_setpoint[INDI_THRUST] = stabilization_cmd[COMMAND_THRUST];
+  //c->u_setpoint[INDI_THRUST] = stabilization_cmd[COMMAND_THRUST];
 
   /* bound the result */
   BoundAbs(c->u_setpoint[INDI_ROLL], MAX_PPRZ);
   BoundAbs(c->u_setpoint[INDI_PITCH], MAX_PPRZ);
   BoundAbs(c->u_setpoint[INDI_YAW], MAX_PPRZ);
-  Bound(c->u_setpoint[INDI_THRUST], 0, MAX_PPRZ);
+  Bound(c->u_setpoint[INDI_THRUST], 2000, MAX_PPRZ);
 
   /* Apply a compensator to the actuator setpoint to obtain actuator command */
   c->apply_compensator_filters(c->command_out[__k], c->u_setpoint);
@@ -473,7 +478,10 @@ void stabilization_attitude_run(bool_t in_flight)
   stabilization_cmd[COMMAND_ROLL] = c->command_out[__k][INDI_ROLL];
   stabilization_cmd[COMMAND_PITCH] = c->command_out[__k][INDI_PITCH];
   stabilization_cmd[COMMAND_YAW] = c->command_out[__k][INDI_YAW];
-  //stabilization_cmd[COMMAND_THRUST] = 0;
+  // Do not overwrite thrust unless when in 4DOF mode
+  if (guidance_v_mode == GUIDANCE_V_MODE_HELI_INDI_4DOF) {
+    stabilization_cmd[COMMAND_THRUST] = c->command_out[__k][INDI_THRUST];
+  }
 }
 
 #if 0

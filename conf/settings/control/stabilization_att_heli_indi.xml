@@ -16,7 +16,8 @@
       <dl_setting var="new_heli_indi.invG[1][0]" min="-100000" step="1" max="100000"   module="stabilization/stabilization_attitude_heli_indi" shortname="[1][0]" type="int32"/>
       <dl_setting var="new_heli_indi.invG[1][1]" min="0" step="1" max="100000"   module="stabilization/stabilization_attitude_heli_indi" shortname="[1][1]" type="int32"/>
       <dl_setting var="new_heli_indi.invG[2][2]" min="0" step="1" max="10000"   module="stabilization/stabilization_attitude_heli_indi" shortname="[2][2]" type="int32"/>
-      <dl_setting var="new_heli_indi.invG[2][3]" min="0" step="1" max="500000"   module="stabilization/stabilization_attitude_heli_indi" shortname="[2][3]" type="int32"/>
+      <dl_setting var="new_heli_indi.invG[2][3]" min="-500000" step="1" max="500000"   module="stabilization/stabilization_attitude_heli_indi" shortname="[2][3]" type="int32"/>
+      <dl_setting var="new_heli_indi.invG[3][3]" min="-500000" step="1" max="500000"   module="stabilization/stabilization_attitude_heli_indi" shortname="[3][3]" type="int32"/>
     </dl_settings>
 
   </dl_settings>

@@ -426,6 +426,7 @@ void autopilot_set_mode(uint8_t new_autopilot_mode)
       case AP_MODE_ATTITUDE_CLIMB:
       case AP_MODE_ATTITUDE_Z_HOLD:
       case AP_MODE_HELI_INDI:
+      case AP_MODE_HELI_INDI_4DOF:
         guidance_h_mode_changed(GUIDANCE_H_MODE_ATTITUDE);
         break;
       case AP_MODE_FORWARD:
@@ -508,6 +509,9 @@ void autopilot_set_mode(uint8_t new_autopilot_mode)
         break;
       case AP_MODE_HELI_INDI:
         guidance_v_mode_changed(GUIDANCE_V_MODE_HELI_INDI);
+        break;
+      case AP_MODE_HELI_INDI_4DOF:
+        guidance_v_mode_changed(GUIDANCE_V_MODE_HELI_INDI_4DOF);
         break;
       default:
         break;
