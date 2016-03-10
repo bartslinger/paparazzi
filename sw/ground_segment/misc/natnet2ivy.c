@@ -499,6 +499,20 @@ gboolean timeout_transmit_callback(gpointer data) {
     double heading = -orient_eulers.psi+90.0/57.6 - tracking_offset_angle; //the optitrack axes are 90 degrees rotated wrt ENU
     NormRadAngle(heading);
 
+    // LOGGING BARTSLINGER
+    orient.qi = rigidBodies[i].qw;
+    orient.qx = rigidBodies[i].qy; // switched
+    orient.qy = rigidBodies[i].qx;
+    orient.qz = rigidBodies[i].qz;
+    double_eulers_of_quat(&orient_eulers, &orient);
+    float myheading = -orient_eulers.psi;
+    float pitch = -orient_eulers.theta;
+    float roll  = orient_eulers.phi;
+    NormRadAngle(myheading);
+    NormRadAngle(pitch);
+    NormRadAngle(roll);
+    printf("%f\t%f\t%f\n", DegOfRad(roll), DegOfRad(pitch), DegOfRad(myheading));
+
     printf_debug("[%d -> %d]Samples: %d\t%d\t\tTiming: %3.3f latency\n", rigidBodies[i].id, aircrafts[rigidBodies[i].id].ac_id
       , rigidBodies[i].nSamples, rigidBodies[i].nVelocitySamples, natnet_latency);
     printf_debug("    Heading: %f\t\tPosition: %f\t%f\t%f\t\tVelocity: %f\t%f\t%f\n", DegOfRad(heading),
