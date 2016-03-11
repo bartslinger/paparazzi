@@ -512,11 +512,11 @@ gboolean timeout_transmit_callback(gpointer data) {
     NormRadAngle(pitch);
     NormRadAngle(roll);
     struct timespec now;
-    clock_gettime(CLOCK_REALTIME, &now);
+    clock_gettime(CLOCK_MONOTONIC, &now);
     static unsigned int startsec = 0;
     if (startsec == 0) startsec = (unsigned int)now.tv_sec;
     //printf("%d.%d\n", (unsigned int)now.tv_sec, (unsigned int)now.tv_nsec);
-    printf("%d.%d\t%f\t%f\t%f\t%f\t%f\t%f\n", (unsigned int)now.tv_sec-startsec, (unsigned int)now.tv_nsec,
+    printf("%d.%d\t%f\t%f\t%f\t%f\t%f\t%f\n", (unsigned int)now.tv_sec, (unsigned int)now.tv_nsec,
                                     DegOfRad(roll),
                                     DegOfRad(pitch),
                                     DegOfRad(myheading),
