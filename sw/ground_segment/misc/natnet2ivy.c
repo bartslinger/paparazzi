@@ -513,16 +513,16 @@ gboolean timeout_transmit_callback(gpointer data) {
     NormRadAngle(roll);
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
-    static unsigned int startsec = 0;
-    if (startsec == 0) startsec = (unsigned int)now.tv_sec;
+    static time_t startsec = 0;
+    if (startsec == 0) startsec = now.tv_sec;
     //printf("%d.%d\n", (unsigned int)now.tv_sec, (unsigned int)now.tv_nsec);
-    printf("%d.%d\t%f\t%f\t%f\t%f\t%f\t%f\n", (unsigned int)now.tv_sec-startsec, (unsigned int)now.tv_nsec,
+    printf("%ld.%09d\t%f\t%f\t%f\t%f\t%f\t%f\n", (long) now.tv_sec-startsec, (int)now.tv_nsec,
                                     DegOfRad(roll),
                                     DegOfRad(pitch),
                                     DegOfRad(myheading),
-                                    rigidBodies[i].x*100.0,
-                                    rigidBodies[i].y*100.0,
-                                    rigidBodies[i].z*100.0);
+                                    (double)rigidBodies[i].x*100.0,
+                                    (double)rigidBodies[i].y*100.0,
+                                    (double)rigidBodies[i].z*100.0);
 
     printf_debug("[%d -> %d]Samples: %d\t%d\t\tTiming: %3.3f latency\n", rigidBodies[i].id, aircrafts[rigidBodies[i].id].ac_id
       , rigidBodies[i].nSamples, rigidBodies[i].nVelocitySamples, natnet_latency);
