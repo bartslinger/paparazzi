@@ -10,8 +10,8 @@
     <waypoint name="GOAL" x="-0.6" y="-1.0"/>
     <waypoint name="STDBY" x="-1.0" y="-0.1"/>
     <waypoint name="TD" x="-0.9" y="-0.8"/>
-    <waypoint lat="51.990627" lon="4.376801" name="p1"/>
-    <waypoint lat="51.990616" lon="4.376766" name="p2"/>
+    <waypoint lat="51.990627" lon="4.376815" name="p1"/>
+    <waypoint lat="51.990617" lon="4.376770" name="p2"/>
     <waypoint lat="51.990635" lon="4.376748" name="p3"/>
     <waypoint lat="51.990646" lon="4.376784" name="p4"/>
     <waypoint lat="51.9906213" lon="4.3768628" name="FA1"/>
@@ -64,9 +64,14 @@
     </block>
     <block name="line_p1_p2">
       <go from="p1" hmode="route" wp="p2"/>
-      <stay until="stage_time>10" wp="p2"/>
+      <stay until="stage_time>2" wp="p2"/>
+      <call fun="nav_set_heading_deg(50)"/>
+      <stay until="stage_time>2" wp="p2"/>
       <go from="p2" hmode="route" wp="p1"/>
-      <deroute block="stay_p1"/>
+      <stay until="stage_time>2" wp="p1"/>
+      <call fun="nav_set_heading_deg(230)"/>
+      <stay until="stage_time>2" wp="p1"/>
+      <deroute block="line_p1_p2"/>
     </block>
     <block name="route">
       <go from="p1" hmode="route" wp="p3"/>
