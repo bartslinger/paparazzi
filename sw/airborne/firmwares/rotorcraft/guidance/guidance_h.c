@@ -396,7 +396,7 @@ void guidance_h_run(bool_t  in_flight)
 
       if (horizontal_mode == HORIZONTAL_MODE_ATTITUDE) {
         struct Int32Eulers sp_cmd_i;
-        sp_cmd_i.phi = nav_roll;
+        sp_cmd_i.phi = nav_roll+RadOfDeg(5);
         sp_cmd_i.theta = nav_pitch;
         sp_cmd_i.psi = nav_heading;
         stabilization_attitude_set_rpy_setpoint_i(&sp_cmd_i);

@@ -180,7 +180,7 @@
     <define name="H_X" value=" 0.47577"/>
     <define name="H_Y" value=" 0.11811"/>
     <define name="H_Z" value=" 0.87161"/>
-    <define name="USE_RPM_SENSOR_NOTCH" value="1"/>
+    <define name="USE_RPM_SENSOR_NOTCH" value="0"/>
     <define name="NOTCH_FILTER_BANDWIDTH" value="10.0"/>
 
     <!-- Use GPS heading instead of magneto -->
@@ -245,7 +245,7 @@
       <define name="LISA_S_UPSIDE_DOWN"/> <!-- wtf hij zit gewoon rechtop maargoed -->
     </subsystem>
     <subsystem name="gps" type="datalink"/>
-    <subsystem name="stabilization" type="int_quat"/>
+    <subsystem name="stabilization" type="heli_indi"/>
     <subsystem name="rpm_sensor" type="eagletree"/>
     <subsystem name="ahrs" type="int_cmpl_quat_notch"/>
     <subsystem name="ins"/>
