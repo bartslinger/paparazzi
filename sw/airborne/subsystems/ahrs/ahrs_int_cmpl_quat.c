@@ -584,8 +584,8 @@ void ahrs_icq_update_heading(int32_t heading)
   // rate_correction FRAC = RATE_FRAC = 12
   // 2^12 / 2^28 * 4.0 = 1/2^14
   // (1<<INT32_ANGLE_FRAC)/2^14 = 1/4
-  ahrs_icq.rate_correction.p += residual_imu.x / 4;
-  ahrs_icq.rate_correction.q += residual_imu.y / 4;
+  //ahrs_icq.rate_correction.p += residual_imu.x / 4;
+  //ahrs_icq.rate_correction.q += residual_imu.y / 4;
   ahrs_icq.rate_correction.r += residual_imu.z / 4;
 
 
@@ -601,8 +601,8 @@ void ahrs_icq_update_heading(int32_t heading)
     // residual_ltp FRAC = 2 * TRIG_FRAC = 28
     // high_rez_bias = RATE_FRAC+28 = 40
     // 2^40 / 2^28 * 2.5e-4 = 1
-    ahrs_icq.high_rez_bias.p -= residual_imu.x * (1 << INT32_ANGLE_FRAC);
-    ahrs_icq.high_rez_bias.q -= residual_imu.y * (1 << INT32_ANGLE_FRAC);
+    //ahrs_icq.high_rez_bias.p -= residual_imu.x * (1 << INT32_ANGLE_FRAC);
+    //ahrs_icq.high_rez_bias.q -= residual_imu.y * (1 << INT32_ANGLE_FRAC);
     ahrs_icq.high_rez_bias.r -= residual_imu.z * (1 << INT32_ANGLE_FRAC);
 
     INT_RATES_RSHIFT(ahrs_icq.gyro_bias, ahrs_icq.high_rez_bias, 28);
