@@ -184,7 +184,7 @@
     <define name="NOTCH_FILTER_BANDWIDTH" value="10.0"/>
 
     <!-- Use GPS heading instead of magneto -->
-    <define name="USE_GPS_HEADING" value="0"/>
+    <define name="USE_GPS_HEADING" value="1"/>
     <define name="HEADING_UPDATE_GPS_MIN_SPEED" value="0"/>
   </section>
 
@@ -211,7 +211,7 @@
 
   <firmware name="rotorcraft">
     <target name="ap" board="lisa_s_1.0">
-      <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="30"/>
+      <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="0"/>
       <!--subsystem name="radio_control" type="superbitrf_rc"-->
         <!--<define name="RADIO_TRANSMITTER_ID" value="2008496626"/>-->   <!-- TUDelft Dx6i: TX 4 -->
         <!--<define name="RADIO_TRANSMITTER_CHAN" value="6"/>-->
