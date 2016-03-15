@@ -53,8 +53,8 @@
   </command_laws>
 
   <section name="IMU" prefix="IMU_">
-    <define name="BODY_TO_IMU_PHI" value="1.5" unit="deg"/> <!-- was 184. (dit is iets met roll) /-->
-    <define name="BODY_TO_IMU_THETA" value="2.65" unit="deg"/> <!-- was +4.5 /-->
+    <define name="BODY_TO_IMU_PHI" value="8." unit="deg"/> <!-- was 184. (dit is iets met roll) /-->
+    <define name="BODY_TO_IMU_THETA" value="-4." unit="deg"/> <!-- was +4.5 /-->
     <define name="BODY_TO_IMU_PSI" value="7.7" unit="deg"/> <!-- was 3 /-->
 
     <!-- From Delft MAVlab, quick calibration -->
