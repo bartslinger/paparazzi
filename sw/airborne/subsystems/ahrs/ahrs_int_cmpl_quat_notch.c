@@ -220,7 +220,7 @@ bool_t ahrs_icq_align(struct Int32Rates *lp_gyro, struct Int32Vect3 *lp_accel,
   INT_RATES_LSHIFT(ahrs_icq.high_rez_bias, ahrs_icq.high_rez_bias, 28);
 
   ahrs_icq.status = AHRS_ICQ_RUNNING;
-  ahrs_icq.is_aligned = TRUE;
+  ahrs_icq.is_aligned = TRUE; // WAS TRUE
 
   return TRUE;
 }

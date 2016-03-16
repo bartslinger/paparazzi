@@ -97,6 +97,8 @@ PRINT_CONFIG_VAR(ASPIRIN_2_ACCEL_RANGE)
 #define ASPIRIN_2_MAG_STARTUP_DELAY 1.5
 #endif
 
+//#define ASPIRIN_2_DISABLE_MAG 1
+
 struct ImuAspirin2Spi imu_aspirin2;
 
 void mpu_wait_slave4_ready(void);
@@ -183,7 +185,9 @@ void imu_aspirin2_event(void)
                  imu_aspirin2.mpu.data_accel.vect.x,
                  -imu_aspirin2.mpu.data_accel.vect.y,
                  -imu_aspirin2.mpu.data_accel.vect.z);
+    #if !ASPIRIN_2_DISABLE_MAG
     VECT3_ASSIGN(imu.mag_unscaled, mag.x, -mag.y, -mag.z);
+    #endif
 #else
     RATES_COPY(imu.gyro_unscaled, imu_aspirin2.mpu.data_rates.rates);
     VECT3_COPY(imu.accel_unscaled, imu_aspirin2.mpu.data_accel.vect);
