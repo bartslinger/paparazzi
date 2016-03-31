@@ -471,7 +471,17 @@ void stabilization_attitude_run(bool_t in_flight)
   /* Use the filtered measurements for PID control as well */
   int32_t roll_virtual_control  = (heli_indi_gains.roll_p * att_err.qx)  / 16;
   int32_t pitch_virtual_control = (heli_indi_gains.pitch_p * att_err.qy) / 16;
-  int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * att_err.qz) - (c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW] * heli_indi_gains.yaw_d);
+  /* For yaw control implement a yawrate saturation
+   * Saturation implemented by bounding the att_err.
+   * Unsaturated control => v = P*att_err - D*rate
+   * Theory: During maximum yawrate, the virtual control = 0.
+   * P*(att_err)_sat = D*(rate)_max
+   * (att_err)_sat = D/P * (rate)_max
+   */
+  int32_t yaw_att_err_saturated = att_err.qz;
+  int32_t yaw_att_err_max = heli_indi_gains.yaw_d / heli_indi_gains.yaw_p * STABILIZATION_ATTITUDE_SP_MAX_R;
+  BoundAbs(yaw_att_err_saturated, yaw_att_err_max);
+  int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * yaw_att_err_saturated) - (c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW] * heli_indi_gains.yaw_d);
 
   /* Run P(D) control to generate references */
   c->reference[INDI_ROLL]   = roll_virtual_control;
