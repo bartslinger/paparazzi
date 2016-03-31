@@ -53,9 +53,9 @@
   </command_laws>
 
   <section name="IMU" prefix="IMU_">
-    <define name="BODY_TO_IMU_PHI" value="0." unit="deg"/> <!-- 8.0/-->
-    <define name="BODY_TO_IMU_THETA" value="0." unit="deg"/> <!-- -4.0 /-->
-    <define name="BODY_TO_IMU_PSI" value="0." unit="deg"/> <!-- was 7.7 /-->
+    <define name="BODY_TO_IMU_PHI" value="8." unit="deg"/> <!-- 8.0/-->
+    <define name="BODY_TO_IMU_THETA" value="-4." unit="deg"/> <!-- -4.0 /-->
+    <define name="BODY_TO_IMU_PSI" value="7.7" unit="deg"/> <!-- was 7.7 /-->
 
     <!-- From Delft MAVlab, quick calibration -->
     <define name="ACCEL_X_NEUTRAL" value="0"/>
@@ -167,7 +167,7 @@
 
   <section name="INS" prefix="INS_">
     <!-- Use GPS altitude measurments and set the R gain -->
-    <define name="USE_GPS_ALT" value="0"/>
+    <define name="USE_GPS_ALT" value="1"/>
     <define name="VFF_R_GPS" value="0.01"/>
   </section>
 
@@ -202,21 +202,21 @@
  </section>
 
  <modules main_freq="512">
-   <load name="gps_ubx_ucenter.xml"/>
+   <!--load name="gps_ubx_ucenter.xml"/-->
    <load name="send_imu_mag_current.xml"/>
    <load name="logger_sd_spi_direct.xml">
      <configure name="LOGGER_CONTROL_SWITCH" value="RADIO_AUX2"/>
      <configure name="LOGGER_LED" value="3"/>
    </load>
    <!--load name="adc_expansion_uart.xml"/-->
-   <load name="air_data.xml"/>
+   <!--load name="air_data.xml"/-->
    <!--load name="sys_mon.xml"/-->
  </modules>
 
   <firmware name="rotorcraft">
     <target name="ap" board="lisa_s_1.0">
-        <define name="AHRS_USE_GPS_HEADING" value="0"/>
-        <configure name="USE_MAGNETOMETER" value="1"/>
+        <define name="AHRS_USE_GPS_HEADING" value="1"/>
+        <configure name="USE_MAGNETOMETER" value="0"/>
         <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="0"/>
         
         <!--subsystem name="radio_control" type="superbitrf_rc"-->
@@ -231,7 +231,7 @@
       <!--configure name="USE_BARO_BOARD" value="0"/-->
       <define name="RADIO_KILL_SWITCH" value="RADIO_FLAP"/>
 
-      <configure name="AHRS_PROPAGATE_FREQUENCY" value="120"/>
+      <configure name="AHRS_PROPAGATE_FREQUENCY" value="500"/>
       <define name="USE_PERSISTENT_SETTINGS" value="TRUE"/>
     </target>
 
@@ -249,10 +249,10 @@
     <subsystem name="imu" type="lisa_s_v1.0">
       <define name="LISA_S_UPSIDE_DOWN"/> <!-- wtf hij zit gewoon rechtop maargoed -->
     </subsystem>
-    <subsystem name="gps" type="ublox"/>
-    <subsystem name="stabilization" type="int_quat"/>
+    <subsystem name="gps" type="datalink"/>
+    <subsystem name="stabilization" type="heli_indi"/>
     <subsystem name="rpm_sensor" type="eagletree"/>
-    <subsystem name="ahrs" type="int_cmpl_quat"/>
+    <subsystem name="ahrs" type="int_cmpl_quat_notch"/>
     <subsystem name="ins"/>
   </firmware>
 </airframe>
