@@ -12,103 +12,14 @@
 
 <airframe name="walkera_genius_v2">
 
-  <servos driver="Pwm">
-    <servo name="CIC_FRONT" no="4" min="1000" neutral="1400" max="1700"/>
-    <servo name="CIC_RIGHT" no="5" min="1150" neutral="1450" max="1850"/>
-    <servo name="CIC_LEFT" no="0" min="1000" neutral="1400" max="1700"/>
-    <servo name="TAIL" no="2" min="0" neutral="0" max="500"/>
-    <servo name="GAS" no="3" min="1890" neutral="1890" max="1430"/>
-  </servos>
-
-  <commands>
-    <axis name="ROLL" failsafe_value="0"/>
-    <axis name="PITCH" failsafe_value="0"/>
-    <axis name="YAW" failsafe_value="0"/>
-    <axis name="THRUST" failsafe_value="0"/>
-  </commands>
-
-  <command_laws>
-    <let var="hoverpower" value=".85*MAX_PPRZ"/>
-    <let var="hoverstick" value=".35*MAX_PPRZ"/>
-    <let var="halfway" value="(@THRUST >= ($hoverstick) ? 1 : 0)"/>
-    <let var="collective" value="@THRUST * 0.1258 + (MAX_PPRZ*0.2013)"/>
-    <!--let var="collective" value="@THRUST"/-->
-    <let var="gas" value="($hoverpower) + $halfway * (((@THRUST) - ($hoverstick)) * (MAX_PPRZ - ($hoverpower))) / (MAX_PPRZ - ($hoverstick))  + (1 - $halfway) * ((@THRUST - ($hoverstick)) * ($hoverpower)) / ($hoverstick)"/>
-
-    <set servo="CIC_LEFT" value="((@PITCH*1.75*0.5*0.5)-(@ROLL*1.75*0.5*0.73))-($collective)"/>
-    <set servo="CIC_RIGHT" value="((-@PITCH*1.75*0.5*0.5)-(@ROLL*1.75*0.5*0.73))+($collective)"/>
-    <set servo="CIC_FRONT" value="-@PITCH*1.75*0.5-($collective)"/>
-
-    <!--set servo="CIC_LEFT" value="-$collective"/>
-    <set servo="CIC_RIGHT" value="$collective"/>
-    <set servo="CIC_FRONT" value="-$collective"/-->
-    
-    <set servo="GAS" value="$gas"/>
-    <!--set servo="TAIL" value="@YAW + $halfway * ((MAX_PPRZ*0.4) + @THRUST*0.2037) + (1 - $halfway) * (@THRUST * 1.4872) "/-->
-    <set servo="TAIL" value="@YAW"/>
-    
-    <!--set servo="GAS" value="$gas"/>  
-    <set servo="TAIL" value="@YAW+0.4*$gas"/-->
-    
-  </command_laws>
-
-  <section name="IMU" prefix="IMU_">
-    <define name="BODY_TO_IMU_PHI" value="8." unit="deg"/> <!-- 8.0/-->
-    <define name="BODY_TO_IMU_THETA" value="-4." unit="deg"/> <!-- -4.0 /-->
-    <define name="BODY_TO_IMU_PSI" value="7.7" unit="deg"/> <!-- was 7.7 /-->
-
-    <!-- From Delft MAVlab, quick calibration -->
-    <define name="ACCEL_X_NEUTRAL" value="0"/>
-    <define name="ACCEL_Y_NEUTRAL" value="0"/>
-    <define name="ACCEL_Z_NEUTRAL" value="0"/>
-    <!--define name="ACCEL_X_NEUTRAL" value="62"/>
-    <define name="ACCEL_Y_NEUTRAL" value="16"/>
-    <define name="ACCEL_Z_NEUTRAL" value="-191"/>
-    <define name="ACCEL_X_SENS" value="4.86205019187" integer="16"/>
-    <define name="ACCEL_Y_SENS" value="4.88606377201" integer="16"/>
-    <define name="ACCEL_Z_SENS" value="4.84406734807" integer="16"/-->
-
-
-    <!-- From delft MAVLab 16/3 in t lab-->
-    <define name="MAG_X_NEUTRAL" value="81"/>
-    <define name="MAG_Y_NEUTRAL" value="-214"/>
-    <define name="MAG_Z_NEUTRAL" value="-75"/>
-    <define name="MAG_X_SENS" value="3.4123397367" integer="16"/>
-    <define name="MAG_Y_SENS" value="3.5176940188" integer="16"/>
-    <define name="MAG_Z_SENS" value="3.93401804914" integer="16"/>
-
-    <!-- Current correction -->
-	<!--define name= "MAG_X_CURRENT_COEF" value="-0.00826591496471"/>
-	<define name= "MAG_Y_CURRENT_COEF" value="0.0504179871004"/>
-	<define name= "MAG_Z_CURRENT_COEF" value="0.000356565353913"/-->
-
-
-  </section>
+  <include href="conf/airframes/TUDELFT/tudelft_walkera_genius_v2_common.xml" />
+  <include href="conf/airframes/TUDELFT/calibrations/walkera_2016_03_16.xml"/>
 
  <section name="AUTOPILOT">
    <define name="MODE_AUTO2" value="AP_MODE_NAV"/> <!--AP_MODE_ATTITUDE_DIRECT-->
    <define name="MODE_AUTO1" value="AP_MODE_HOVER_Z_HOLD"/> <!--AP_MODE_HELI_INDI_4DOF-->
    <define name="MODE_MANUAL" value="AP_MODE_HELI_INDI"/> <!--AP_MODE_ATTITUDE_Z_HOLD-->
  </section>
-
- <section name="BAT">
-   <define name="MILLIAMP_AT_FULL_THROTTLE" value="3700"/>
-   <define name="CATASTROPHIC_BAT_LEVEL" value="3.0" unit="V"/>
-    <define name="CRITIC_BAT_LEVEL" value="3.2" unit="V"/>
-    <define name="LOW_BAT_LEVEL" value="3.5" unit="V"/>
-    <define name="MAX_BAT_LEVEL" value="4.2" unit="V"/>
- </section>
-
-
-  <section name="STABILIZATION_RATE" prefix="STABILIZATION_RATE_">
-    <define name="SP_MAX_P" value="360" unit="deg/s"/>
-    <define name="SP_MAX_Q" value="360" unit="deg/s"/>
-    <define name="SP_MAX_R" value="360" unit="deg/s"/>
-
-    <define name="GAIN_P" value="400"/>
-    <define name="GAIN_Q" value="400"/>
-    <define name="GAIN_R" value="350"/>
-  </section>
 
   <section name="STABILIZATION_ATTITUDE_HELI_INDI" prefix="STABILIZATION_ATTITUDE_HELI_INDI_">
     <define name="ROLL_P" value="30"/><!--20 3052 -->
@@ -121,51 +32,10 @@
   </section>
 
   <section name="STABILIZATION_ATTITUDE" prefix="STABILIZATION_ATTITUDE_">
-
     <!-- setpoints -->
     <define name="SP_MAX_PHI" value="45." unit="deg"/>
     <define name="SP_MAX_THETA" value="45." unit="deg"/>
     <define name="SP_MAX_R" value="270." unit="deg/s"/>
-    <define name="DEADBAND_R" value="250"/>
-    <define name="DEADBAND_A" value="250"/>
-
-    <!-- reference-->
-    <define name="REF_OMEGA_P" value="3000" unit="deg/s"/>
-    <define name="REF_ZETA_P" value="0.85"/>
-    <define name="REF_MAX_P" value="300." unit="deg/s"/>
-    <define name="REF_MAX_PDOT" value="RadOfDeg(7000.)"/>
-
-    <define name="REF_OMEGA_Q" value="3000" unit="deg/s"/>
-    <define name="REF_ZETA_Q" value="0.85"/>
-    <define name="REF_MAX_Q" value="300." unit="deg/s"/>
-    <define name="REF_MAX_QDOT" value="RadOfDeg(7000.)"/>
-
-    <define name="REF_OMEGA_R" value="3000" unit="deg/s"/>
-    <define name="REF_ZETA_R" value="0.85"/>
-    <define name="REF_MAX_R" value="300." unit="deg/s"/>
-    <define name="REF_MAX_RDOT" value="RadOfDeg(7000.)"/>
-
-    <!-- feedback -->
-    <define name="PHI_PGAIN" value="3052"/>
-    <define name="PHI_DGAIN" value="108"/>
-    <define name="PHI_IGAIN" value="0"/>
-
-    <define name="THETA_PGAIN" value="3052"/>
-    <define name="THETA_DGAIN" value="108"/>
-    <define name="THETA_IGAIN" value="0"/>
-
-    <define name="PSI_PGAIN" value="944"/>
-    <define name="PSI_DGAIN" value="300"/>
-    <define name="PSI_IGAIN" value="10"/>
-
-    <!-- feedforward -->
-    <define name="PHI_DDGAIN" value="0"/>
-    <define name="THETA_DDGAIN" value="0"/>
-    <define name="PSI_DDGAIN" value=" 300"/>
-
-    <define name="PHI_AGAIN" value="0"/>
-    <define name="THETA_AGAIN" value="0"/>
-    <define name="PSI_AGAIN" value="0"/>
   </section>
 
   <section name="INS" prefix="INS_">
@@ -174,61 +44,45 @@
     <define name="VFF_R_GPS" value="0.01"/>
   </section>
 
- <section name="GUIDANCE_V" prefix="GUIDANCE_V_">
-   <define name="HOVER_KP" value="241"/>
-   <define name="HOVER_KD" value="104"/>
-   <define name="HOVER_KI" value="0"/>
-   <define name="GUIDANCE_V_NOMINAL_HOVER_THROTTLE" value="0.9"/>
+  <section name="GUIDANCE_V" prefix="GUIDANCE_V_">
+    <define name="HOVER_KP" value="241"/>
+    <define name="HOVER_KD" value="104"/>
+    <define name="HOVER_KI" value="0"/>
+    <define name="GUIDANCE_V_NOMINAL_HOVER_THROTTLE" value="0.9"/>
   </section>
 
   <section name="AHRS" prefix="AHRS_">
-  <!-- (0.390835, 0.00556658, 0.920444) 16mrt2016 delft -->
-    <define name="H_X" value=" 0.390835"/>
-    <define name="H_Y" value=" 0.00556658"/>
-    <define name="H_Z" value=" 0.920444"/>
-    <define name="USE_RPM_SENSOR_NOTCH" value="1"/>
-    <define name="NOTCH_FILTER_BANDWIDTH" value="10.0"/>
-
-    <!-- Use GPS heading instead of magneto -->
-    <!--define name="USE_GPS_HEADING" value="0"/-->
     <define name="HEADING_UPDATE_GPS_MIN_SPEED" value="0"/>
   </section>
 
- <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
+  <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
    <define name="PGAIN" value="301"/>
    <define name="DGAIN" value="185"/>
    <define name="IGAIN" value="31"/>
- </section>
+  </section>
 
- <section name="RPM_SENSOR" prefix="RPM_SENSOR_">
-   <define name="PULSES_PER_ROTATION" value="6"/>
- </section>
-
- <modules main_freq="512">
-   <!--load name="gps_ubx_ucenter.xml"/-->
-   <load name="send_imu_mag_current.xml"/>
-   <load name="logger_sd_spi_direct.xml">
-     <configure name="LOGGER_CONTROL_SWITCH" value="RADIO_AUX2"/>
-     <configure name="LOGGER_LED" value="3"/>
-   </load>
-   <!--load name="adc_expansion_uart.xml"/-->
-   <!--load name="air_data.xml"/-->
-   <!--load name="sys_mon.xml"/-->
- </modules>
+  <modules main_freq="512">
+    <load name="send_imu_mag_current.xml"/>
+    <load name="logger_sd_spi_direct.xml">
+      <configure name="LOGGER_CONTROL_SWITCH" value="RADIO_AUX2"/>
+      <configure name="LOGGER_LED" value="3"/>
+    </load>
+    <!-- DISABLED MODULES
+      <load name="gps_ubx_ucenter.xml"/>
+      <load name="adc_expansion_uart.xml"/>
+      <load name="air_data.xml"/>
+      <load name="sys_mon.xml"/>
+    -->
+  </modules>
 
   <firmware name="rotorcraft">
     <target name="ap" board="lisa_s_1.0">
-        <define name="AHRS_USE_GPS_HEADING" value="1"/>
-        <configure name="USE_MAGNETOMETER" value="0"/>
-        <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="0"/>
-        <define name="HELI_ROLL_DOUBLET_ACTIVE" value="0"/>
-        
-        <!--subsystem name="radio_control" type="superbitrf_rc"-->
-        <!--<define name="RADIO_TRANSMITTER_ID" value="2008496626"/>-->   <!-- TUDelft Dx6i: TX 4 -->
-        <!--<define name="RADIO_TRANSMITTER_CHAN" value="6"/>-->
-        <!--<define name="RADIO_TRANSMITTER_PROTOCOL" value="0x01"/>-->
-
-	  <subsystem name="radio_control" type="ppm">
+      <configure name="USE_MAGNETOMETER" value="0"/>
+      <define name="AHRS_USE_GPS_HEADING" value="1"/>
+      <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="0"/>
+      <define name="HELI_ROLL_DOUBLET_ACTIVE" value="0"/>
+      
+      <subsystem name="radio_control" type="ppm">
         <configure name="RADIO_CONTROL_PPM_PIN" value="SERVO6"/>
       </subsystem>
 
@@ -245,11 +99,10 @@
       <define name="USE_SERVOS_1AND2"/>
     </subsystem>
 
-	<subsystem name="telemetry" type="transparent">
-	  <configure name="MODEM_BAUD" value="B115200"/>
-	  <configure name="MODEM_PORT" value="UART1"/>
-	</subsystem>
-    <!--subsystem name="telemetry" type="superbitrf" /-->
+	  <subsystem name="telemetry" type="transparent">
+	    <configure name="MODEM_BAUD" value="B115200"/>
+	    <configure name="MODEM_PORT" value="UART1"/>
+	  </subsystem>
     <subsystem name="imu" type="lisa_s_v1.0">
       <define name="LISA_S_UPSIDE_DOWN"/> <!-- wtf hij zit gewoon rechtop maargoed -->
     </subsystem>

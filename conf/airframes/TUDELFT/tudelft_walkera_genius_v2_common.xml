@@ -46,13 +46,13 @@
     <define name="BODY_TO_IMU_PSI" value="7.7" unit="deg"/> <!-- was 7.7 /-->
   </section>
 
- <section name="BAT">
-   <define name="MILLIAMP_AT_FULL_THROTTLE" value="3700"/>
-   <define name="CATASTROPHIC_BAT_LEVEL" value="3.0" unit="V"/>
+  <section name="BAT">
+    <define name="MILLIAMP_AT_FULL_THROTTLE" value="3700"/>
+    <define name="CATASTROPHIC_BAT_LEVEL" value="3.0" unit="V"/>
     <define name="CRITIC_BAT_LEVEL" value="3.2" unit="V"/>
     <define name="LOW_BAT_LEVEL" value="3.5" unit="V"/>
     <define name="MAX_BAT_LEVEL" value="4.2" unit="V"/>
- </section>
+  </section>
 
   <section name="STABILIZATION_RATE" prefix="STABILIZATION_RATE_">
     <define name="SP_MAX_P" value="360" unit="deg/s"/>
@@ -113,8 +113,7 @@
     <define name="HEADING_UPDATE_GPS_MIN_SPEED" value="0"/>
   </section>
 
- <section name="RPM_SENSOR" prefix="RPM_SENSOR_">
-   <define name="PULSES_PER_ROTATION" value="6"/>
- </section>
-
+  <section name="RPM_SENSOR" prefix="RPM_SENSOR_">
+    <define name="PULSES_PER_ROTATION" value="6"/>
+  </section>
 </airframe>
