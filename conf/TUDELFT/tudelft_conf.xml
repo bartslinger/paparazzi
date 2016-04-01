@@ -111,7 +111,7 @@
   />
   <aircraft
    name="Helisa_GPS"
-   ac_id="6"
+   ac_id="115"
    airframe="airframes/TUDELFT/tudelft_walkera_genius_v2_outside.xml"
    radio="radios/FlyElectricRx31_DX6.xml"
    telemetry="telemetry/rotorcraft_with_logger.xml"

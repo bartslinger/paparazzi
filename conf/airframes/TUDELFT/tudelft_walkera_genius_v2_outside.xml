@@ -13,7 +13,7 @@
 <airframe name="walkera_genius_v2">
 
   <include href="conf/airframes/TUDELFT/tudelft_walkera_genius_v2_common.xml" />
-  <include href="conf/airframes/TUDELFT/calibrations/walkera_2016_03_16.xml"/>
+  <include href="conf/airframes/TUDELFT/calibrations/walkera_most_recent_calib.xml"/>
 
  <section name="AUTOPILOT">
    <define name="MODE_AUTO2" value="AP_MODE_NAV"/> <!--AP_MODE_ATTITUDE_DIRECT-->
@@ -77,8 +77,8 @@
 
   <firmware name="rotorcraft">
     <target name="ap" board="lisa_s_1.0">
-      <configure name="USE_MAGNETOMETER" value="0"/>
-      <define name="AHRS_USE_GPS_HEADING" value="1"/>
+      <configure name="USE_MAGNETOMETER" value="1"/>
+      <define name="AHRS_USE_GPS_HEADING" value="0"/>
       <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="0"/>
       <define name="HELI_ROLL_DOUBLET_ACTIVE" value="0"/>
       
