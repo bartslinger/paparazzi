@@ -137,12 +137,15 @@ static inline void indi_set_identity(int32_t _matrix[][INDI_DOF])
 
 /* Filter functions referenced to */
 struct heli_rate_filter_t actuator_model[INDI_DOF];
+struct heli_rate_filter_t fast_dynamics_model[2]; // only pitch and roll
 int32_t alpha_yaw_inc;
 int32_t alpha_yaw_dec;
 static inline void indi_apply_actuator_models(int32_t _out[], int32_t _in[])
 {
-  _out[INDI_ROLL] = heli_rate_filter_propagate(&actuator_model[INDI_ROLL], _in[INDI_ROLL]);
-  _out[INDI_PITCH] = heli_rate_filter_propagate(&actuator_model[INDI_PITCH], _in[INDI_PITCH]);
+  int32_t temp_roll;
+  int32_t temp_pitch;
+  temp_roll  = heli_rate_filter_propagate(&actuator_model[INDI_ROLL], _in[INDI_ROLL]);
+  temp_pitch = heli_rate_filter_propagate(&actuator_model[INDI_PITCH], _in[INDI_PITCH]);
 
   /* Depending on yaw direction, change filter coefficient */
   int32_t prev = actuator_model[INDI_YAW].buffer[actuator_model[INDI_YAW].idx];
@@ -156,6 +159,10 @@ static inline void indi_apply_actuator_models(int32_t _out[], int32_t _in[])
   _out[INDI_YAW] = heli_rate_filter_propagate(&actuator_model[INDI_YAW], _in[INDI_YAW]);
 
   _out[INDI_THRUST] = heli_rate_filter_propagate(&actuator_model[INDI_THRUST], _in[INDI_THRUST]);
+
+  /* Also apply first order filter that represents fast damping dynamics in pitch and roll rate */
+  _out[INDI_ROLL]  = heli_rate_filter_propagate(&fast_dynamics_model[INDI_ROLL], temp_roll);
+  _out[INDI_PITCH] = heli_rate_filter_propagate(&fast_dynamics_model[INDI_PITCH], temp_pitch);
 }
 
 static inline void indi_apply_compensator_filters(int32_t _out[], int32_t _in[])
@@ -295,6 +302,10 @@ void stabilization_attitude_init(void)
   // Different dynamics for up and down
   alpha_yaw_inc = actuator_model[INDI_YAW].alpha;
   alpha_yaw_dec = (PERIODIC_FREQUENCY << 14)/(PERIODIC_FREQUENCY + 10); // OMEGA_DOWN = 10 rad/s, shift = 14
+
+  /* Fast dynamics in roll and pitch model */
+  heli_rate_filter_initialize(&fast_dynamics_model[INDI_ROLL], 70, 0, 9600); // TODO: Fix value
+  heli_rate_filter_initialize(&fast_dynamics_model[INDI_PITCH], 70, 0, 9600); // "       "
 
   /* Notch filter initialization */
   for (uint8_t i = 0; i < INDI_DOF; i++) {
@@ -450,7 +461,7 @@ void stabilization_attitude_run(bool_t in_flight)
     c->apply_measurement_filters[i](c->filtered_measurement[i], c->filtered_measurement[i-1]);
   }
 
-  /* RADIO throttle stick value */
+  /* RADIO throttle stick value, for 4dof mode */
   int32_t accel_z_sp = (-1)*3*((guidance_v_rc_delta_t - MAX_PPRZ/2) << INT32_ACCEL_FRAC) / (MAX_PPRZ/2);
   accel_z_sp = ((accel_z_sp << INT32_TRIG_FRAC) / guidance_v_thrust_coeff);
 
