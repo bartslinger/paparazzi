@@ -137,7 +137,9 @@ static inline void indi_set_identity(int32_t _matrix[][INDI_DOF])
 
 /* Filter functions referenced to */
 struct heli_rate_filter_t actuator_model[INDI_DOF];
+#if STABILIZATION_ATTITUDE_HELI_INDI_USE_FAST_DYN_FILTERS
 struct heli_rate_filter_t fast_dynamics_model[2]; // only pitch and roll
+#endif
 int32_t alpha_yaw_inc;
 int32_t alpha_yaw_dec;
 static inline void indi_apply_actuator_models(int32_t _out[], int32_t _in[])
@@ -160,9 +162,14 @@ static inline void indi_apply_actuator_models(int32_t _out[], int32_t _in[])
 
   _out[INDI_THRUST] = heli_rate_filter_propagate(&actuator_model[INDI_THRUST], _in[INDI_THRUST]);
 
+#if STABILIZATION_ATTITUDE_HELI_INDI_USE_FAST_DYN_FILTERS
   /* Also apply first order filter that represents fast damping dynamics in pitch and roll rate */
   _out[INDI_ROLL]  = heli_rate_filter_propagate(&fast_dynamics_model[INDI_ROLL], temp_roll);
   _out[INDI_PITCH] = heli_rate_filter_propagate(&fast_dynamics_model[INDI_PITCH], temp_pitch);
+#else
+  _out[INDI_ROLL] = temp_roll;
+  _out[INDI_PITCH] = temp_pitch;
+#endif
 }
 
 static inline void indi_apply_compensator_filters(int32_t _out[], int32_t _in[])
@@ -303,9 +310,11 @@ void stabilization_attitude_init(void)
   alpha_yaw_inc = actuator_model[INDI_YAW].alpha;
   alpha_yaw_dec = (PERIODIC_FREQUENCY << 14)/(PERIODIC_FREQUENCY + 10); // OMEGA_DOWN = 10 rad/s, shift = 14
 
+#if STABILIZATION_ATTITUDE_HELI_INDI_USE_FAST_DYN_FILTERS
   /* Fast dynamics in roll and pitch model */
-  heli_rate_filter_initialize(&fast_dynamics_model[INDI_ROLL], 70, 0, 9600); // TODO: Fix value
-  heli_rate_filter_initialize(&fast_dynamics_model[INDI_PITCH], 70, 0, 9600); // "       "
+  heli_rate_filter_initialize(&fast_dynamics_model[INDI_ROLL], STABILIZATION_ATTITUDE_HELI_INDI_FAST_DYN_ROLL_BW, 0, 9600); // TODO: Fix value
+  heli_rate_filter_initialize(&fast_dynamics_model[INDI_PITCH], STABILIZATION_ATTITUDE_HELI_INDI_FAST_DYN_PITCH_BW, 0, 9600); // "       "
+#endif
 
   /* Notch filter initialization */
   for (uint8_t i = 0; i < INDI_DOF; i++) {

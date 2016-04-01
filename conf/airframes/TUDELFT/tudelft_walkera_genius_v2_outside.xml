@@ -1,0 +1,119 @@
+<!-- this is a Walkera Genius V2 frame equiped with Lisa/S 0.1 with brushless main rotor -->
+<!-- Using Lisa/S V1.0 board file as it is software compatible. -->
+
+<!--
+     Applicable configuration:
+     airframe="airframes/TUDelft/walkera_genius_v2.xml"
+     radio="radios/cockpitSX.xml"
+     telemetry="telemetry/default_rotorcraft.xml"
+     flight_plan="flight_plans/rotorcraft_basic.xml"
+     settings="settings/rotorcraft_basic.xml settings/control/rotorcraft_guidance.xml settings/control/stabilization_att_int.xml settings/control/stabilization_rate.xml"
+-->
+
+<airframe name="walkera_genius_v2">
+
+  <include href="conf/airframes/TUDELFT/tudelft_walkera_genius_v2_common.xml" />
+  <include href="conf/airframes/TUDELFT/calibrations/walkera_2016_03_16.xml"/>
+
+ <section name="AUTOPILOT">
+   <define name="MODE_AUTO2" value="AP_MODE_NAV"/> <!--AP_MODE_ATTITUDE_DIRECT-->
+   <define name="MODE_AUTO1" value="AP_MODE_HOVER_Z_HOLD"/> <!--AP_MODE_HELI_INDI_4DOF-->
+   <define name="MODE_MANUAL" value="AP_MODE_HELI_INDI"/> <!--AP_MODE_ATTITUDE_Z_HOLD-->
+ </section>
+
+  <section name="STABILIZATION_ATTITUDE_HELI_INDI" prefix="STABILIZATION_ATTITUDE_HELI_INDI_">
+    <define name="ROLL_P" value="30"/><!--20 3052 -->
+    <define name="PITCH_P" value="25"/><!--20 3052 -->
+    <define name="YAW_P" value="15"/>
+    <define name="YAW_D" value="6"/>
+    <define name="USE_FAST_DYN_FILTERS" value="0" />
+    <define name="FAST_DYN_ROLL_BW" value="70" />
+    <define name="FAST_DYN_PITCH_BW" value="70" />
+  </section>
+
+  <section name="STABILIZATION_ATTITUDE" prefix="STABILIZATION_ATTITUDE_">
+    <!-- setpoints -->
+    <define name="SP_MAX_PHI" value="45." unit="deg"/>
+    <define name="SP_MAX_THETA" value="45." unit="deg"/>
+    <define name="SP_MAX_R" value="270." unit="deg/s"/>
+  </section>
+
+  <section name="INS" prefix="INS_">
+    <!-- Use GPS altitude measurments and set the R gain -->
+    <define name="USE_GPS_ALT" value="1"/>
+    <define name="VFF_R_GPS" value="0.01"/>
+  </section>
+
+ <section name="GUIDANCE_V" prefix="GUIDANCE_V_">
+   <define name="HOVER_KP" value="241"/>
+   <define name="HOVER_KD" value="104"/>
+   <define name="HOVER_KI" value="0"/>
+   <define name="GUIDANCE_V_NOMINAL_HOVER_THROTTLE" value="0.9"/>
+  </section>
+
+  <section name="AHRS" prefix="AHRS_">
+    <define name="HEADING_UPDATE_GPS_MIN_SPEED" value="0"/>
+  </section>
+
+ <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
+   <define name="PGAIN" value="301"/>
+   <define name="DGAIN" value="185"/>
+   <define name="IGAIN" value="31"/>
+ </section>
+
+ <modules main_freq="512">
+   <!--load name="gps_ubx_ucenter.xml"/-->
+   <load name="send_imu_mag_current.xml"/>
+   <load name="logger_sd_spi_direct.xml">
+     <configure name="LOGGER_CONTROL_SWITCH" value="RADIO_AUX2"/>
+     <configure name="LOGGER_LED" value="3"/>
+   </load>
+   <!--load name="adc_expansion_uart.xml"/-->
+   <!--load name="air_data.xml"/-->
+   <!--load name="sys_mon.xml"/-->
+ </modules>
+
+  <firmware name="rotorcraft">
+    <target name="ap" board="lisa_s_1.0">
+        <define name="AHRS_USE_GPS_HEADING" value="1"/>
+        <configure name="USE_MAGNETOMETER" value="0"/>
+        <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="0"/>
+        <define name="HELI_ROLL_DOUBLET_ACTIVE" value="0"/>
+        
+        <!--subsystem name="radio_control" type="superbitrf_rc"-->
+        <!--<define name="RADIO_TRANSMITTER_ID" value="2008496626"/>-->   <!-- TUDelft Dx6i: TX 4 -->
+        <!--<define name="RADIO_TRANSMITTER_CHAN" value="6"/>-->
+        <!--<define name="RADIO_TRANSMITTER_PROTOCOL" value="0x01"/>-->
+
+	  <subsystem name="radio_control" type="ppm">
+        <configure name="RADIO_CONTROL_PPM_PIN" value="SERVO6"/>
+      </subsystem>
+
+      <!--configure name="USE_BARO_BOARD" value="0"/-->
+      <define name="RADIO_KILL_SWITCH" value="RADIO_FLAP"/>
+
+      <configure name="AHRS_PROPAGATE_FREQUENCY" value="500"/>
+      <define name="USE_PERSISTENT_SETTINGS" value="TRUE"/>
+    </target>
+
+    <subsystem name="actuators" type="pwm">
+      <define name="TIM5_SERVO_HZ" value="2000"/>
+      <define name="SERVO_HZ" value="300"/>
+      <define name="USE_SERVOS_1AND2"/>
+    </subsystem>
+
+	<subsystem name="telemetry" type="transparent">
+	  <configure name="MODEM_BAUD" value="B115200"/>
+	  <configure name="MODEM_PORT" value="UART1"/>
+	</subsystem>
+    <!--subsystem name="telemetry" type="superbitrf" /-->
+    <subsystem name="imu" type="lisa_s_v1.0">
+      <define name="LISA_S_UPSIDE_DOWN"/> <!-- wtf hij zit gewoon rechtop maargoed -->
+    </subsystem>
+    <subsystem name="gps" type="datalink"/>
+    <subsystem name="stabilization" type="heli_indi"/>
+    <subsystem name="rpm_sensor" type="eagletree"/>
+    <subsystem name="ahrs" type="int_cmpl_quat_notch"/>
+    <subsystem name="ins"/>
+  </firmware>
+</airframe>
