@@ -122,6 +122,26 @@ struct SecondOrderNotchFilter acc_z2_notch;
 static inline void UNUSED ahrs_icq_update_mag_full(struct Int32Vect3 *mag, float dt);
 static inline void ahrs_icq_update_mag_2d(struct Int32Vect3 *mag, float dt);
 
+struct AhrsFilteredAccels {
+  int32_t x;
+  int32_t y;
+  int32_t z;
+} ahrs_filtered_accels;
+
+#if PERIODIC_TELEMETRY
+#include "subsystems/datalink/telemetry.h"
+
+/* Telemetry messages here */
+
+static void send_ahrs_accel_values(struct transport_tx *trans, struct link_device *dev)
+{
+  pprz_msg_send_IMU_ACCEL_FILTERED(trans, dev, AC_ID,
+                                &ahrs_filtered_accels.x,
+                                &ahrs_filtered_accels.y,
+                                &ahrs_filtered_accels.z);
+}
+#endif
+
 void ahrs_icq_init(void)
 {
 #ifdef AHRS_USE_RPM_SENSOR_NOTCH
@@ -194,6 +214,10 @@ void ahrs_icq_init(void)
 
   ahrs_icq.accel_cnt = 0;
   ahrs_icq.mag_cnt = 0;
+
+#if PERIODIC_TELEMETRY
+  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_IMU_ACCEL_FILTERED, send_ahrs_accel_values);
+#endif
 }
 
 
@@ -323,19 +347,17 @@ void ahrs_icq_update_accel(struct Int32Vect3 *accel, float dt)
     int32_t zout2;
     notch_filter_update(&acc_z2_notch, &zout1, &zout2);
 
-    /* Log it! */
-    //sd_logger_periodic();
-
     /* Set acceleration values to filtered values */
-#if 0
     accel->x = xout2;
     accel->y = yout2;
     accel->z = zout2;
-#endif
   } else {
-    //sd_logger_periodic();
+    // Don't apply filters for low RPM
   }
 #endif
+  ahrs_filtered_accels.x = accel->x;
+  ahrs_filtered_accels.y = accel->y;
+  ahrs_filtered_accels.z = accel->z;
 
   // c2 = ltp z-axis in imu-frame
   struct Int32RMat ltp_to_imu_rmat;

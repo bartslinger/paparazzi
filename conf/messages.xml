@@ -1901,7 +1901,11 @@
     <field name="g2_r" type="float"/>
   </message>
 
-  <!--217 is free -->
+  <message name="IMU_ACCEL_FILTERED" id="217">
+    <field name="ax"    type="int32" alt_unit="m/s2" alt_unit_coef="0.0009766"/>
+    <field name="ay"    type="int32" alt_unit="m/s2" alt_unit_coef="0.0009766"/>
+    <field name="az"    type="int32" alt_unit="m/s2" alt_unit_coef="0.0009766"/>
+  </message>
 
   <message name="BEBOP_ACTUATORS" id="218">
     <field name="cmd_thrust" type="int32"/>
