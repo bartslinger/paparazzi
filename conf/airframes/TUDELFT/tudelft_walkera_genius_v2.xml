@@ -45,14 +45,16 @@
   </section>
 
   <section name="GUIDANCE_V" prefix="GUIDANCE_V_">
-    <define name="HOVER_KP" value="241"/>
-    <define name="HOVER_KD" value="104"/>
+    <define name="HOVER_KP" value="600"/>
+    <define name="HOVER_KD" value="237"/>
     <define name="HOVER_KI" value="0"/>
     <define name="GUIDANCE_V_NOMINAL_HOVER_THROTTLE" value="0.9"/>
   </section>
 
   <section name="AHRS" prefix="AHRS_">
     <define name="HEADING_UPDATE_GPS_MIN_SPEED" value="0"/>
+    <define name="USE_RPM_SENSOR_NOTCH" value="1"/>
+    <define name="NOTCH_FILTER_BANDWIDTH" value="10"/>
   </section>
 
   <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
