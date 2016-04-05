@@ -53,7 +53,7 @@
 
   <section name="AHRS" prefix="AHRS_">
     <define name="HEADING_UPDATE_GPS_MIN_SPEED" value="0"/>
-    <define name="USE_RPM_SENSOR_NOTCH" value="1"/>
+    <define name="USE_RPM_SENSOR_NOTCH" value="0"/>
     <define name="NOTCH_FILTER_BANDWIDTH" value="10"/>
   </section>
 
