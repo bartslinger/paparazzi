@@ -122,11 +122,7 @@ struct SecondOrderNotchFilter acc_z2_notch;
 static inline void UNUSED ahrs_icq_update_mag_full(struct Int32Vect3 *mag, float dt);
 static inline void ahrs_icq_update_mag_2d(struct Int32Vect3 *mag, float dt);
 
-struct AhrsFilteredAccels {
-  int32_t x;
-  int32_t y;
-  int32_t z;
-} ahrs_filtered_accels;
+struct Int32Vect3 ahrs_filtered_accels;
 
 #if PERIODIC_TELEMETRY
 #include "subsystems/datalink/telemetry.h"
@@ -318,10 +314,12 @@ void ahrs_icq_update_accel(struct Int32Vect3 *accel, float dt)
     notch_filter_set_filter_frequency(&acc_y_notch, rpm_sensor.motor_frequency);
     notch_filter_set_filter_frequency(&acc_z_notch, rpm_sensor.motor_frequency);
 
+    /* First harmonic */
     notch_filter_set_filter_frequency(&acc_x1_notch, 2.0*rpm_sensor.motor_frequency);
     notch_filter_set_filter_frequency(&acc_y1_notch, 2.0*rpm_sensor.motor_frequency);
     notch_filter_set_filter_frequency(&acc_z1_notch, 2.0*rpm_sensor.motor_frequency);
 
+    /* Second harmonic */
     notch_filter_set_filter_frequency(&acc_x2_notch, 3.0*rpm_sensor.motor_frequency);
     notch_filter_set_filter_frequency(&acc_y2_notch, 3.0*rpm_sensor.motor_frequency);
     notch_filter_set_filter_frequency(&acc_z2_notch, 3.0*rpm_sensor.motor_frequency);
@@ -347,17 +345,19 @@ void ahrs_icq_update_accel(struct Int32Vect3 *accel, float dt)
     int32_t zout2;
     notch_filter_update(&acc_z2_notch, &zout1, &zout2);
 
+    /* Insert values in the struct for logging. */
     /* Set acceleration values to filtered values */
-    accel->x = xout2;
-    accel->y = yout2;
-    accel->z = zout2;
+    ahrs_filtered_accels.x = xout2;
+    ahrs_filtered_accels.y = yout2;
+    ahrs_filtered_accels.z = zout2;
   } else {
-    // Don't apply filters for low RPM
+    /* Don't apply filters for low RPM */
+    ahrs_filtered_accels.x = accel->x;
+    ahrs_filtered_accels.y = accel->y;
+    ahrs_filtered_accels.z = accel->z;
   }
 #endif
-  ahrs_filtered_accels.x = accel->x;
-  ahrs_filtered_accels.y = accel->y;
-  ahrs_filtered_accels.z = accel->z;
+
 
   // c2 = ltp z-axis in imu-frame
   struct Int32RMat ltp_to_imu_rmat;
@@ -398,9 +398,9 @@ void ahrs_icq_update_accel(struct Int32Vect3 *accel, float dt)
 
     /* and subtract it from imu measurement to get a corrected measurement
      * of the gravity vector */
-    VECT3_DIFF(pseudo_gravity_measurement, *accel, acc_c_imu);
+    VECT3_DIFF(pseudo_gravity_measurement, ahrs_filtered_accels, acc_c_imu); /* Changed *accel to ahrs_filtered_accels */
   } else {
-    VECT3_COPY(pseudo_gravity_measurement, *accel);
+    VECT3_COPY(pseudo_gravity_measurement, ahrs_filtered_accels); /* Changed *accel to ahrs_filtered_accels */
   }
 
   /* compute the residual of the pseudo gravity vector in imu frame */
