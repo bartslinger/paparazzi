@@ -61,12 +61,27 @@ void rpm_sensor_process_pulse(uint16_t cnt, uint8_t overflow_cnt)
     return;
   }
 
+
   if ((cnt > rpm_sensor.previous_cnt && overflow_cnt > 0) || (overflow_cnt > 1)) {
     rpm_sensor.motor_frequency = 0.0f;
   } else {
     rpm_sensor.motor_frequency = (281250.0/diff)/6.0;
   }
 
+  /* Spike filter (spikes in rpm measurement removed by limiting maximum inc/dec) */
+  static float previous_motor_frequency = 0.0f;
+  float freqdiff = rpm_sensor.motor_frequency - previous_motor_frequency;
+  /* Difference of 0.25 corresponds to 128 Hz / second */
+  /* Hard-coded for 512 Hz */
+  /* Yes this is beuned */
+  if (freqdiff > 0.25) {
+    rpm_sensor.motor_frequency = previous_motor_frequency + 0.25;
+  }
+  else if (freqdiff < -0.25) {
+    rpm_sensor.motor_frequency = previous_motor_frequency - 0.25;
+  }
+
+  previous_motor_frequency = rpm_sensor.motor_frequency;
   /* Remember count */
   rpm_sensor.previous_cnt = cnt;
 }
