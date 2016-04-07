@@ -403,10 +403,6 @@ void ahrs_icq_update_accel(struct Int32Vect3 *accel, float dt)
     VECT3_COPY(pseudo_gravity_measurement, ahrs_filtered_accels); /* Changed *accel to ahrs_filtered_accels */
   }
 
-  /* compute the residual of the pseudo gravity vector in imu frame */
-  VECT3_CROSS_PRODUCT(residual, pseudo_gravity_measurement, c2);
-
-
   /* FIR filtered pseudo_gravity_measurement */
 #define FIR_FILTER_SIZE 8
   static struct Int32Vect3 filtered_gravity_measurement = {0, 0, 0};
@@ -414,6 +410,13 @@ void ahrs_icq_update_accel(struct Int32Vect3 *accel, float dt)
   VECT3_ADD(filtered_gravity_measurement, pseudo_gravity_measurement);
   VECT3_SDIV(filtered_gravity_measurement, filtered_gravity_measurement, FIR_FILTER_SIZE);
 
+  static struct Int32Vect3 filtered_c2 = {0, 0, 0};
+  VECT3_SMUL(filtered_c2, filtered_c2, FIR_FILTER_SIZE - 1);
+  VECT3_ADD(filtered_c2, c2);
+  VECT3_SDIV(filtered_c2, filtered_c2, FIR_FILTER_SIZE);
+
+  /* compute the residual of the pseudo gravity vector in imu frame */
+  VECT3_CROSS_PRODUCT(residual, filtered_gravity_measurement, filtered_c2);
 
   if (ahrs_icq.gravity_heuristic_factor) {
     /* heuristic on acceleration (gravity estimate) norm */
