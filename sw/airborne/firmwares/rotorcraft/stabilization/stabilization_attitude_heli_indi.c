@@ -52,9 +52,18 @@ extern int32_t guidance_v_rc_delta_t; // private variable of stabilization_v.c
 #warning "Order of commands incorrect"
 #endif
 
+#ifndef STABILIZATION_ATTITUDE_STEADY_STATE_ROLL
+  #define STABILIZATION_ATTITUDE_STEADY_STATE_ROLL 0
+#endif
+#ifndef STABILIZATION_ATTITUDE_STEADY_STATE_PITCH
+  #define STABILIZATION_ATTITUDE_STEADY_STATE_PITCH 0
+#endif
 
 struct Int32Quat   stab_att_sp_quat;
 struct Int32Eulers stab_att_sp_euler;
+struct Int32Quat sp_offset;
+float sp_offset_roll = STABILIZATION_ATTITUDE_STEADY_STATE_ROLL;
+float sp_offset_pitch = STABILIZATION_ATTITUDE_STEADY_STATE_PITCH;
 
 struct HeliIndiGains heli_indi_gains = {
   STABILIZATION_ATTITUDE_HELI_INDI_ROLL_P,
@@ -69,7 +78,6 @@ struct HeliIndiGains heli_indi_gains = {
 #define HELI_INDI_YAWRATE_FILTSIZE 8
 
 struct IndiController_int new_heli_indi;
-struct Int32Quat sp_offset;
 //struct HeliIndiStab heli_indi;
 //int32_t global_delta_u;
 //int32_t global_pitch_model;
@@ -95,6 +103,32 @@ static void send_indi_debug_values(struct transport_tx *trans, struct link_devic
                                 &stabilization_cmd[COMMAND_YAW]);
 }
 #endif
+
+void stabilization_attitude_heli_indi_set_steadystate_pitch(float pitch)
+{
+  sp_offset_pitch = pitch;
+  stabilization_attitude_heli_indi_set_steadystate_pitchroll();
+}
+
+void stabilization_attitude_heli_indi_set_steadystate_roll(float roll)
+{
+  sp_offset_roll = roll;
+  stabilization_attitude_heli_indi_set_steadystate_pitchroll();
+}
+
+void stabilization_attitude_heli_indi_set_steadystate_pitchroll()
+{
+  /* Pitch roll setpoint not zero */
+  /* orientation vector describing simultaneous rotation of roll/pitch */
+  struct FloatVect3 ov;
+  struct FloatQuat q;
+  ov.x = -sp_offset_roll * M_PI / 180;
+  ov.y = -sp_offset_pitch * M_PI / 180;
+  ov.z = 0.0;
+  /* quaternion from that orientation vector */
+  float_quat_of_orientation_vect(&q, &ov);
+  QUAT_BFP_OF_REAL(sp_offset, q);
+}
 
 static inline void indi_subtract_vect(int32_t _out[], int32_t _in1[], int32_t _in2[])
 {
@@ -289,16 +323,8 @@ static inline void indi_apply_measurement_butterworth_filters(int32_t _out[], in
 
 void stabilization_attitude_init(void)
 {
-  /* Pitch roll setpoint not zero */
-  /* orientation vector describing simultaneous rotation of roll/pitch */
-  struct FloatVect3 ov;
-  struct FloatQuat q;
-  ov.x = -STABILIZATION_ATTITUDE_STEADY_STATE_ROLL * M_PI / 180;
-  ov.y = -STABILIZATION_ATTITUDE_STEADY_STATE_PITCH * M_PI / 180;
-  ov.z = 0.0;
-  /* quaternion from that orientation vector */
-  float_quat_of_orientation_vect(&q, &ov);
-  QUAT_BFP_OF_REAL(sp_offset, q);
+  /* Set steady-state pitch and roll values */
+  stabilization_attitude_heli_indi_set_steadystate_pitchroll();
 
   /* Initialization code INDI */
   struct IndiController_int* c = &new_heli_indi;

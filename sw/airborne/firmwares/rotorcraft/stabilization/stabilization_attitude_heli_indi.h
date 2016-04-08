@@ -97,7 +97,13 @@ extern struct IndiController_int new_heli_indi;
 
 extern struct Int32Quat   stab_att_sp_quat;  ///< with #INT32_QUAT_FRAC
 extern struct Int32Eulers stab_att_sp_euler; ///< with #INT32_ANGLE_FRAC
+extern float sp_offset_roll;
+extern float sp_offset_pitch;
 extern struct HeliIndiStab heli_indi;
 extern struct HeliIndiGains heli_indi_gains;
+
+extern void stabilization_attitude_heli_indi_set_steadystate_pitch(float pitch);
+extern void stabilization_attitude_heli_indi_set_steadystate_roll(float roll);
+extern void stabilization_attitude_heli_indi_set_steadystate_pitchroll(void);
 
 #endif /* STABILIZATION_ATTITUDE_QUAT_INT_H */

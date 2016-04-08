@@ -1,0 +1,10 @@
+<!DOCTYPE settings SYSTEM "../settings.dtd">
+
+<settings target="ap|nps|test_imu|test_ahrs">
+  <dl_settings>
+    <dl_settings NAME="ss pitch/roll">
+      <dl_setting MAX="10" MIN="-10" STEP="0.1" VAR="sp_offset_roll" shortname="ss roll" module="stabilization/stabilization_attitude_heli_indi" param="STABILIZATION_ATTITUDE_STEADY_STATE_ROLL" unit="deg" handler="set_steadystate_roll" type="float" persistent="true"/>
+      <dl_setting MAX="10" MIN="-10" STEP="0.1" VAR="sp_offset_pitch" shortname="ss pitch" module="stabilization/stabilization_attitude_heli_indi" param="STABILIZATION_ATTITUDE_STEADY_STATE_PITCH" unit="deg" handler="set_steadystate_pitch" type="float" persistent="true"/>
+    </dl_settings>
+  </dl_settings>
+</settings>
