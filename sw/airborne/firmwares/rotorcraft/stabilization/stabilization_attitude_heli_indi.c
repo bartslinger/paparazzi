@@ -305,10 +305,10 @@ void stabilization_attitude_init(void)
   heli_rate_filter_initialize(&actuator_model[INDI_ROLL], 70, 9, 900);
   heli_rate_filter_initialize(&actuator_model[INDI_PITCH], 70, 9, 900);
   heli_rate_filter_initialize(&actuator_model[INDI_YAW], 37, 0, 9600);
-  heli_rate_filter_initialize(&actuator_model[INDI_THRUST], 70, 9, 450);
+  heli_rate_filter_initialize(&actuator_model[INDI_THRUST], 70, 9, 450); /* 450 because dynamic range is only 0-9600 */
   // Different dynamics for up and down
   alpha_yaw_inc = actuator_model[INDI_YAW].alpha;
-  alpha_yaw_dec = (PERIODIC_FREQUENCY << 14)/(PERIODIC_FREQUENCY + 10); // OMEGA_DOWN = 10 rad/s, shift = 14
+  alpha_yaw_dec = (PERIODIC_FREQUENCY << 14)/(PERIODIC_FREQUENCY + 13); // OMEGA_DOWN = 10 rad/s, shift = 14
 
 #if STABILIZATION_ATTITUDE_HELI_INDI_USE_FAST_DYN_FILTERS
   /* Fast dynamics in roll and pitch model */
@@ -334,7 +334,6 @@ void stabilization_attitude_init(void)
   init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_THRUST], 10, 1.0/PERIODIC_FREQUENCY, 0);
   init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_THRUST], 10, 1.0/PERIODIC_FREQUENCY, 0);
 
-
   /* Assign filter functions: */
   c->apply_actuator_models = &indi_apply_actuator_models;
   c->apply_compensator_filters = &indi_apply_compensator_filters;
@@ -342,8 +341,6 @@ void stabilization_attitude_init(void)
   c->apply_measurement_filters[1] = &indi_apply_measurement_butterworth_filters;
   c->apply_actuator_filters[0] = &indi_apply_actuator_notch_filters;
   c->apply_actuator_filters[1] = &indi_apply_actuator_butterworth_filters;
-
-  // AND ITS GONE (the old stuff)
 
 #if PERIODIC_TELEMETRY
   register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_STAB_INDI_DEBUG, send_indi_debug_values);
@@ -391,36 +388,6 @@ void stabilization_attitude_set_earth_cmd_i(struct Int32Vect2 *cmd, int32_t head
 
   quat_from_earth_cmd_i(&stab_att_sp_quat, cmd, heading);
 }
-
-#if 0
-void stabilization_attitude_get_measured_commands(){
-  /* Convert analog signals to corresponding steady-state PWM values */
-  int32_t servo_left  = adc_uart_values[0] * (float)0.54486 + 697;
-  int32_t servo_front = adc_uart_values[1] * (float)0.54827 + 703;
-  int32_t servo_right = adc_uart_values[2] * (float)0.54983 + 685;
-
-  /* Convert servo deflections back to pitch and roll commands */
-  servo_left  -= SERVO_CIC_LEFT_NEUTRAL;
-  servo_front -= SERVO_CIC_FRONT_NEUTRAL;
-  servo_right -= SERVO_CIC_RIGHT_NEUTRAL;
-
-  servo_left  *= servo_left>0 ?  SERVO_CIC_LEFT_TRAVEL_UP_DEN : SERVO_CIC_LEFT_TRAVEL_DOWN_DEN;
-  servo_front *= servo_front>0 ? SERVO_CIC_FRONT_TRAVEL_UP_DEN : SERVO_CIC_FRONT_TRAVEL_DOWN_DEN;
-  servo_right *= servo_right>0 ? SERVO_CIC_RIGHT_TRAVEL_UP_DEN : SERVO_CIC_RIGHT_TRAVEL_DOWN_DEN;
-
-  //  B = A*x (matrix multiply)
-  //  B = servo_values left, right, front
-  //  x = cmd pitch, cmd roll, var_collective
-  /* inverse (A) bitshifted <<16 =
-  //   24966      -24966      -49932
-  //  -51300      -51300           0
-  //  -21845       21845      -21845
-  */
-  heli_indi.measured_cmd[0] = (+ 24966 * servo_left - 24966 * servo_right - 49932 * servo_front) >> 16; // pitch
-  heli_indi.measured_cmd[1] = (- 51300 * servo_left - 51300 * servo_right) >> 16;                       // roll
-  heli_indi.measured_cmd[2] = (- 21845 * servo_left + 21845 * servo_right - 21845 * servo_front) >> 16; // var_collective
-}
-#endif
 
 #define OFFSET_AND_ROUND(_a, _b) (((_a)+(1<<((_b)-1)))>>(_b))
 #define OFFSET_AND_ROUND2(_a, _b) (((_a)+(1<<((_b)-1))-((_a)<0?1:0))>>(_b))
@@ -550,152 +517,6 @@ void stabilization_attitude_run(bool_t in_flight)
   }
 }
 
-#if 0
-static inline void stabilization_attitude_run_old(bool_t enable_integrator)
-{
-  (void) enable_integrator;
-  //struct HeliIndiStab *c = &heli_indi;
-
-  /* calculate acceleration in body frame */
-  //ins_int.ltp_accel.x = accel_meas_ltp.x;
-  //ins_int.ltp_accel.y = accel_meas_ltp.y;
-  struct NedCoor_i *ltp_accel_nedcoor = stateGetAccelNed_i();
-  struct Int32Vect3 ltp_accel;
-  ltp_accel.x = ltp_accel_nedcoor->x;
-  ltp_accel.y = ltp_accel_nedcoor->y;
-  ltp_accel.z = ltp_accel_nedcoor->z;
-  int32_rmat_vmult(&global_body_accelerations, stateGetNedToBodyRMat_i(), &ltp_accel);
-
-  /* attitude error */
-  struct Int32Quat att_err;
-  struct Int32Quat *att_quat = stateGetNedToBodyQuat_i();
-  INT32_QUAT_INV_COMP(att_err, *att_quat, stab_att_sp_quat);
-  /* wrap it in the shortest direction */
-  int32_quat_wrap_shortest(&att_err);
-  int32_quat_normalize(&att_err);
-
-  /* rate error */
-  struct Int32Rates *body_rate = stateGetBodyRates_i();
-
-  /* First notch, then IIR filter on MEASURED RATES */
-  if (rpm_sensor.motor_frequency > 25) {
-    notch_filter_set_filter_frequency(&heli_indi.p_filter, rpm_sensor.motor_frequency);
-    notch_filter_set_filter_frequency(&heli_indi.p_inner_filter, rpm_sensor.motor_frequency);
-    notch_filter_set_filter_frequency(&heli_indi.q_filter, rpm_sensor.motor_frequency);
-    notch_filter_set_filter_frequency(&heli_indi.q_inner_filter, rpm_sensor.motor_frequency);
-    notch_filter_set_filter_frequency(&heli_indi.r_filter, rpm_sensor.motor_frequency);
-    notch_filter_set_filter_frequency(&heli_indi.r_inner_filter, rpm_sensor.motor_frequency);
-    notch_filter_update(&heli_indi.p_filter, &body_rate->p, &heli_indi.rate_notched.p);
-    notch_filter_update(&heli_indi.q_filter, &body_rate->q, &heli_indi.rate_notched.q);
-    notch_filter_update(&heli_indi.r_filter, &body_rate->r, &heli_indi.rate_notched.r);
-  } else {
-    /* Rotor spinning slowly, don't notch */
-    heli_indi.rate_notched.p = body_rate->p;
-    heli_indi.rate_notched.q = body_rate->q;
-    heli_indi.rate_notched.r = body_rate->r;
-  }
-  /* Always IIR, also if rotor not spinning faster than 25Hz */
-  heli_indi.rate_filt.p = ((heli_indi.rate_filt.p * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + heli_indi.rate_notched.p) / HELI_INDI_ROLLRATE_FILTSIZE;
-  heli_indi.rate_filt.q = ((heli_indi.rate_filt.q * (HELI_INDI_PITCHRATE_FILTSIZE-1)) + heli_indi.rate_notched.q) / HELI_INDI_PITCHRATE_FILTSIZE;
-  heli_indi.rate_filt.r = ((heli_indi.rate_filt.r * (HELI_INDI_YAWRATE_FILTSIZE-1)) + heli_indi.rate_notched.r) / HELI_INDI_YAWRATE_FILTSIZE;
-
-  /* Calculate delta pqr measured */
-  struct Int32Rates delta_rate_meas;
-  delta_rate_meas.p = heli_indi.rate_filt.p;
-  delta_rate_meas.q = heli_indi.rate_filt.q;
-  delta_rate_meas.r = heli_indi.rate_filt.r - heli_indi.rate_previous.r;
-  heli_indi.rate_previous.r = heli_indi.rate_filt.r;
-
-  /* Linear controllers */
-  //int32_t roll_pid = (GAIN_MULTIPLIER_P * heli_indi_gains.roll_p * att_err.qx) >> 15;
-  //int32_t pitch_pid = (GAIN_MULTIPLIER_P * heli_indi_gains.pitch_p * att_err.qy) >> 15;
-  int32_t roll_virtual_control  = (heli_indi_gains.roll_p * att_err.qx) / 16;
-  int32_t pitch_virtual_control = (heli_indi_gains.pitch_p * att_err.qy) / 16;
-  int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * att_err.qz) - (heli_indi.rate_filt.r * heli_indi_gains.yaw_d);
-
-  /* ------------------ */
-
-  /* INDI YAW */
-  /* Multiply with dt; this integrates virtual control (acceleration) to required change in rate */
-  int32_t delta_thrust_meas = thrust_model_output_transferred - heli_indi.previous_thrust;
-  heli_indi.previous_thrust = thrust_model_output_transferred;
-  global_delta_thrust = delta_thrust_meas;
-
-  int32_t delta_r_ref = yaw_virtual_control * 512/512;
-
-  int32_t delta_r_error = delta_r_ref - (delta_rate_meas.r*512);
-  int32_t delta_u_yaw = (delta_r_error * 512/512 + 69*delta_thrust_meas) / 31;
-
-  /* Depending on direction, change filter coefficient */
-  int32_t prev = heli_indi.tail_model.buffer[heli_indi.tail_model.idx];
-  if(stabilization_cmd[COMMAND_YAW] - prev > 0) {
-    // Tail spinning up
-    heli_indi.tail_model.alpha = heli_indi.alpha_tail_inc;
-  } else {
-    // Tail spinning down
-    heli_indi.tail_model.alpha = heli_indi.alpha_tail_dec;
-  }
-  int32_t yaw_model_output = heli_rate_filter_propagate(&heli_indi.tail_model, stabilization_cmd[COMMAND_YAW]);
-
-  /* Only notch above freq threshold */
-  if (rpm_sensor.motor_frequency > 25) {
-    notch_filter_update(&heli_indi.r_inner_filter, &yaw_model_output, &heli_indi.inputmodel_notched.r);
-  } else {
-    heli_indi.inputmodel_notched.r = yaw_model_output;
-  }
-  /* Always IIR */
-  heli_indi.inputmodel_filtered.r = ((heli_indi.inputmodel_filtered.r * (HELI_INDI_YAWRATE_FILTSIZE - 1)) + heli_indi.inputmodel_notched.r) / HELI_INDI_YAWRATE_FILTSIZE;
-  /* -------- */
-
-
-  /* INDI PITCH + ROLL */
-  /* ----------------- */
-  /* Get measured pitch, roll, collective commands from adc measurements */
-  stabilization_attitude_get_measured_commands();
-
-  int32_t delta_p_ref = roll_virtual_control;
-  int32_t delta_p_error = delta_p_ref - delta_rate_meas.p;
-  int32_t roll_model_output = heli_rate_filter_propagate(&heli_indi.roll_model, stabilization_cmd[COMMAND_ROLL]);
-
-  int32_t delta_q_ref = pitch_virtual_control;
-  int32_t delta_q_error = delta_q_ref - delta_rate_meas.q;
-  int32_t pitch_model_output = heli_rate_filter_propagate(&heli_indi.pitch_model, stabilization_cmd[COMMAND_PITCH]);
-  global_pitch_model = pitch_model_output;
-
-  /* from matlab identification procedure
-  59558       18324
- -29230       34353
-  */
-
-  float delta_u_roll =  (59558.0 * (delta_p_error - 0) + 18324.0 / 4 * (delta_q_error + 0)) / 65536 /2;
-  float delta_u_pitch = (-29230.0 / 4 * (delta_p_error - 0) + 34353.0 * (delta_q_error + 0)) / 65536 /2;
-
-  global_delta_u = (int32_t) delta_u_pitch;
-
-  /* Notch on inner loop pitch and roll */
-  if (rpm_sensor.motor_frequency > 25) {
-    notch_filter_update(&heli_indi.p_inner_filter, &roll_model_output, &heli_indi.inputmodel_notched.p);
-    notch_filter_update(&heli_indi.q_inner_filter, &pitch_model_output, &heli_indi.inputmodel_notched.q);
-  } else {
-    heli_indi.inputmodel_filtered.p = roll_model_output;
-    heli_indi.inputmodel_filtered.q = pitch_model_output;
-  }
-  /*Always IIR */
-  heli_indi.inputmodel_filtered.p = ((heli_indi.inputmodel_filtered.p * (HELI_INDI_ROLLRATE_FILTSIZE - 1)) + heli_indi.inputmodel_notched.p) / HELI_INDI_ROLLRATE_FILTSIZE;
-  heli_indi.inputmodel_filtered.q = ((heli_indi.inputmodel_filtered.q * (HELI_INDI_PITCHRATE_FILTSIZE - 1)) + heli_indi.inputmodel_notched.q) / HELI_INDI_PITCHRATE_FILTSIZE;
-
-  /* set stabilization commands */
-  stabilization_cmd[COMMAND_ROLL] = heli_indi.inputmodel_filtered.p + delta_u_roll;
-  stabilization_cmd[COMMAND_PITCH] = heli_indi.inputmodel_filtered.q + delta_u_pitch;//(att_err.qy > 0) ? MAX_PPRZ : -MAX_PPRZ;//
-  stabilization_cmd[COMMAND_YAW] = heli_indi.inputmodel_filtered.r + delta_u_yaw;
-
-  /* bound the result */
-  BoundAbs(stabilization_cmd[COMMAND_ROLL], MAX_PPRZ);
-  BoundAbs(stabilization_cmd[COMMAND_PITCH], MAX_PPRZ);
-  BoundAbs(stabilization_cmd[COMMAND_YAW], MAX_PPRZ);
-}
-#endif
-
 void stabilization_attitude_read_rc(bool_t in_flight, bool_t in_carefree, bool_t coordinated_turn)
 {
   struct FloatQuat q_sp;
@@ -706,3 +527,36 @@ void stabilization_attitude_read_rc(bool_t in_flight, bool_t in_carefree, bool_t
 #endif
   QUAT_BFP_OF_REAL(stab_att_sp_quat, q_sp);
 }
+
+#if 0
+/* Function to convert actuator deflections back to pitch/roll 'commands'
+ * Values are hard-coded.
+ */
+void stabilization_attitude_get_measured_commands(){
+  /* Convert analog signals to corresponding steady-state PWM values */
+  int32_t servo_left  = adc_uart_values[0] * (float)0.54486 + 697;
+  int32_t servo_front = adc_uart_values[1] * (float)0.54827 + 703;
+  int32_t servo_right = adc_uart_values[2] * (float)0.54983 + 685;
+
+  /* Convert servo deflections back to pitch and roll commands */
+  servo_left  -= SERVO_CIC_LEFT_NEUTRAL;
+  servo_front -= SERVO_CIC_FRONT_NEUTRAL;
+  servo_right -= SERVO_CIC_RIGHT_NEUTRAL;
+
+  servo_left  *= servo_left>0 ?  SERVO_CIC_LEFT_TRAVEL_UP_DEN : SERVO_CIC_LEFT_TRAVEL_DOWN_DEN;
+  servo_front *= servo_front>0 ? SERVO_CIC_FRONT_TRAVEL_UP_DEN : SERVO_CIC_FRONT_TRAVEL_DOWN_DEN;
+  servo_right *= servo_right>0 ? SERVO_CIC_RIGHT_TRAVEL_UP_DEN : SERVO_CIC_RIGHT_TRAVEL_DOWN_DEN;
+
+  //  B = A*x (matrix multiply)
+  //  B = servo_values left, right, front
+  //  x = cmd pitch, cmd roll, var_collective
+  /* inverse (A) bitshifted <<16 =
+  //   24966      -24966      -49932
+  //  -51300      -51300           0
+  //  -21845       21845      -21845
+  */
+  heli_indi.measured_cmd[0] = (+ 24966 * servo_left - 24966 * servo_right - 49932 * servo_front) >> 16; // pitch
+  heli_indi.measured_cmd[1] = (- 51300 * servo_left - 51300 * servo_right) >> 16;                       // roll
+  heli_indi.measured_cmd[2] = (- 21845 * servo_left + 21845 * servo_right - 21845 * servo_front) >> 16; // var_collective
+}
+#endif
