@@ -69,6 +69,7 @@ struct HeliIndiGains heli_indi_gains = {
 #define HELI_INDI_YAWRATE_FILTSIZE 8
 
 struct IndiController_int new_heli_indi;
+struct Int32Quat sp_offset;
 //struct HeliIndiStab heli_indi;
 //int32_t global_delta_u;
 //int32_t global_pitch_model;
@@ -288,6 +289,17 @@ static inline void indi_apply_measurement_butterworth_filters(int32_t _out[], in
 
 void stabilization_attitude_init(void)
 {
+  /* Pitch roll setpoint not zero */
+  /* orientation vector describing simultaneous rotation of roll/pitch */
+  struct FloatVect3 ov;
+  struct FloatQuat q;
+  ov.x = -STABILIZATION_ATTITUDE_STEADY_STATE_ROLL * M_PI / 180;
+  ov.y = -STABILIZATION_ATTITUDE_STEADY_STATE_PITCH * M_PI / 180;
+  ov.z = 0.0;
+  /* quaternion from that orientation vector */
+  float_quat_of_orientation_vect(&q, &ov);
+  QUAT_BFP_OF_REAL(sp_offset, q);
+
   /* Initialization code INDI */
   struct IndiController_int* c = &new_heli_indi;
 
@@ -409,7 +421,12 @@ void stabilization_attitude_run(bool_t in_flight)
   /* attitude error */
   struct Int32Quat att_err;
   struct Int32Quat *att_quat = stateGetNedToBodyQuat_i();
-  INT32_QUAT_INV_COMP(att_err, *att_quat, stab_att_sp_quat);
+
+  /* Add steady-state value to attitude setpoint */
+  struct Int32Quat corr_att_sp_quat; // Corrected attitude setpoint
+  INT32_QUAT_COMP_INV(corr_att_sp_quat, stab_att_sp_quat, sp_offset);
+
+  INT32_QUAT_INV_COMP(att_err, *att_quat, corr_att_sp_quat);
   /* wrap it in the shortest direction */
   int32_quat_wrap_shortest(&att_err);
   int32_quat_normalize(&att_err);

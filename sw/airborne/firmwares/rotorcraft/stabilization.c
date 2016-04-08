@@ -26,19 +26,9 @@
 #include "firmwares/rotorcraft/stabilization.h"
 
 int32_t stabilization_cmd[COMMANDS_NB];
-float steady_state_roll;
-float steady_state_pitch;
 
 void stabilization_init(void)
 {
-#if STABILIZATION_ATTITUDE_STEADY_STATE_ROLL
-  steady_state_roll = STABILIZATION_ATTITUDE_STEADY_STATE_ROLL * M_PI / 180;;
-#endif
-
-#if STABILIZATION_ATTITUDE_STEADY_STATE_PITCH
-  steady_state_pitch = STABILIZATION_ATTITUDE_STEADY_STATE_PITCH * M_PI / 180;;
-#endif
-
   for (uint8_t i = 0; i < COMMANDS_NB; i++) {
     stabilization_cmd[i] = 0;
   }
