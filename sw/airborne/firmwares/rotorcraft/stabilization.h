@@ -38,5 +38,7 @@ extern void stabilization_init(void);
  *  Range -MAX_PPRZ:MAX_PPRZ
  */
 extern int32_t stabilization_cmd[COMMANDS_NB];
+extern float steady_state_roll;
+extern float steady_state_pitch;
 
 #endif /* STABILIZATION_H */
