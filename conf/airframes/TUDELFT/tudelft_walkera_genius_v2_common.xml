@@ -41,7 +41,7 @@
   </command_laws>
 
   <section name="IMU" prefix="IMU_">
-    <define name="BODY_TO_IMU_PHI" value="8." unit="deg"/> <!-- 8.0/-->
+    <define name="BODY_TO_IMU_PHI" value="6." unit="deg"/> <!-- 8.0/-->
     <define name="BODY_TO_IMU_THETA" value="-4." unit="deg"/> <!-- -4.0 /-->
     <define name="BODY_TO_IMU_PSI" value="7.7" unit="deg"/> <!-- was 7.7 /-->
   </section>
