@@ -92,15 +92,15 @@ struct IndiController_int new_heli_indi;
 static void send_indi_debug_values(struct transport_tx *trans, struct link_device *dev)
 {
   pprz_msg_send_STAB_INDI_DEBUG(trans, dev, AC_ID,
-                                &new_heli_indi.reference[INDI_THRUST],
-                                &new_heli_indi.filtered_measurement[1][INDI_THRUST],
-                                &stabilization_cmd[COMMAND_THRUST],
-                                &new_heli_indi.u_setpoint[INDI_THRUST],
-                                &new_heli_indi.command_out[__k][INDI_THRUST],
+                                &stabilization_cmd[COMMAND_YAW],
+                                &new_heli_indi.reference[INDI_YAW],
+                                &new_heli_indi.measurement[INDI_YAW],
+                                &new_heli_indi.u_setpoint[INDI_YAW],
+                                &new_heli_indi.command_out[__k][INDI_YAW],
                                 &new_heli_indi.error[INDI_YAW],
                                 &new_heli_indi.error[INDI_THRUST],
                                 &new_heli_indi.filtered_measurement[1][INDI_YAW],
-                                &stabilization_cmd[COMMAND_YAW]);
+                                &stabilization_cmd[COMMAND_THRUST]);
 }
 #endif
 
@@ -346,7 +346,7 @@ void stabilization_attitude_init(void)
   heli_rate_filter_initialize(&actuator_model[INDI_THRUST], 70, 9, 450); /* 450 because dynamic range is only 0-9600 */
   // Different dynamics for up and down
   alpha_yaw_inc = actuator_model[INDI_YAW].alpha;
-  alpha_yaw_dec = (PERIODIC_FREQUENCY << 14)/(PERIODIC_FREQUENCY + 13); // OMEGA_DOWN = 10 rad/s, shift = 14
+  alpha_yaw_dec = (PERIODIC_FREQUENCY << 14)/(PERIODIC_FREQUENCY + 13); // OMEGA_DOWN = 13 rad/s, shift = 14
 
 #if STABILIZATION_ATTITUDE_HELI_INDI_USE_FAST_DYN_FILTERS
   /* Fast dynamics in roll and pitch model */
@@ -363,12 +363,17 @@ void stabilization_attitude_init(void)
     notch_filter_set_bandwidth(&measurement_notchfilter[i], 10.0);
   }
 
+  notch_filter_set_bandwidth(&actuator_notchfilter[INDI_YAW], 20.0);
+  notch_filter_set_bandwidth(&measurement_notchfilter[INDI_YAW], 20.0);
+
   /* Low pass filter initialization */
-  for (uint8_t i = 0; i < INDI_DOF-1; i++) {
+  for (uint8_t i = 0; i < INDI_DOF-2; i++) {
     // Cutoff frequencies are in Hz!!!
     init_butterworth_2_low_pass_int(&actuator_lowpass_filters[i], 20, 1.0/PERIODIC_FREQUENCY, 0);
     init_butterworth_2_low_pass_int(&measurement_lowpass_filters[i], 20, 1.0/PERIODIC_FREQUENCY, 0);
   }
+  init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_YAW], 10, 1.0/PERIODIC_FREQUENCY, 0);
+  init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_YAW], 10, 1.0/PERIODIC_FREQUENCY, 0);
   init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_THRUST], 10, 1.0/PERIODIC_FREQUENCY, 0);
   init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_THRUST], 10, 1.0/PERIODIC_FREQUENCY, 0);
 

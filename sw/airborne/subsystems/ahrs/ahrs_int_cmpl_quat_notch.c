@@ -33,7 +33,7 @@
 #include "subsystems/ahrs/ahrs_int_cmpl_quat.h"
 #include "subsystems/ahrs/ahrs_int_utils.h"
 
-#ifdef AHRS_USE_RPM_SENSOR_NOTCH
+#if AHRS_USE_RPM_SENSOR_NOTCH
 #include "subsystems/sensors/rpm_sensor.h"
 #include "filters/notch_filter.h"
 #endif
@@ -107,7 +107,7 @@ PRINT_CONFIG_VAR(AHRS_MAG_ZETA)
 
 struct AhrsIntCmplQuat ahrs_icq;
 
-#ifdef AHRS_USE_RPM_SENSOR_NOTCH
+#if AHRS_USE_RPM_SENSOR_NOTCH
 struct SecondOrderNotchFilter acc_x_notch;
 struct SecondOrderNotchFilter acc_y_notch;
 struct SecondOrderNotchFilter acc_z_notch;
@@ -140,7 +140,7 @@ static void send_ahrs_accel_values(struct transport_tx *trans, struct link_devic
 
 void ahrs_icq_init(void)
 {
-#ifdef AHRS_USE_RPM_SENSOR_NOTCH
+#if AHRS_USE_RPM_SENSOR_NOTCH
   /* Set notch filter bandwidth */
   rpm_sensor_init();
 
@@ -307,7 +307,7 @@ void ahrs_icq_update_accel(struct Int32Vect3 *accel, float dt)
     return;
   }
 
-#ifdef AHRS_USE_RPM_SENSOR_NOTCH
+#if AHRS_USE_RPM_SENSOR_NOTCH
   if (rpm_sensor.motor_frequency > 25.0) {
 
     notch_filter_set_filter_frequency(&acc_x_notch, rpm_sensor.motor_frequency);
@@ -356,6 +356,10 @@ void ahrs_icq_update_accel(struct Int32Vect3 *accel, float dt)
     ahrs_filtered_accels.y = accel->y;
     ahrs_filtered_accels.z = accel->z;
   }
+#else
+  ahrs_filtered_accels.x = accel->x;
+  ahrs_filtered_accels.y = accel->y;
+  ahrs_filtered_accels.z = accel->z;
 #endif
 
 
