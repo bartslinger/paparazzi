@@ -111,7 +111,7 @@
     <subsystem name="gps" type="datalink"/>
     <subsystem name="stabilization" type="heli_indi"/>
     <subsystem name="rpm_sensor" type="eagletree"/>
-    <subsystem name="ahrs" type="int_cmpl_quat_notch"/>
+    <subsystem name="ahrs" type="int_cmpl_quat"/>
     <subsystem name="ins"/>
   </firmware>
 </airframe>

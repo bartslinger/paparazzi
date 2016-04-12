@@ -39,7 +39,7 @@ AHRS_ICQ_SRCS   += subsystems/ahrs/ahrs_int_cmpl_quat_notch.c
 AHRS_ICQ_SRCS   += subsystems/ahrs/ahrs_int_cmpl_quat_wrapper.c
 AHRS_ICQ_SRCS   += subsystems/ahrs/ahrs_aligner.c
 
-#ifdef AHRS_USE_RPM_SENSOR_NOTCH
+#if AHRS_USE_RPM_SENSOR_NOTCH
 AHRS_ICQ_SRCS   += filters/notch_filter.c
 #endif
 
