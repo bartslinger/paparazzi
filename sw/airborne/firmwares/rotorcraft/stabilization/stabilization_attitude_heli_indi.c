@@ -514,8 +514,8 @@ void stabilization_attitude_run(bool_t in_flight)
    * (att_err)_sat = D/P * (rate)_max
    */
   int32_t yaw_att_err_saturated = att_err.qz;
-  //int32_t yaw_att_err_max = (heli_indi_gains.yaw_d * (int32_t) ANGLE_BFP_OF_REAL(STABILIZATION_ATTITUDE_SP_MAX_R)) / heli_indi_gains.yaw_p;
-  //BoundAbs(yaw_att_err_saturated, yaw_att_err_max);
+  int32_t yaw_att_err_max = (heli_indi_gains.yaw_d * (int32_t) ANGLE_BFP_OF_REAL(STABILIZATION_ATTITUDE_SP_MAX_R)) / heli_indi_gains.yaw_p;
+  BoundAbs(yaw_att_err_saturated, yaw_att_err_max);
   int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * yaw_att_err_saturated) - (c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW] * heli_indi_gains.yaw_d);
 
   /* Run P(D) control to generate references */
