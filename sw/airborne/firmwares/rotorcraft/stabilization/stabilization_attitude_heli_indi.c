@@ -336,7 +336,7 @@ void stabilization_attitude_init(void)
   // -31016       27170
   c->invG[0][0] =   +22000; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =       0;
   c->invG[1][0] =        0; c->invG[1][1] =  +20000; c->invG[1][2] =    0; c->invG[1][3] =       0;
-  c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] = 2114; c->invG[2][3] = -130000*0;
+  c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] =  730; c->invG[2][3] = -130000*0;
   c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] =  -50000;
 
   /* Actuator filter initialization */
@@ -363,8 +363,8 @@ void stabilization_attitude_init(void)
     notch_filter_set_bandwidth(&measurement_notchfilter[i], 10.0);
   }
 
-  notch_filter_set_bandwidth(&actuator_notchfilter[INDI_YAW], 20.0);
-  notch_filter_set_bandwidth(&measurement_notchfilter[INDI_YAW], 20.0);
+  notch_filter_set_bandwidth(&actuator_notchfilter[INDI_YAW], 30.0);
+  notch_filter_set_bandwidth(&measurement_notchfilter[INDI_YAW], 30.0);
 
   /* Low pass filter initialization */
   for (uint8_t i = 0; i < INDI_DOF-2; i++) {
@@ -372,8 +372,8 @@ void stabilization_attitude_init(void)
     init_butterworth_2_low_pass_int(&actuator_lowpass_filters[i], 20, 1.0/PERIODIC_FREQUENCY, 0);
     init_butterworth_2_low_pass_int(&measurement_lowpass_filters[i], 20, 1.0/PERIODIC_FREQUENCY, 0);
   }
-  init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_YAW], 10, 1.0/PERIODIC_FREQUENCY, 0);
-  init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_YAW], 10, 1.0/PERIODIC_FREQUENCY, 0);
+  init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_YAW], 8, 1.0/PERIODIC_FREQUENCY, 0);
+  init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_YAW], 8, 1.0/PERIODIC_FREQUENCY, 0);
   init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_THRUST], 10, 1.0/PERIODIC_FREQUENCY, 0);
   init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_THRUST], 10, 1.0/PERIODIC_FREQUENCY, 0);
 
@@ -513,10 +513,14 @@ void stabilization_attitude_run(bool_t in_flight)
    * P*(att_err)_sat = D*(rate)_max
    * (att_err)_sat = D/P * (rate)_max
    */
-  int32_t yaw_att_err_saturated = att_err.qz;
-  int32_t yaw_att_err_max = (heli_indi_gains.yaw_d * (int32_t) ANGLE_BFP_OF_REAL(STABILIZATION_ATTITUDE_SP_MAX_R)) / heli_indi_gains.yaw_p;
-  BoundAbs(yaw_att_err_saturated, yaw_att_err_max);
-  int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * yaw_att_err_saturated) - (c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW] * heli_indi_gains.yaw_d);
+  //int32_t yaw_att_err_saturated = att_err.qz;
+  //int32_t yaw_att_err_max = (heli_indi_gains.yaw_d * (int32_t) ANGLE_BFP_OF_REAL(STABILIZATION_ATTITUDE_SP_MAX_R)) / heli_indi_gains.yaw_p;
+  //BoundAbs(yaw_att_err_saturated, yaw_att_err_max);
+  //int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * yaw_att_err_saturated) - (c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW] * heli_indi_gains.yaw_d);
+
+  /* Try with a cascaded controller */
+  int32_t yaw_rate_reference = (heli_indi_gains.yaw_p * att_err.qz / 8);
+  int32_t yaw_virtual_control = heli_indi_gains.yaw_d * (yaw_rate_reference - body_rate->r);
 
   /* Run P(D) control to generate references */
   c->reference[INDI_ROLL]   = roll_virtual_control;
@@ -543,6 +547,32 @@ void stabilization_attitude_run(bool_t in_flight)
   indi_add_vect(c->u_setpoint, c->filtered_actuator[INDI_NR_FILTERS-1], c->du);
   //c->u_setpoint[INDI_THRUST] = stabilization_cmd[COMMAND_THRUST];
 
+#if HELI_YAW_IDENTIFICATION
+  /* Add a sum of sines to the yaw control signal for identification */
+  /* shifts
+  3.5125 2hz
+  5.3665 4hz
+  2.1858 6hz
+  2.8025 8hz
+  */
+  const int32_t freqs[4] = {2, 4, 6, 8}; // Hz
+  const int32_t shifts[4] = {(int32_t)ANGLE_BFP_OF_REAL(3.5125),
+                       (int32_t)ANGLE_BFP_OF_REAL(5.3665),
+                       (int32_t)ANGLE_BFP_OF_REAL(2.1858),
+                       (int32_t)ANGLE_BFP_OF_REAL(2.8025) };
+  static int32_t yawcnt = 0; // increases at 512 hz
+  if(radio_control.values[SDLOGGER_CONTROL_SWITCH] > 0) {
+    int32_t sum_yaw = 0;
+    for(int i = 0; i < 4; i++) {
+      int32_t angle = INT32_ANGLE_2_PI * freqs[i] * yawcnt / 512;
+      int16_t add_yaw = pprz_itrig_sin(angle + shifts[i]);
+      sum_yaw += add_yaw;
+    }
+    c->u_setpoint[INDI_YAW] += sum_yaw / 8;
+
+    yawcnt++;
+  }
+#endif
   /* bound the result */
   BoundAbs(c->u_setpoint[INDI_ROLL], MAX_PPRZ);
   BoundAbs(c->u_setpoint[INDI_PITCH], MAX_PPRZ);
@@ -563,6 +593,11 @@ void stabilization_attitude_run(bool_t in_flight)
   if (guidance_v_mode == GUIDANCE_V_MODE_HELI_INDI_4DOF) {
     stabilization_cmd[COMMAND_THRUST] = c->command_out[__k][INDI_THRUST];
   }
+
+  // OVERWRITE YAW STABILIZATION WITH DIRECT PID //
+  stabilization_cmd[COMMAND_YAW] = yaw_virtual_control / 32 + 6500;
+
+  BoundAbs(stabilization_cmd[COMMAND_YAW], MAX_PPRZ);
 }
 
 void stabilization_attitude_read_rc(bool_t in_flight, bool_t in_carefree, bool_t coordinated_turn)
