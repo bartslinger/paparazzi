@@ -24,8 +24,8 @@
   <section name="STABILIZATION_ATTITUDE_HELI_INDI" prefix="STABILIZATION_ATTITUDE_HELI_INDI_">
     <define name="ROLL_P" value="30"/><!--20 3052 -->
     <define name="PITCH_P" value="25"/><!--20 3052 -->
-    <define name="YAW_P" value="7"/>
-    <define name="YAW_D" value="7"/>
+    <define name="YAW_P" value="8"/>
+    <define name="YAW_D" value="19"/>
     <define name="USE_FAST_DYN_FILTERS" value="0" />
     <define name="FAST_DYN_ROLL_BW" value="70" />
     <define name="FAST_DYN_PITCH_BW" value="70" />

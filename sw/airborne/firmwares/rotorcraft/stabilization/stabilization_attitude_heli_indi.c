@@ -520,7 +520,7 @@ void stabilization_attitude_run(bool_t in_flight)
 
   /* Try with a cascaded controller */
   int32_t yaw_rate_reference = (heli_indi_gains.yaw_p * att_err.qz / 8);
-  int32_t yaw_virtual_control = heli_indi_gains.yaw_d * (yaw_rate_reference - body_rate->r);
+  int32_t yaw_virtual_control = heli_indi_gains.yaw_d * (yaw_rate_reference - body_rate->r) / 128;
 
   /* Run P(D) control to generate references */
   c->reference[INDI_ROLL]   = roll_virtual_control;
@@ -596,6 +596,7 @@ void stabilization_attitude_run(bool_t in_flight)
 
   // OVERWRITE YAW STABILIZATION WITH DIRECT PID //
   stabilization_cmd[COMMAND_YAW] = yaw_virtual_control / 32 + 6500;
+  //stabilization_cmd[COMMAND_YAW] = 6500;
 
   BoundAbs(stabilization_cmd[COMMAND_YAW], MAX_PPRZ);
 }
