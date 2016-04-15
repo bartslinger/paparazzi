@@ -132,6 +132,22 @@ static void send_ahrs_ref_quat(struct transport_tx *trans, struct link_device *d
                               &(quat->qy),
                               &(quat->qz));
 }
+
+/* BARTS HELI IDENTIFICATION MESSAGE */
+
+static void send_indi_debug_values(struct transport_tx *trans, struct link_device *dev)
+{
+  struct Int32Rates *body_rate = stateGetBodyRates_i();
+  pprz_msg_send_STAB_INDI_DEBUG(trans, dev, AC_ID,
+                                &(body_rate->p), &(body_rate->q), &(body_rate->r),
+                                &stabilization_cmd[COMMAND_ROLL],
+                                &stabilization_cmd[COMMAND_PITCH],
+                                &stabilization_cmd[COMMAND_YAW],
+                                &stabilization_cmd[COMMAND_THRUST],
+                                &stabilization_cmd[COMMAND_YAW],
+                                &stabilization_cmd[COMMAND_YAW]);
+}
+
 #endif
 
 void stabilization_attitude_init(void)
@@ -145,6 +161,7 @@ void stabilization_attitude_init(void)
   register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_STAB_ATTITUDE_INT, send_att);
   register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_STAB_ATTITUDE_REF_INT, send_att_ref);
   register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_AHRS_REF_QUAT, send_ahrs_ref_quat);
+  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_STAB_INDI_DEBUG, send_indi_debug_values);
 #endif
 }
 
@@ -307,7 +324,7 @@ void stabilization_attitude_run(bool_t enable_integrator)
       int16_t add_yaw = pprz_itrig_sin(angle + shifts[i]);
       sum_yaw += add_yaw;
     }
-    stabilization_cmd[COMMAND_YAW] += sum_yaw / 8;
+    stabilization_cmd[COMMAND_YAW] += sum_yaw / 32;
 
     yawcnt++;
   }
