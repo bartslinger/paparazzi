@@ -34,6 +34,7 @@
 #include "math/pprz_algebra_float.h"
 #include "math/pprz_algebra_int.h"
 #include "state.h"
+#include "subsystems/radio_control.h"
 
 struct Int32AttitudeGains stabilization_gains = {
   {STABILIZATION_ATTITUDE_PHI_PGAIN, STABILIZATION_ATTITUDE_THETA_PGAIN, STABILIZATION_ATTITUDE_PSI_PGAIN },
@@ -284,6 +285,33 @@ void stabilization_attitude_run(bool_t enable_integrator)
   stabilization_cmd[COMMAND_ROLL] = stabilization_att_fb_cmd[COMMAND_ROLL] + stabilization_att_ff_cmd[COMMAND_ROLL];
   stabilization_cmd[COMMAND_PITCH] = stabilization_att_fb_cmd[COMMAND_PITCH] + stabilization_att_ff_cmd[COMMAND_PITCH];
   stabilization_cmd[COMMAND_YAW] = stabilization_att_fb_cmd[COMMAND_YAW] + stabilization_att_ff_cmd[COMMAND_YAW];
+
+#if HELI_YAW_IDENTIFICATION
+  /* Add a sum of sines to the yaw control signal for identification */
+  /* shifts
+  3.5125 2hz
+  5.3665 4hz
+  2.1858 6hz
+  2.8025 8hz
+  */
+  const int32_t freqs[4] = {2, 4, 6, 8}; // Hz
+  const int32_t shifts[4] = {(int32_t)ANGLE_BFP_OF_REAL(3.5125),
+                       (int32_t)ANGLE_BFP_OF_REAL(5.3665),
+                       (int32_t)ANGLE_BFP_OF_REAL(2.1858),
+                       (int32_t)ANGLE_BFP_OF_REAL(2.8025) };
+  static int32_t yawcnt = 0; // increases at 512 hz
+  if(radio_control.values[SDLOGGER_CONTROL_SWITCH] > 0) {
+    int32_t sum_yaw = 0;
+    for(int i = 0; i < 4; i++) {
+      int32_t angle = INT32_ANGLE_2_PI * freqs[i] * yawcnt / 512;
+      int16_t add_yaw = pprz_itrig_sin(angle + shifts[i]);
+      sum_yaw += add_yaw;
+    }
+    stabilization_cmd[COMMAND_YAW] += sum_yaw / 8;
+
+    yawcnt++;
+  }
+#endif
 
   /* bound the result */
   BoundAbs(stabilization_cmd[COMMAND_ROLL], MAX_PPRZ);
