@@ -193,6 +193,37 @@ static void send_tune_vert(struct transport_tx *trans, struct link_device *dev)
 }
 #endif
 
+#if HELI_THRUST_IDENTIFICATION
+static inline void add_thrust_disturbance(void)
+{
+  /* Add a sum of sines to the thrust control signal for identification */
+  /* shifts
+  3.5125 2hz
+  5.3665 4hz
+  2.1858 6hz
+  2.8025 8hz
+  */
+  const int32_t freqs[4] = {2, 4, 6, 8}; // Hz
+  const int32_t shifts[4] = {(int32_t)ANGLE_BFP_OF_REAL(3.5125),
+                       (int32_t)ANGLE_BFP_OF_REAL(5.3665),
+                       (int32_t)ANGLE_BFP_OF_REAL(2.1858),
+                       (int32_t)ANGLE_BFP_OF_REAL(2.8025) };
+  static int32_t thrustcnt = 0; // increases at 512 hz
+  if(radio_control.values[SDLOGGER_CONTROL_SWITCH] > 0) {
+    int32_t sum_thrust = 0;
+    for(int i = 0; i < 4; i++) {
+      int32_t angle = INT32_ANGLE_2_PI * freqs[i] * thrustcnt / 512;
+      int16_t add_thrust = pprz_itrig_sin(angle + shifts[i]);
+      sum_thrust += add_thrust;
+    }
+    guidance_v_delta_t += sum_thrust / 16;
+
+    thrustcnt++;
+  }
+}
+
+#endif
+
 void guidance_v_init(void)
 {
 
@@ -292,7 +323,6 @@ void guidance_v_notify_in_flight(bool_t in_flight)
   }
 }
 
-
 void guidance_v_run(bool_t in_flight)
 {
 
@@ -340,6 +370,10 @@ void guidance_v_run(bool_t in_flight)
       guidance_v_zd_sp = 0;
       gv_update_ref_from_z_sp(guidance_v_z_sp);
       run_hover_loop(in_flight);
+#if HELI_THRUST_IDENTIFICATION
+      add_thrust_disturbance();
+#endif
+
 #if !NO_RC_THRUST_LIMIT
       /* use rc limitation if available */
       if (radio_control.status == RC_OK) {

@@ -17,7 +17,7 @@
 
  <section name="AUTOPILOT">
    <define name="MODE_AUTO2" value="AP_MODE_NAV"/> <!--AP_MODE_ATTITUDE_DIRECT-->
-   <define name="MODE_AUTO1" value="AP_MODE_HOVER_DIRECT"/> <!--AP_MODE_HELI_INDI_4DOF-->
+   <define name="MODE_AUTO1" value="AP_MODE_HOVER_Z_HOLD"/> <!--AP_MODE_HELI_INDI_4DOF-->
    <define name="MODE_MANUAL" value="AP_MODE_HELI_INDI"/> <!--AP_MODE_ATTITUDE_Z_HOLD-->
  </section>
 
@@ -83,7 +83,7 @@
       <define name="AHRS_USE_GPS_HEADING" value="1"/>
       <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="0"/>
       <define name="HELI_ROLL_DOUBLET_ACTIVE" value="0"/>
-      <define name="HELI_YAW_IDENTIFICATION" value="1"/>
+      <define name="HELI_YAW_IDENTIFICATION" value="0"/>
       <define name="HELI_THRUST_IDENTIFICATION" value="1"/>
       
       <subsystem name="radio_control" type="ppm">
@@ -111,7 +111,7 @@
       <define name="LISA_S_UPSIDE_DOWN"/> <!-- wtf hij zit gewoon rechtop maargoed -->
     </subsystem>
     <subsystem name="gps" type="datalink"/>
-    <subsystem name="stabilization" type="int_quat"/> <!-- heli_indi -->
+    <subsystem name="stabilization" type="int_quat"/> <!-- heli_indi / heli_indi -->
     <subsystem name="rpm_sensor" type="eagletree"/>
     <subsystem name="ahrs" type="int_cmpl_quat"/>
     <subsystem name="ins"/>
