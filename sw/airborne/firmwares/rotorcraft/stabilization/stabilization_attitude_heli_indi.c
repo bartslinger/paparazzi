@@ -336,7 +336,7 @@ void stabilization_attitude_init(void)
   // -31016       27170
   c->invG[0][0] =   +22000; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =       0;
   c->invG[1][0] =        0; c->invG[1][1] =  +20000; c->invG[1][2] =    0; c->invG[1][3] =       0;
-  c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] =  524; c->invG[2][3] = -130000*0;
+  c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] =  730; c->invG[2][3] =       0;
   c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] =  -50000;
 
   /* Actuator filter initialization */
@@ -496,9 +496,9 @@ void stabilization_attitude_run(bool_t in_flight)
   filtered_measurement_vector[INDI_YAW] = 512*(c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW] - previous_filt_yawrate);  // = approximately yaw acceleration error
   previous_filt_yawrate = c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW];
 
-  //static int32_t previous_thrust = 0;
-  //int32_t delta_thrust_meas = c->filtered_actuator[0][INDI_THRUST] - previous_thrust;
-  //previous_thrust = c->filtered_actuator[0][INDI_THRUST];
+  static int32_t previous_thrust = 0;
+  int32_t delta_thrust_cmd = stabilization_cmd[COMMAND_THRUST] - previous_thrust;
+  previous_thrust = stabilization_cmd[COMMAND_THRUST];
 
   /* Apply model dynamics matrix, is diagonal of ones when model dynamics are neglected. */
   indi_matrix_multiply_vector(c->dynamics_compensated_measurement, c->D, filtered_measurement_vector);
@@ -542,6 +542,7 @@ void stabilization_attitude_run(bool_t in_flight)
   c->du[INDI_PITCH] >>= 16;
   c->du[INDI_YAW]   >>= 16;
   c->du[INDI_THRUST]>>= 16;  // to get -1/4
+
   //c->du[INDI_YAW] = (c->error[INDI_YAW] + 69*delta_thrust_meas) / 31;
 
   /* Take the current (filtered) actuator position and add the incremental value. */
@@ -574,10 +575,16 @@ void stabilization_attitude_run(bool_t in_flight)
     yawcnt++;
   }
 #endif
+
+  /* Add compensation for thrust */
+  // int32_t thrust_correction = 20 * stabilization_cmd[COMMAND_THRUST] * c->invG[2][2]; // <<<<<  +=
+  // thrust_correction >>= 16;
+  // c->u_setpoint[INDI_YAW] += thrust_correction;
+
   /* bound the result */
   BoundAbs(c->u_setpoint[INDI_ROLL], MAX_PPRZ);
   BoundAbs(c->u_setpoint[INDI_PITCH], MAX_PPRZ);
-  BoundAbs(c->u_setpoint[INDI_YAW], MAX_PPRZ);
+  Bound(c->u_setpoint[INDI_YAW], 0, MAX_PPRZ);
   Bound(c->u_setpoint[INDI_THRUST], 2000, MAX_PPRZ);
 
   /* Apply a compensator to the actuator setpoint to obtain actuator command */

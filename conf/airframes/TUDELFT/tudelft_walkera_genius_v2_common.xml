@@ -33,7 +33,7 @@
     <set servo="GAS" value="$gas"/>
     <!--set servo="TAIL" value="@YAW + $halfway *
      ((MAX_PPRZ*0.4) + @THRUST*0.2037) + (1 - $halfway) * (@THRUST * 1.4872) "/-->
-    <set servo="TAIL" value="@YAW+0.4*$gas"/>
+    <set servo="TAIL" value="@YAW+0.4"/>
     
     <!--set servo="GAS" value="$gas"/>  
     <set servo="TAIL" value="@YAW+0.4*$gas"/-->
