@@ -22,13 +22,13 @@
  </section>
 
   <section name="STABILIZATION_ATTITUDE_HELI_INDI" prefix="STABILIZATION_ATTITUDE_HELI_INDI_">
-    <define name="ROLL_P" value="30"/><!--20 3052 -->
-    <define name="PITCH_P" value="25"/><!--20 3052 -->
+    <define name="ROLL_P" value="32"/><!--20 3052 -->
+    <define name="PITCH_P" value="32"/><!--20 3052 -->
     <define name="YAW_P" value="8"/>
     <define name="YAW_D" value="13"/>
-    <define name="USE_FAST_DYN_FILTERS" value="0" />
-    <define name="FAST_DYN_ROLL_BW" value="70" />
-    <define name="FAST_DYN_PITCH_BW" value="70" />
+    <define name="USE_FAST_DYN_FILTERS" value="1" />
+    <define name="FAST_DYN_ROLL_BW" value="186" />
+    <define name="FAST_DYN_PITCH_BW" value="17" />
   </section>
 
   <section name="STABILIZATION_ATTITUDE" prefix="STABILIZATION_ATTITUDE_">
@@ -85,8 +85,8 @@
       <define name="HELI_ROLL_DOUBLET_ACTIVE" value="0"/>
       <define name="HELI_YAW_IDENTIFICATION" value="0"/>
       <define name="HELI_THRUST_IDENTIFICATION" value="0"/>
-      <define name="HELI_ROLL_IDENTIFICATION" value="1"/>
-      <define name="HELI_PITCH_IDENTIFICATION" value="0"/>
+      <define name="HELI_ROLL_IDENTIFICATION" value="0"/>
+      <define name="HELI_PITCH_IDENTIFICATION" value="1"/>
       
       <subsystem name="radio_control" type="ppm">
         <configure name="RADIO_CONTROL_PPM_PIN" value="SERVO6"/>
@@ -113,7 +113,7 @@
       <define name="LISA_S_UPSIDE_DOWN"/> <!-- wtf hij zit gewoon rechtop maargoed -->
     </subsystem>
     <subsystem name="gps" type="datalink"/>
-    <subsystem name="stabilization" type="int_quat"/> <!-- int_quat / heli_indi -->
+    <subsystem name="stabilization" type="heli_indi"/> <!-- int_quat / heli_indi -->
     <subsystem name="rpm_sensor" type="eagletree"/>
     <subsystem name="ahrs" type="int_cmpl_quat"/>
     <subsystem name="ins"/>
