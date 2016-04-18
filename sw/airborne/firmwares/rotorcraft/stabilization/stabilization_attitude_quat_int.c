@@ -66,6 +66,8 @@ struct Int32Eulers stab_att_sp_euler;
 
 struct AttRefQuatInt att_ref_quat_i;
 
+int32_t identification_amplitude_div = 32;
+
 #define IERROR_SCALE 128
 #define GAIN_PRESCALER_FF 48
 #define GAIN_PRESCALER_P 12
@@ -324,7 +326,7 @@ void stabilization_attitude_run(bool_t enable_integrator)
       int16_t add_yaw = pprz_itrig_sin(angle + shifts[i]);
       sum_yaw += add_yaw;
     }
-    stabilization_cmd[COMMAND_YAW] += sum_yaw / 32;
+    stabilization_cmd[COMMAND_YAW] += sum_yaw / identification_amplitude_div;
 
     yawcnt++;
   }
@@ -351,7 +353,7 @@ void stabilization_attitude_run(bool_t enable_integrator)
       int16_t add_roll = pprz_itrig_sin(angle + shifts[i]);
       sum_roll += add_roll;
     }
-    stabilization_cmd[COMMAND_ROLL] += sum_roll / 32;
+    stabilization_cmd[COMMAND_ROLL] += sum_roll / identification_amplitude_div;
 
     rollcnt++;
   }
@@ -378,7 +380,7 @@ void stabilization_attitude_run(bool_t enable_integrator)
       int16_t add_pitch = pprz_itrig_sin(angle + shifts[i]);
       sum_pitch += add_pitch;
     }
-    stabilization_cmd[COMMAND_PITCH] += sum_pitch / 32;
+    stabilization_cmd[COMMAND_PITCH] += sum_pitch / identification_amplitude_div;
 
     pitchcnt++;
   }

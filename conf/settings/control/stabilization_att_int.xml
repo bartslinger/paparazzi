@@ -2,6 +2,9 @@
 
 <settings target="ap|nps">
   <dl_settings>
+    <dl_settings NAME="Identification">
+      <dl_setting var="identification_amplitude_div" min="1" step="1" max="512" module="stabilization/stabilization_attitude_quat_int" shortname="dist.div" type="int32" />
+    </dl_settings>
 
     <dl_settings NAME="Att Loop">
       <dl_setting var="stabilization_gains.p.x" min="1" step="1" max="8000"   module="stabilization/stabilization_attitude_common_int" shortname="pgain phi" param="STABILIZATION_ATTITUDE_PHI_PGAIN" type="int32" persistent="true"/>

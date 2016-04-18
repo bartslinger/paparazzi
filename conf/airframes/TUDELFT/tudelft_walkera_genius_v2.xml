@@ -113,7 +113,7 @@
       <define name="LISA_S_UPSIDE_DOWN"/> <!-- wtf hij zit gewoon rechtop maargoed -->
     </subsystem>
     <subsystem name="gps" type="datalink"/>
-    <subsystem name="stabilization" type="heli_indi"/> <!-- heli_indi / heli_indi -->
+    <subsystem name="stabilization" type="int_quat"/> <!-- int_quat / heli_indi -->
     <subsystem name="rpm_sensor" type="eagletree"/>
     <subsystem name="ahrs" type="int_cmpl_quat"/>
     <subsystem name="ins"/>
