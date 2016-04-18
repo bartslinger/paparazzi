@@ -330,6 +330,60 @@ void stabilization_attitude_run(bool_t enable_integrator)
   }
 #endif
 
+#if HELI_ROLL_IDENTIFICATION
+  /* Add a sum of sines to the roll control signal for identification */
+  /* shifts
+  3.5125 2hz
+  5.3665 4hz
+  2.1858 6hz
+  2.8025 8hz
+  */
+  const int32_t freqs[4] = {2, 4, 6, 8}; // Hz
+  const int32_t shifts[4] = {(int32_t)ANGLE_BFP_OF_REAL(3.5125),
+                       (int32_t)ANGLE_BFP_OF_REAL(5.3665),
+                       (int32_t)ANGLE_BFP_OF_REAL(2.1858),
+                       (int32_t)ANGLE_BFP_OF_REAL(2.8025) };
+  static int32_t rollcnt = 0; // increases at 512 hz
+  if(radio_control.values[SDLOGGER_CONTROL_SWITCH] > 0) {
+    int32_t sum_roll = 0;
+    for(int i = 0; i < 4; i++) {
+      int32_t angle = INT32_ANGLE_2_PI * freqs[i] * rollcnt / 512;
+      int16_t add_roll = pprz_itrig_sin(angle + shifts[i]);
+      sum_roll += add_roll;
+    }
+    stabilization_cmd[COMMAND_ROLL] += sum_roll / 32;
+
+    rollcnt++;
+  }
+#endif
+
+#if HELI_PITCH_IDENTIFICATION
+  /* Add a sum of sines to the pitch control signal for identification */
+  /* shifts
+  3.5125 2hz
+  5.3665 4hz
+  2.1858 6hz
+  2.8025 8hz
+  */
+  const int32_t freqs[4] = {2, 4, 6, 8}; // Hz
+  const int32_t shifts[4] = {(int32_t)ANGLE_BFP_OF_REAL(3.5125),
+                       (int32_t)ANGLE_BFP_OF_REAL(5.3665),
+                       (int32_t)ANGLE_BFP_OF_REAL(2.1858),
+                       (int32_t)ANGLE_BFP_OF_REAL(2.8025) };
+  static int32_t pitchcnt = 0; // increases at 512 hz
+  if(radio_control.values[SDLOGGER_CONTROL_SWITCH] > 0) {
+    int32_t sum_pitch = 0;
+    for(int i = 0; i < 4; i++) {
+      int32_t angle = INT32_ANGLE_2_PI * freqs[i] * pitchcnt / 512;
+      int16_t add_pitch = pprz_itrig_sin(angle + shifts[i]);
+      sum_pitch += add_pitch;
+    }
+    stabilization_cmd[COMMAND_PITCH] += sum_pitch / 32;
+
+    pitchcnt++;
+  }
+#endif
+
   /* bound the result */
   BoundAbs(stabilization_cmd[COMMAND_ROLL], MAX_PPRZ);
   BoundAbs(stabilization_cmd[COMMAND_PITCH], MAX_PPRZ);
