@@ -15,6 +15,57 @@
   <include href="conf/airframes/TUDELFT/tudelft_walkera_genius_v2_common.xml" />
   <include href="conf/airframes/TUDELFT/calibrations/walkera_2016_03_16.xml"/>
 
+  <heli_curves>
+    <curve throttle="0,4800,7200,8400,9600" collective="-1000,750,2500,4250,6000"/>
+  </heli_curves>
+
+  <servos driver="Pwm">
+    <servo name="CIC_FRONT" no="4" min="1000" neutral="1400" max="1700"/>
+    <servo name="CIC_RIGHT" no="5" min="1150" neutral="1450" max="1850"/>
+    <servo name="CIC_LEFT" no="0" min="1000" neutral="1400" max="1700"/>
+    <servo name="TAIL" no="2" min="0" neutral="0" max="500"/>
+    <servo name="GAS" no="3" min="1000" neutral="1000" max="1890"/>
+  </servos>
+
+  <commands>
+    <axis name="ROLL" failsafe_value="0"/>
+    <axis name="PITCH" failsafe_value="0"/>
+    <axis name="YAW" failsafe_value="0"/>
+    <axis name="THRUST" failsafe_value="0"/>
+  </commands>
+
+  <section name="MIXING" prefix="SW_MIXING_">
+    <!-- front left (CW), front right (CCW), back right (CW), back left (CCW) -->
+    <define name="TYPE" value="H120"/>
+    <define name="TRIM_ROLL"  value="0"/>
+    <define name="TRIM_PITCH" value="0"/>
+    <define name="TRIM_COLL"  value="0"/>
+  </section>
+
+  <command_laws>
+    <let var="hoverpower" value=".85*MAX_PPRZ"/>
+    <let var="hoverstick" value=".35*MAX_PPRZ"/>
+    <let var="halfway" value="(@THRUST >= ($hoverstick) ? 1 : 0)"/>
+    <let var="collective" value="@THRUST * 0.1258 + (MAX_PPRZ*0.2013)"/>
+    <!--let var="collective" value="@THRUST"/-->
+    <let var="gas" value="($hoverpower) + $halfway * (((@THRUST) - ($hoverstick)) * (MAX_PPRZ - ($hoverpower))) / (MAX_PPRZ - ($hoverstick))  + (1 - $halfway) * ((@THRUST - ($hoverstick)) * ($hoverpower)) / ($hoverstick)"/>
+
+    <!--set servo="CIC_LEFT" value="((@PITCH*1.75*0.5*0.5)-(@ROLL*1.75*0.5*0.73))-($collective)"/>
+    <set servo="CIC_RIGHT" value="((-@PITCH*1.75*0.5*0.5)-(@ROLL*1.75*0.5*0.73))+($collective)"/>
+    <set servo="CIC_FRONT" value="-@PITCH*1.75*0.5-($collective)"/>    
+    <set servo="GAS" value="$gas"/>
+    <set servo="TAIL" value="@YAW+0.4"/-->
+
+    <call fun="throttle_curve_run(autopilot_motors_on, values)"/>
+    <call fun="swashplate_mixing_run(values)"/>
+    <set servo="CIC_FRONT" value="-swashplate_mixing.commands[SW_FRONT]"/>
+    <set servo="CIC_LEFT" value="-swashplate_mixing.commands[SW_LEFTBACK]"/>
+    <set servo="CIC_RIGHT" value="swashplate_mixing.commands[SW_RIGHTBACK]"/>
+    <set servo="GAS" value="throttle_curve.throttle"/>
+    <set servo="TAIL" value="@YAW + throttle_curve.throttle*2800/7000"/>
+    
+  </command_laws>
+
  <section name="AUTOPILOT">
    <define name="MODE_AUTO2" value="AP_MODE_NAV"/> <!--AP_MODE_ATTITUDE_DIRECT-->
    <define name="MODE_AUTO1" value="AP_MODE_HOVER_Z_HOLD"/> <!--AP_MODE_HELI_INDI_4DOF-->
@@ -69,6 +120,8 @@
       <configure name="LOGGER_CONTROL_SWITCH" value="RADIO_AUX2"/>
       <configure name="LOGGER_LED" value="3"/>
     </load>
+    <load name="heli_swashplate_mixing.xml"/>
+    <load name="heli_throttle_curve.xml"/>
     <!-- DISABLED MODULES
       <load name="gps_ubx_ucenter.xml"/>
       <load name="adc_expansion_uart.xml"/>
@@ -113,7 +166,7 @@
       <define name="LISA_S_UPSIDE_DOWN"/> <!-- wtf hij zit gewoon rechtop maargoed -->
     </subsystem>
     <subsystem name="gps" type="datalink"/>
-    <subsystem name="stabilization" type="heli_indi"/> <!-- int_quat / heli_indi -->
+    <subsystem name="stabilization" type="int_quat"/> <!-- int_quat / heli_indi -->
     <subsystem name="rpm_sensor" type="eagletree"/>
     <subsystem name="ahrs" type="int_cmpl_quat"/>
     <subsystem name="ins"/>

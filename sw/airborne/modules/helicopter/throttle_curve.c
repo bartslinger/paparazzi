@@ -52,7 +52,7 @@ void throttle_curve_init(void)
 void throttle_curve_run(bool motors_on, pprz_t in_cmd[])
 {
   // Calculate the mode value from the switch
-  int8_t mode = ((float)(in_cmd[COMMAND_FMODE] + MAX_PPRZ) / THROTTLE_CURVE_SWITCH_VAL);
+  int8_t mode = 0;
   Bound(mode, 0, THROTTLE_CURVES_NB - 1);
   throttle_curve.mode = mode;
 
