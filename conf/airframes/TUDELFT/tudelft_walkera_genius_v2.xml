@@ -44,7 +44,7 @@
 
   <command_laws>
     <let var="hoverpower" value=".85*MAX_PPRZ"/>
-    <let var="hoverstick" value=".35*MAX_PPRZ"/>
+    <let var="hoverstick" value=".1*MAX_PPRZ"/>
     <let var="halfway" value="(@THRUST >= ($hoverstick) ? 1 : 0)"/>
     <let var="collective" value="@THRUST * 0.1258 + (MAX_PPRZ*0.2013)"/>
     <!--let var="collective" value="@THRUST"/-->
@@ -53,7 +53,7 @@
     <!--set servo="CIC_LEFT" value="((@PITCH*1.75*0.5*0.5)-(@ROLL*1.75*0.5*0.73))-($collective)"/>
     <set servo="CIC_RIGHT" value="((-@PITCH*1.75*0.5*0.5)-(@ROLL*1.75*0.5*0.73))+($collective)"/>
     <set servo="CIC_FRONT" value="-@PITCH*1.75*0.5-($collective)"/>    
-    <set servo="GAS" value="$gas"/>
+    <set servo="GAS" value="$halfway*MAX_PPRZ"/>
     <set servo="TAIL" value="@YAW+0.4"/-->
 
     <call fun="throttle_curve_run(autopilot_motors_on, values)"/>
