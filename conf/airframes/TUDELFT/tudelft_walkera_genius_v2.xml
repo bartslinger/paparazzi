@@ -20,11 +20,11 @@
   </heli_curves>
 
   <servos driver="Pwm">
-    <servo name="CIC_FRONT" no="4" min="1000" neutral="1400" max="1700"/>
+    <servo name="CIC_FRONT" no="0" min="1000" neutral="1400" max="1700"/>
     <servo name="CIC_RIGHT" no="5" min="1150" neutral="1450" max="1850"/>
-    <servo name="CIC_LEFT" no="0" min="1000" neutral="1400" max="1700"/>
-    <servo name="TAIL" no="2" min="0" neutral="0" max="500"/>
-    <servo name="GAS" no="3" min="1000" neutral="1000" max="1890"/>
+    <servo name="CIC_LEFT" no="4" min="1000" neutral="1400" max="1700"/>
+    <servo name="TAIL" no="1" min="0" neutral="0" max="3500"/>
+    <servo name="GAS" no="2" min="1000" neutral="1000" max="1890"/>
   </servos>
 
   <commands>
@@ -142,7 +142,7 @@
       <define name="HELI_PITCH_IDENTIFICATION" value="1"/>
       
       <subsystem name="radio_control" type="ppm">
-        <configure name="RADIO_CONTROL_PPM_PIN" value="SERVO6"/>
+        <configure name="RADIO_CONTROL_PPM_PIN" value="SUPERBIT_RST"/>
       </subsystem>
 
       <!--configure name="USE_BARO_BOARD" value="0"/-->
@@ -153,7 +153,7 @@
     </target>
 
     <subsystem name="actuators" type="pwm">
-      <define name="TIM5_SERVO_HZ" value="2000"/>
+      <define name="TIM5_SERVO_HZ" value="300"/>
       <define name="SERVO_HZ" value="300"/>
       <define name="USE_SERVOS_1AND2"/>
     </subsystem>

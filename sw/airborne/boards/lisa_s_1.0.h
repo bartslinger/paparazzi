@@ -297,7 +297,7 @@
  * PWM
  *
  */
-#define PWM_USE_TIM8 1
+#define PWM_USE_TIM8 0
 #define PWM_USE_TIM4 1
 #define PWM_USE_TIM5 1
 
@@ -315,7 +315,7 @@
 #define ACTUATORS_PWM_NB 4
 #endif
 
-#define USE_PWM8 1
+#define USE_PWM8 0
 #define USE_PWM3 1
 #define USE_PWM4 1
 
@@ -406,7 +406,7 @@
 #else
 #define PWM_SERVO_5_OC_BIT 0
 #endif
-
+/*
 #if USE_PWM6
 #define PWM_SERVO_6 3
 #define PWM_SERVO_6_TIMER TIM8
@@ -416,9 +416,8 @@
 #define PWM_SERVO_6_OC TIM_OC4
 #define PWM_SERVO_6_OC_BIT (1<<3)
 #endif
+*/
 
-/*
- *
 #if USE_PWM6
 #define PWM_SERVO_6 3
 #define PWM_SERVO_6_TIMER TIM5
@@ -439,16 +438,16 @@
 #define PWM_SERVO_6_OC_BIT (1<<1)
 #else
 #define PWM_SERVO_6_OC_BIT 0
-#endif*/
+#endif
 
 
 
 /* servos 1-4 or 3-4 on TIM4 depending on USE_SERVOS_1AND2 */
 #define PWM_TIM4_CHAN_MASK (PWM_SERVO_1_OC_BIT|PWM_SERVO_2_OC_BIT|PWM_SERVO_3_OC_BIT|PWM_SERVO_4_OC_BIT)
 /* servos 5-6 on TIM5 */
-#define PWM_TIM5_CHAN_MASK (PWM_SERVO_5_OC_BIT) //|PWM_SERVO_6_OC_BIT
+#define PWM_TIM5_CHAN_MASK (PWM_SERVO_5_OC_BIT|PWM_SERVO_6_OC_BIT)
 
-#define PWM_TIM8_CHAN_MASK (PWM_SERVO_6_OC_BIT)
+//#define PWM_TIM8_CHAN_MASK (PWM_SERVO_6_OC_BIT)
 
 /* SuperbitRF mounted */
 #define SUPERBITRF_SPI_DEV spi2
