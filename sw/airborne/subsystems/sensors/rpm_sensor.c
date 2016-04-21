@@ -48,24 +48,22 @@ void rpm_sensor_init(void)
   rpm_sensor_arch_init();
 }
 
-
-#define MAX_MOTOR_FREQUENCY 150
-#define MIN_DIFF 313
+#define MIN_DIFF_MEASURE 3000
 void rpm_sensor_process_pulse(uint16_t cnt, uint8_t overflow_cnt)
 {
   (void) overflow_cnt;
   uint16_t diff = cnt - rpm_sensor.previous_cnt;
 
-  if (diff < MIN_DIFF) {
-    // discard measurement
+  if (diff < MIN_DIFF_MEASURE) {
+    /* Discard measurement */
+    rpm_sensor.previous_cnt = cnt;
     return;
   }
-
 
   if ((cnt > rpm_sensor.previous_cnt && overflow_cnt > 0) || (overflow_cnt > 1)) {
     rpm_sensor.motor_frequency = 0.0f;
   } else {
-    rpm_sensor.motor_frequency = (281250.0/diff)/6.0;
+    rpm_sensor.motor_frequency = (7200000.0/diff)/16.0;
   }
 
   /* Spike filter (spikes in rpm measurement removed by limiting maximum inc/dec) */
@@ -80,8 +78,8 @@ void rpm_sensor_process_pulse(uint16_t cnt, uint8_t overflow_cnt)
   else if (freqdiff < -0.25) {
     rpm_sensor.motor_frequency = previous_motor_frequency - 0.25;
   }
-
   previous_motor_frequency = rpm_sensor.motor_frequency;
+
   /* Remember count */
   rpm_sensor.previous_cnt = cnt;
 }

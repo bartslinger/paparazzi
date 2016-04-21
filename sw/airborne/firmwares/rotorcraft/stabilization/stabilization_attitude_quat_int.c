@@ -29,6 +29,8 @@
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_rc_setpoint.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_quat_transformations.h"
 
+#include "subsystems/sensors/rpm_sensor.h"
+
 #include "std.h"
 #include "paparazzi.h"
 #include "math/pprz_algebra_float.h"
@@ -154,6 +156,7 @@ static void send_indi_debug_values(struct transport_tx *trans, struct link_devic
 
 void stabilization_attitude_init(void)
 {
+  rpm_sensor_init();
 
   attitude_ref_quat_int_init(&att_ref_quat_i);
 

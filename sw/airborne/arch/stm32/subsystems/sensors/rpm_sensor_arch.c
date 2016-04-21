@@ -47,18 +47,18 @@
 #ifdef NVIC_TIM_IRQ_PRIO
 #define RPM_PPM_IRQ_PRIO  NVIC_TIM_IRQ_PRIO
 #else
-#define RPM_PPM_IRQ_PRIO 2
+#define RPM_PPM_IRQ_PRIO 3
 #endif
 
-#define RPM_RCC_TIM_PPM         RCC_TIM3
-#define RPM_PPM_TIMER           TIM3
+#define RPM_RCC_TIM_PPM         RCC_TIM8
+#define RPM_PPM_TIMER           TIM8
 #define RPM_PPM_CHANNEL         TIM_IC1
 #define RPM_PPM_GPIO_PORT       GPIOC
 #define RPM_PPM_GPIO_PIN        GPIO6
 #define RPM_PPM_GPIO_AF         0
-#define RPM_PPM_TICKS_PER_USEC  6
+#define RPM_PPM_TICKS_PER_USEC  1
 #define RPM_PPM_TIMER_INPUT     TIM_IC_IN_TI1
-#define RPM_PPM_IRQ             NVIC_TIM3_IRQ
+#define RPM_PPM_IRQ             NVIC_TIM8_CC_IRQ
 #define RPM_PPM_CC_IE           TIM_DIER_CC1IE
 #define RPM_PPM_CC_IF           TIM_SR_CC1IF
 
@@ -74,15 +74,14 @@ void rpm_sensor_arch_init(void)
 {
   /* timer clock enable */
   rcc_periph_clock_enable(RPM_RCC_TIM_PPM);
+  rcc_periph_clock_enable(RCC_GPIOC);
   rcc_periph_clock_enable(RCC_AFIO);
-
 
   /* GPIO configuration as input capture for timer
    * Using RADIO_IRQ pin on Lisa/S (=PC6).
-   * Requires remapping to get timer 3 channel 1.
    */
   gpio_enable_clock(RPM_PPM_GPIO_PORT);
-  gpio_primary_remap(FALSE, AFIO_MAPR_TIM3_REMAP_FULL_REMAP);
+  //gpio_primary_remap(FALSE, AFIO_MAPR_TIM3_REMAP_FULL_REMAP);
   gpio_set_mode(RPM_PPM_GPIO_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, RPM_PPM_GPIO_PIN);
 
   /* Time Base configuration */
@@ -90,17 +89,17 @@ void rpm_sensor_arch_init(void)
   timer_set_mode(RPM_PPM_TIMER, TIM_CR1_CKD_CK_INT,
                  TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
   timer_set_period(RPM_PPM_TIMER, 0xFFFF);
-  //uint32_t timer_clk = timer_get_frequency(RPM_PPM_TIMER);
-  //timer_set_prescaler(RPM_PPM_TIMER, (timer_clk / (RPM_PPM_TICKS_PER_USEC * ONE_MHZ_CLK)) - 1);
-  timer_set_prescaler(RPM_PPM_TIMER, 256);
+  uint32_t timer_clk = timer_get_frequency(RPM_PPM_TIMER);
+  timer_set_prescaler(RPM_PPM_TIMER, (timer_clk / (RPM_PPM_TICKS_PER_USEC * ONE_MHZ_CLK)) - 1);
+  //timer_set_prescaler(RPM_PPM_TIMER, 256);
 
   /* TIM configuration: Input Capture mode ---------------------
       The Rising edge is used as active edge
    ------------------------------------------------------------ */
   timer_ic_set_polarity(RPM_PPM_TIMER, RPM_PPM_CHANNEL, TIM_IC_RISING);
   timer_ic_set_input(RPM_PPM_TIMER, RPM_PPM_CHANNEL, RPM_PPM_TIMER_INPUT);
-  timer_ic_set_prescaler(RPM_PPM_TIMER, RPM_PPM_CHANNEL, TIM_IC_PSC_OFF);
-  timer_ic_set_filter(RPM_PPM_TIMER, RPM_PPM_CHANNEL, TIM_IC_CK_INT_N_8); // Filter enabled
+  timer_ic_set_prescaler(RPM_PPM_TIMER, RPM_PPM_CHANNEL, TIM_IC_PSC_8);
+  //timer_ic_set_filter(RPM_PPM_TIMER, RPM_PPM_CHANNEL, TIM_IC_CK_INT_N_8); // Filter enabled
 
   /* Enable timer Interrupt(s). */
   nvic_set_priority(RPM_PPM_IRQ, RPM_PPM_IRQ_PRIO);
@@ -117,17 +116,22 @@ void rpm_sensor_arch_init(void)
 
 }
 
-void tim3_isr(void)
+void tim8_cc_isr(void)
 {
-  if ((TIM3_SR & RPM_PPM_CC_IF) != 0) { /* Interrupt from rising edge */
-    timer_clear_flag(TIM3, RPM_PPM_CC_IF);
+  if ((TIM8_SR & RPM_PPM_CC_IF) != 0) { /* Interrupt from rising edge */
+    timer_clear_flag(TIM8, RPM_PPM_CC_IF);
 
-    uint16_t now = timer_get_counter(TIM3);
+    uint16_t now = timer_get_counter(TIM8);
     rpm_sensor_process_pulse(now, rpm_sensor_arch_overflow_cnt);
     rpm_sensor_arch_overflow_cnt = 0;
 
-  } else if ((TIM3_SR & TIM_SR_UIF) != 0) { /* Interrupt from overflow */
-    timer_clear_flag(TIM3, TIM_SR_UIF);
+  }
+}
+
+void tim8_up_isr(void)
+{
+  if ((TIM8_SR & TIM_SR_UIF) != 0) { /* Interrupt from overflow */
+    timer_clear_flag(TIM8, TIM_SR_UIF);
 
     if (rpm_sensor_arch_overflow_cnt < 2) {
       rpm_sensor_arch_overflow_cnt++;
