@@ -323,6 +323,7 @@ static inline void indi_apply_measurement_butterworth_filters(int32_t _out[], in
 
 void stabilization_attitude_init(void)
 {
+  rpm_sensor_init();
   /* Set steady-state pitch and roll values */
   stabilization_attitude_heli_indi_set_steadystate_pitchroll();
 
@@ -334,8 +335,8 @@ void stabilization_attitude_init(void)
   // matlab new method
   //  47948       14952
   // -31016       27170
-  c->invG[0][0] =   +25051; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =       0;
-  c->invG[1][0] =        0; c->invG[1][1] =  +23364; c->invG[1][2] =    0; c->invG[1][3] =       0;
+  c->invG[0][0] =   +11681; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =       0;
+  c->invG[1][0] =        0; c->invG[1][1] =  +17341; c->invG[1][2] =    0; c->invG[1][3] =       0;
   c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] =  730; c->invG[2][3] =       0;
   c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] =  -50000;
 

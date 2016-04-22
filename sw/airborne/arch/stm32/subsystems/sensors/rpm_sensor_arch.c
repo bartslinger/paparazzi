@@ -90,7 +90,8 @@ void rpm_sensor_arch_init(void)
                  TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
   timer_set_period(RPM_PPM_TIMER, 0xFFFF);
   uint32_t timer_clk = timer_get_frequency(RPM_PPM_TIMER);
-  timer_set_prescaler(RPM_PPM_TIMER, (timer_clk / (RPM_PPM_TICKS_PER_USEC * ONE_MHZ_CLK)) - 1);
+  timer_set_prescaler(RPM_PPM_TIMER, (timer_clk / 200000) - 1); // at 72mhz = 360-1
+  //timer_set_prescaler(RPM_PPM_TIMER, 359);
   //timer_set_prescaler(RPM_PPM_TIMER, 256);
 
   /* TIM configuration: Input Capture mode ---------------------
