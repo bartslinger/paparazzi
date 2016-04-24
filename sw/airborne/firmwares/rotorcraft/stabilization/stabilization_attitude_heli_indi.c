@@ -329,6 +329,7 @@ void stabilization_attitude_init(void)
 
   /* Initialization code INDI */
   struct IndiController_int* c = &new_heli_indi;
+  c->adj_angle = 0;
 
   /* Initialize model matrices */
   indi_set_identity(c->D);
@@ -599,8 +600,14 @@ void stabilization_attitude_run(bool_t in_flight)
   indi_copy_vect(c->command_out[__k-1], c->command_out[__k]);
 
   /* Set stabilization commands to output values of the INDI controller */
-  stabilization_cmd[COMMAND_ROLL] = c->command_out[__k][INDI_ROLL];
-  stabilization_cmd[COMMAND_PITCH] = c->command_out[__k][INDI_PITCH];
+  //stabilization_cmd[COMMAND_ROLL] = c->command_out[__k][INDI_ROLL];
+  //stabilization_cmd[COMMAND_PITCH] = c->command_out[__k][INDI_PITCH];
+  stabilization_cmd[COMMAND_ROLL] = (pprz_itrig_cos(c->adj_angle) * c->command_out[__k][INDI_ROLL] +
+                                     pprz_itrig_sin(c->adj_angle) * c->command_out[__k][INDI_PITCH]) >> 14;
+  stabilization_cmd[COMMAND_PITCH] = (-pprz_itrig_sin(c->adj_angle) * c->command_out[__k][INDI_ROLL] +
+                                      pprz_itrig_cos(c->adj_angle) * c->command_out[__k][INDI_PITCH]) >> 14;
+
+
   stabilization_cmd[COMMAND_YAW] = c->command_out[__k][INDI_YAW];
   // Do not overwrite thrust unless when in 4DOF mode
   if (guidance_v_mode == GUIDANCE_V_MODE_HELI_INDI_4DOF) {
