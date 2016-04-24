@@ -336,7 +336,7 @@ void stabilization_attitude_init(void)
   //  47948       14952
   // -31016       27170
   c->invG[0][0] =   +11681; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =       0;
-  c->invG[1][0] =        0; c->invG[1][1] =  +17341; c->invG[1][2] =    0; c->invG[1][3] =       0;
+  c->invG[1][0] =        0; c->invG[1][1] =  +41734; c->invG[1][2] =    0; c->invG[1][3] =       0; // was 17341
   c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] =  730; c->invG[2][3] =       0;
   c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] =  -50000;
 
@@ -543,6 +543,10 @@ void stabilization_attitude_run(bool_t in_flight)
   c->du[INDI_PITCH] >>= 16;
   c->du[INDI_YAW]   >>= 16;
   c->du[INDI_THRUST]>>= 16;  // to get -1/4
+
+  /* Try compensate pitch command depending on roll rate */
+  //float compensation = 5.5357* c->measurement[INDI_ROLL] / 512;
+  //c->du[INDI_PITCH] += (int32_t)compensation;
 
   //c->du[INDI_YAW] = (c->error[INDI_YAW] + 69*delta_thrust_meas) / 31;
 
