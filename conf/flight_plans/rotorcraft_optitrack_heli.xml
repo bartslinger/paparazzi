@@ -12,7 +12,7 @@
     <waypoint name="TD" x="-0.9" y="-0.8"/>
     <waypoint lat="51.990624" lon="4.376843" name="p1"/>
     <waypoint lat="51.990638" lon="4.376749" name="p2"/>
-    <waypoint lat="51.990621" lon="4.376761" name="p3"/>
+    <waypoint lat="51.990628" lon="4.376794" name="p3"/>
     <waypoint lat="51.990646" lon="4.376784" name="p4"/>
     <waypoint lat="51.9906213" lon="4.3768628" name="_CZ1"/>
     <waypoint lat="51.9905874" lon="4.3767766" name="_CZ2"/>
@@ -104,6 +104,9 @@
     <block name="landed">
       <call fun="NavKillThrottle()"/>
       <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
+    </block>
+    <block name="circle p3">
+      <circle radius="2" wp="p3"/>
     </block>
   </blocks>
 </flight_plan>

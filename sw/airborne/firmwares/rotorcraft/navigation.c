@@ -269,6 +269,7 @@ void nav_circle(struct EnuCoor_i *wp_center, int32_t radius)
   }
   nav_circle_center = *wp_center;
   nav_circle_radius = radius;
+  nav_set_heading_towards( POS_FLOAT_OF_BFP(navigation_carrot.x), POS_FLOAT_OF_BFP(navigation_carrot.y) );
   horizontal_mode = HORIZONTAL_MODE_CIRCLE;
 }
 
