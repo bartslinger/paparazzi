@@ -506,8 +506,8 @@ void stabilization_attitude_run(bool_t in_flight)
   indi_matrix_multiply_vector(c->dynamics_compensated_measurement, c->D, filtered_measurement_vector);
 
   /* Use the filtered measurements for PID control as well */
-  int32_t roll_virtual_control  = (heli_indi_gains.roll_p * att_err.qx)  / 16;
-  int32_t pitch_virtual_control = (heli_indi_gains.pitch_p * att_err.qy) / 16;
+  int32_t roll_virtual_control  = (heli_indi_gains.roll_p * att_err.qx)  / 4;
+  int32_t pitch_virtual_control = (heli_indi_gains.pitch_p * att_err.qy) / 4;
   /* For yaw control implement a yawrate saturation
    * Saturation implemented by bounding the att_err.
    * Unsaturated control => v = P*att_err - D*rate
