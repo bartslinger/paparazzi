@@ -329,15 +329,15 @@ void stabilization_attitude_init(void)
 
   /* Initialization code INDI */
   struct IndiController_int* c = &new_heli_indi;
-  c->adj_angle = ANGLE_BFP_OF_REAL(30.0*M_PI/180.0);
+  c->adj_angle = ANGLE_BFP_OF_REAL(32.0*M_PI/180.0);
 
   /* Initialize model matrices */
   indi_set_identity(c->D);
   // matlab new method
   //  47948       14952
   // -31016       27170
-  c->invG[0][0] =   +11681*.8; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =       0;
-  c->invG[1][0] =        0; c->invG[1][1] =  +17341*.8; c->invG[1][2] =    0; c->invG[1][3] =       0; // was 17341
+  c->invG[0][0] =   +11681; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =       0;
+  c->invG[1][0] =        0; c->invG[1][1] =  +17341; c->invG[1][2] =    0; c->invG[1][3] =       0; // was 17341
   c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] =  730; c->invG[2][3] =       0;
   c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] =  -50000;
 
@@ -602,6 +602,7 @@ void stabilization_attitude_run(bool_t in_flight)
   /* Set stabilization commands to output values of the INDI controller */
   //stabilization_cmd[COMMAND_ROLL] = c->command_out[__k][INDI_ROLL];
   //stabilization_cmd[COMMAND_PITCH] = c->command_out[__k][INDI_PITCH];
+
   stabilization_cmd[COMMAND_ROLL] = (pprz_itrig_cos(c->adj_angle) * c->command_out[__k][INDI_ROLL] +
                                      pprz_itrig_sin(c->adj_angle) * c->command_out[__k][INDI_PITCH]) >> 14;
   stabilization_cmd[COMMAND_PITCH] = (-pprz_itrig_sin(c->adj_angle) * c->command_out[__k][INDI_ROLL] +

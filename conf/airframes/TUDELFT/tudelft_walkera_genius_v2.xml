@@ -79,8 +79,8 @@
  </section>
 
   <section name="STABILIZATION_ATTITUDE_HELI_INDI" prefix="STABILIZATION_ATTITUDE_HELI_INDI_">
-    <define name="ROLL_P" value="8"/><!--20 3052 -->
-    <define name="PITCH_P" value="8"/><!--20 3052 -->
+    <define name="ROLL_P" value="12"/><!--20 3052 -->
+    <define name="PITCH_P" value="12"/><!--20 3052 -->
     <define name="YAW_P" value="20"/>
     <define name="YAW_D" value="25"/>
     <define name="USE_FAST_DYN_FILTERS" value="1" />
@@ -138,6 +138,7 @@
 
   <firmware name="rotorcraft">
     <target name="ap" board="lisa_s_1.0">
+      <!--define name="USE_KILL_SWITCH_FOR_MOTOR_ARMING" value="1"/-->
       <configure name="USE_MAGNETOMETER" value="0"/>
       <define name="AHRS_USE_GPS_HEADING" value="1"/>
       <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="0"/>
