@@ -371,8 +371,8 @@ void stabilization_attitude_init(void)
   /* Low pass filter initialization */
   for (uint8_t i = 0; i < INDI_DOF-2; i++) {
     // Cutoff frequencies are in Hz!!!
-    init_butterworth_2_low_pass_int(&actuator_lowpass_filters[i], 20, 1.0/PERIODIC_FREQUENCY, 0);
-    init_butterworth_2_low_pass_int(&measurement_lowpass_filters[i], 20, 1.0/PERIODIC_FREQUENCY, 0);
+    init_butterworth_2_low_pass_int(&actuator_lowpass_filters[i], 30, 1.0/PERIODIC_FREQUENCY, 0);
+    init_butterworth_2_low_pass_int(&measurement_lowpass_filters[i], 30, 1.0/PERIODIC_FREQUENCY, 0);
   }
   init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_YAW], 20, 1.0/PERIODIC_FREQUENCY, 0);
   init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_YAW], 20, 1.0/PERIODIC_FREQUENCY, 0);
