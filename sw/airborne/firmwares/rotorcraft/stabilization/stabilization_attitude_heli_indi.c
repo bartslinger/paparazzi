@@ -336,8 +336,8 @@ void stabilization_attitude_init(void)
   // matlab new method
   //  47948       14952
   // -31016       27170
-  c->invG[0][0] =   +11681; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =       0;
-  c->invG[1][0] =        0; c->invG[1][1] =  +17341; c->invG[1][2] =    0; c->invG[1][3] =       0; // was 17341
+  c->invG[0][0] =   +11681*.8; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =       0;
+  c->invG[1][0] =        0; c->invG[1][1] =  +17341*.8; c->invG[1][2] =    0; c->invG[1][3] =       0; // was 17341
   c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] =  730; c->invG[2][3] =       0;
   c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] =  -50000;
 
@@ -371,8 +371,8 @@ void stabilization_attitude_init(void)
   /* Low pass filter initialization */
   for (uint8_t i = 0; i < INDI_DOF-2; i++) {
     // Cutoff frequencies are in Hz!!!
-    init_butterworth_2_low_pass_int(&actuator_lowpass_filters[i], 30, 1.0/PERIODIC_FREQUENCY, 0);
-    init_butterworth_2_low_pass_int(&measurement_lowpass_filters[i], 30, 1.0/PERIODIC_FREQUENCY, 0);
+    init_butterworth_2_low_pass_int(&actuator_lowpass_filters[i], 40, 1.0/PERIODIC_FREQUENCY, 0);
+    init_butterworth_2_low_pass_int(&measurement_lowpass_filters[i], 40, 1.0/PERIODIC_FREQUENCY, 0);
   }
   init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_YAW], 20, 1.0/PERIODIC_FREQUENCY, 0);
   init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_YAW], 20, 1.0/PERIODIC_FREQUENCY, 0);
