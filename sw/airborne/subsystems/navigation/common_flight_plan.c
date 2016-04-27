@@ -31,6 +31,7 @@
 
 /** In s */
 uint16_t stage_time, block_time;
+uint16_t highres_stage_time; /** Increments 16 times per second */
 
 uint8_t nav_stage, nav_block;
 

@@ -24,6 +24,7 @@
  */
 
 #include "generated/airframe.h"
+#include "autopilot.h"
 
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_heli_indi.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude.h"
@@ -613,6 +614,12 @@ void stabilization_attitude_run(bool_t in_flight)
   // Do not overwrite thrust unless when in 4DOF mode
   if (guidance_v_mode == GUIDANCE_V_MODE_HELI_INDI_4DOF) {
     stabilization_cmd[COMMAND_THRUST] = c->command_out[__k][INDI_THRUST];
+  }
+
+  // Disable tail when not armed
+  if(!autopilot_motors_on)
+  {
+    stabilization_cmd[COMMAND_YAW] = 0;
   }
 
   // OVERWRITE YAW STABILIZATION WITH DIRECT PID //

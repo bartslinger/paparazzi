@@ -409,6 +409,7 @@ void nav_init_stage(void)
 {
   VECT3_COPY(nav_last_point, *stateGetPositionEnu_i());
   stage_time = 0;
+  highres_stage_time = 0;
   nav_circle_radians = 0;
   horizontal_mode = HORIZONTAL_MODE_WAYPOINT;
 }
@@ -417,6 +418,7 @@ void nav_init_stage(void)
 void nav_periodic_task(void)
 {
   RunOnceEvery(NAV_FREQ, { stage_time++;  block_time++; });
+  highres_stage_time++;
 
   nav_survey_active = FALSE;
 
