@@ -60,11 +60,12 @@
     </block>
     <block name="Doublet">
       <call fun="nav_set_heading_deg(110)"/>
-      <go wp="p3"/>
-      <stay wp="p3" until="stage_time > 2"/>
-      <attitude roll="10" alt="WaypointAlt(8)" until="highres_stage_time > 8"/>
-      <attitude roll="-10" alt="WaypointAlt(8)" until="highres_stage_time > 8"/>
-      <deroute block="Doublet"/>
+      <for var="i" from="0" to="10">
+        <go wp="p3"/>
+        <stay wp="p3" until="stage_time > 2"/>
+        <attitude roll="10" alt="WaypointAlt(8)" until="highres_stage_time > 8"/>
+        <attitude roll="-10" alt="WaypointAlt(8)" until="highres_stage_time > 8"/>
+      </for>
     </block>
     <block name="START" strip_button="Go" strip_icon="lookfore.png">
       <call fun="NavSetWaypointHere(WP_GOAL)"/>
