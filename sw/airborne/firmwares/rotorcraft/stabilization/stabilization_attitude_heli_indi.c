@@ -92,6 +92,7 @@ struct IndiController_int new_heli_indi;
 
 static void send_indi_debug_values(struct transport_tx *trans, struct link_device *dev)
 {
+  //stab_att_sp_euler.phi
   pprz_msg_send_STAB_INDI_DEBUG(trans, dev, AC_ID,
                                 &stabilization_cmd[COMMAND_YAW],
                                 &new_heli_indi.reference[INDI_YAW],
@@ -103,6 +104,15 @@ static void send_indi_debug_values(struct transport_tx *trans, struct link_devic
                                 &new_heli_indi.filtered_measurement[1][INDI_YAW],
                                 &stabilization_cmd[COMMAND_THRUST]);
 }
+
+static void send_indi_euler_setpoint(struct transport_tx *trans, struct link_device *dev)
+{
+  pprz_msg_send_INDI_EULER_SETPOINT(trans, dev, AC_ID,
+                                    &stab_att_sp_euler.phi,
+                                    &stab_att_sp_euler.theta,
+                                    &stab_att_sp_euler.psi);
+}
+
 #endif
 
 void stabilization_attitude_heli_indi_set_steadystate_pitch(float pitch)
@@ -390,6 +400,7 @@ void stabilization_attitude_init(void)
 
 #if PERIODIC_TELEMETRY
   register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_STAB_INDI_DEBUG, send_indi_debug_values);
+  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_INDI_EULER_SETPOINT, send_indi_euler_setpoint);
   //register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_<<MSG>>, function);
 #endif
 }
