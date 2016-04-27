@@ -340,7 +340,8 @@ void stabilization_attitude_init(void)
 
   /* Initialization code INDI */
   struct IndiController_int* c = &new_heli_indi;
-  c->adj_angle = ANGLE_BFP_OF_REAL(32.0*M_PI/180.0);
+  c->roll_comp_angle = ANGLE_BFP_OF_REAL(32.0*M_PI/180.0);
+  c->pitch_comp_angle = ANGLE_BFP_OF_REAL(32.0*M_PI/180.0);
 
   /* Initialize model matrices */
   indi_set_identity(c->D);
@@ -615,11 +616,20 @@ void stabilization_attitude_run(bool_t in_flight)
   //stabilization_cmd[COMMAND_ROLL] = c->command_out[__k][INDI_ROLL];
   //stabilization_cmd[COMMAND_PITCH] = c->command_out[__k][INDI_PITCH];
 
+  /* Rotate both commands
   stabilization_cmd[COMMAND_ROLL] = (pprz_itrig_cos(c->adj_angle) * c->command_out[__k][INDI_ROLL] +
                                      pprz_itrig_sin(c->adj_angle) * c->command_out[__k][INDI_PITCH]) >> 14;
   stabilization_cmd[COMMAND_PITCH] = (-pprz_itrig_sin(c->adj_angle) * c->command_out[__k][INDI_ROLL] +
                                       pprz_itrig_cos(c->adj_angle) * c->command_out[__k][INDI_PITCH]) >> 14;
+  */
 
+  /* Two correction angles, don't rotate but just add.
+   * sin/cos = tan
+   */
+  stabilization_cmd[COMMAND_ROLL] = c->command_out[__k][INDI_ROLL]
+                                  + c->command_out[__k][INDI_PITCH] * pprz_itrig_sin(c->pitch_comp_angle) / pprz_itrig_cos(c->pitch_comp_angle);
+  stabilization_cmd[COMMAND_PITCH] = c->command_out[__k][INDI_PITCH]
+                                   - c->command_out[__k][INDI_ROLL] * pprz_itrig_sin(c->roll_comp_angle) / pprz_itrig_cos(c->roll_comp_angle);
 
   stabilization_cmd[COMMAND_YAW] = c->command_out[__k][INDI_YAW];
   // Do not overwrite thrust unless when in 4DOF mode

@@ -90,7 +90,8 @@ struct IndiController_int {
   int32_t filtered_actuator[INDI_NR_FILTERS][INDI_DOF];
   int32_t measurement[INDI_DOF];
   int32_t filtered_measurement[INDI_NR_FILTERS][INDI_DOF];
-  int32_t adj_angle;                                        ///< Angle to rotate pitch/roll commands with INT32_ANGLE_FRAC
+  int32_t roll_comp_angle;                                        ///< Angle to rotate pitch/roll commands with INT32_ANGLE_FRAC
+  int32_t pitch_comp_angle;                                        ///< Angle to rotate pitch/roll commands with INT32_ANGLE_FRAC
 };
 
 extern struct IndiController_int new_heli_indi;
