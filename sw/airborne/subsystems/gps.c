@@ -47,12 +47,16 @@ struct GpsTimeSync gps_time_sync;
 static void send_svinfo_id(struct transport_tx *trans, struct link_device *dev,
                            uint8_t svid)
 {
+#if GPS_NB_CHANNELS > 0
   if (svid < GPS_NB_CHANNELS) {
     pprz_msg_send_SVINFO(trans, dev, AC_ID, &svid,
                          &gps.svinfos[svid].svid, &gps.svinfos[svid].flags,
                          &gps.svinfos[svid].qi, &gps.svinfos[svid].cno,
                          &gps.svinfos[svid].elev, &gps.svinfos[svid].azim);
   }
+#else
+  (void) trans; (void) dev; (void) svid; /* Avoid unused variable warnings */
+#endif
 }
 
 /** send SVINFO message (regardless of state) */

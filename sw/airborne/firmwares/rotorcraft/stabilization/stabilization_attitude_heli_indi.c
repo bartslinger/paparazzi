@@ -499,9 +499,9 @@ void stabilization_attitude_run(bool_t in_flight)
   filtered_measurement_vector[INDI_YAW] = 512*(c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW] - previous_filt_yawrate);  // = approximately yaw acceleration error
   previous_filt_yawrate = c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW];
 
-  static int32_t previous_thrust = 0;
-  int32_t delta_thrust_cmd = stabilization_cmd[COMMAND_THRUST] - previous_thrust;
-  previous_thrust = stabilization_cmd[COMMAND_THRUST];
+  //static int32_t previous_thrust = 0;
+  //int32_t delta_thrust_cmd = stabilization_cmd[COMMAND_THRUST] - previous_thrust;
+  //previous_thrust = stabilization_cmd[COMMAND_THRUST];
 
   /* Apply model dynamics matrix, is diagonal of ones when model dynamics are neglected. */
   indi_matrix_multiply_vector(c->dynamics_compensated_measurement, c->D, filtered_measurement_vector);
