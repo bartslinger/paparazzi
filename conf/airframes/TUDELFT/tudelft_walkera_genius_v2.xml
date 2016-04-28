@@ -101,8 +101,8 @@
   </section>
 
   <section name="GUIDANCE_V" prefix="GUIDANCE_V_">
-    <define name="HOVER_KP" value="600"/>
-    <define name="HOVER_KD" value="237"/>
+    <define name="HOVER_KP" value="364"/>
+    <define name="HOVER_KD" value="362"/>
     <define name="HOVER_KI" value="0"/>
     <define name="GUIDANCE_V_NOMINAL_HOVER_THROTTLE" value="0.9"/>
   </section>

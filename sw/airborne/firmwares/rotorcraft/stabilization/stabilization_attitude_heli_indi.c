@@ -340,8 +340,8 @@ void stabilization_attitude_init(void)
 
   /* Initialization code INDI */
   struct IndiController_int* c = &new_heli_indi;
-  c->roll_comp_angle = ANGLE_BFP_OF_REAL(32.0*M_PI/180.0);
-  c->pitch_comp_angle = ANGLE_BFP_OF_REAL(32.0*M_PI/180.0);
+  c->roll_comp_angle = ANGLE_BFP_OF_REAL(30.0*M_PI/180.0);
+  c->pitch_comp_angle = ANGLE_BFP_OF_REAL(11.0*M_PI/180.0);
 
   /* Initialize model matrices */
   indi_set_identity(c->D);
