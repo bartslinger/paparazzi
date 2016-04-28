@@ -12,7 +12,7 @@
 
     <dl_settings NAME="INDI Actuators">
       <dl_setting MAX="300" MIN="1" step="1" var="new_heli_indi.roll_omega" shortname="roll.omega" module="stabilization/stabilization_attitude_heli_indi" unit="rad/s" handler="set_roll_omega" type="uint32_t"/>
-      <dl_setting MAX="20" MIN="0" step="1" var="new_heli_indi.roll_omega" shortname="roll.delay" module="stabilization/stabilization_attitude_heli_indi" unit="discrete steps" handler="set_roll_delay" type="uint8_t"/>
+      <dl_setting MAX="20" MIN="0" step="1" var="new_heli_indi.roll_delay" shortname="roll.delay" module="stabilization/stabilization_attitude_heli_indi" unit="discrete steps" handler="set_roll_delay" type="uint8_t"/>
     </dl_settings>
 
     <dl_settings NAME="INDI Heli invG">
