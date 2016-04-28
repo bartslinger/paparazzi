@@ -63,9 +63,6 @@
       <call fun="nav_set_heading_deg(327)"/>
       <stay wp="p3" until="stage_time > 3"/>
       <attitude roll="0" alt="WaypointAlt(8)" until="highres_stage_time > 6"/>
-      <attitude roll="20" alt="WaypointAlt(8)" until="highres_stage_time > 6"/>
-      <attitude roll="-20" alt="WaypointAlt(8)" until="highres_stage_time > 6"/>
-      <attitude roll="0" alt="WaypointAlt(8)" until="highres_stage_time > 6"/>
       <deroute block="Doublet"/>
     </block>
     <block name="START" strip_button="Go" strip_icon="lookfore.png">
