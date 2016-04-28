@@ -332,6 +332,16 @@ static inline void indi_apply_measurement_butterworth_filters(int32_t _out[], in
   }
 }
 
+void stabilization_attitude_heli_indi_set_roll_omega(uint32_t omega)
+{
+  heli_rate_filter_set_omega(&actuator_model[INDI_ROLL], omega);
+}
+
+void stabilization_attitude_heli_indi_set_roll_delay(uint8_t delay)
+{
+  heli_rate_filter_set_delay(&actuator_model[INDI_ROLL], delay);
+}
+
 void stabilization_attitude_init(void)
 {
   rpm_sensor_init();

@@ -92,6 +92,8 @@ struct IndiController_int {
   int32_t filtered_measurement[INDI_NR_FILTERS][INDI_DOF];
   int32_t roll_comp_angle;                                        ///< Angle to rotate pitch/roll commands with INT32_ANGLE_FRAC
   int32_t pitch_comp_angle;                                        ///< Angle to rotate pitch/roll commands with INT32_ANGLE_FRAC
+  uint32_t roll_omega;
+  uint32_t roll_delay;
 };
 
 extern struct IndiController_int new_heli_indi;
@@ -107,5 +109,8 @@ extern struct HeliIndiGains heli_indi_gains;
 extern void stabilization_attitude_heli_indi_set_steadystate_pitch(float pitch);
 extern void stabilization_attitude_heli_indi_set_steadystate_roll(float roll);
 extern void stabilization_attitude_heli_indi_set_steadystate_pitchroll(void);
+
+extern void stabilization_attitude_heli_indi_set_roll_omega(uint32_t omega);
+extern void stabilization_attitude_heli_indi_set_roll_delay(uint8_t delay);
 
 #endif /* STABILIZATION_ATTITUDE_QUAT_INT_H */
