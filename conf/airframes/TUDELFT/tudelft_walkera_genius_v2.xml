@@ -114,7 +114,7 @@
   </section>
 
   <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
-   <define name="PGAIN" value="301"/>
+   <define name="PGAIN" value="165"/>
    <define name="DGAIN" value="185"/>
    <define name="IGAIN" value="31"/>
   </section>
