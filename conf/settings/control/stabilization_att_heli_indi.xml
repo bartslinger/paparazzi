@@ -14,6 +14,7 @@
       <dl_setting MAX="300" MIN="1" step="1" var="actuator_model[INDI_ROLL].omega" shortname="roll.omega" module="stabilization/stabilization_attitude_heli_indi" unit="rad/s" handler="set_roll_omega" type="uint32_t"/>
       <dl_setting MAX="20" MIN="0" step="1" var="actuator_model[INDI_ROLL].delay" shortname="roll.delay" module="stabilization/stabilization_attitude_heli_indi" unit="discrete steps" handler="set_roll_delay" type="uint8_t"/>
       <dl_setting MAX="20000" MIN="0" step="10" var="actuator_model[INDI_ROLL].max_inc" shortname="roll.sat" module="stabilization/stabilization_attitude_heli_indi" unit="pprz"/>
+      <dl_setting MAX="1" MIN="0" step="1" var="new_heli_indi.use_roll_dyn_filter" values="FALSE|TRUE" shortname="use.rollfilt" module="stabilization/stabilization_attitude_heli_indi"/>
     </dl_settings>
 
     <dl_settings NAME="INDI Heli invG">

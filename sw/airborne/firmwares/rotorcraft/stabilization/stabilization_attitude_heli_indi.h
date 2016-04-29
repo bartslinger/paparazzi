@@ -94,6 +94,7 @@ struct IndiController_int {
   int32_t pitch_comp_angle;                                        ///< Angle to rotate pitch/roll commands with INT32_ANGLE_FRAC
   uint32_t roll_omega;
   uint32_t roll_delay;
+  bool_t use_roll_dyn_filter;
 };
 
 extern struct IndiController_int new_heli_indi;
