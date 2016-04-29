@@ -98,7 +98,7 @@ struct IndiController_int {
 
 extern struct IndiController_int new_heli_indi;
 
-
+extern struct heli_rate_filter_t actuator_model[INDI_DOF];
 extern struct Int32Quat   stab_att_sp_quat;  ///< with #INT32_QUAT_FRAC
 extern struct Int32Eulers stab_att_sp_euler; ///< with #INT32_ANGLE_FRAC
 extern float sp_offset_roll;
