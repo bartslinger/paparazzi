@@ -267,7 +267,7 @@ struct SecondOrderNotchFilter actuator_notchfilter[INDI_DOF];
 struct SecondOrderNotchFilter measurement_notchfilter[INDI_DOF];
 static inline void indi_apply_actuator_notch_filters(int32_t _out[], int32_t _in[])
 {
-  if (rpm_sensor.motor_frequency > 25.0f) {
+  if (rpm_sensor.motor_frequency > 25.0f && new_heli_indi.enable_notch) {
     notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_ROLL], rpm_sensor.motor_frequency);
     notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_PITCH], rpm_sensor.motor_frequency);
     notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_YAW], rpm_sensor.motor_frequency);
@@ -286,7 +286,7 @@ static inline void indi_apply_actuator_notch_filters(int32_t _out[], int32_t _in
 
 static inline void indi_apply_measurement_notch_filters(int32_t _out[], int32_t _in[])
 {
-  if (rpm_sensor.motor_frequency > 25.0f) {
+  if (rpm_sensor.motor_frequency > 25.0f && new_heli_indi.enable_notch) {
     notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_ROLL], rpm_sensor.motor_frequency);
     notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_PITCH], rpm_sensor.motor_frequency);
     notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_YAW], rpm_sensor.motor_frequency);
@@ -346,6 +346,13 @@ void stabilization_attitude_heli_indi_set_roll_delay(uint8_t delay)
   heli_rate_filter_set_delay(&actuator_model[INDI_ROLL], delay);
 }
 
+void stabilization_attitude_heli_indi_set_rollfilter_bw(float bandwidth)
+{
+  // Cutoff frequencies are in Hz!!!
+  init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_ROLL], bandwidth, 1.0/PERIODIC_FREQUENCY, 0);
+  init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_ROLL], bandwidth, 1.0/PERIODIC_FREQUENCY, 0);
+}
+
 void stabilization_attitude_init(void)
 {
   rpm_sensor_init();
@@ -357,6 +364,10 @@ void stabilization_attitude_init(void)
   c->roll_comp_angle = ANGLE_BFP_OF_REAL(30.0*M_PI/180.0);
   c->pitch_comp_angle = ANGLE_BFP_OF_REAL(11.0*M_PI/180.0);
   c->use_roll_dyn_filter = TRUE;
+  c->dist_magnitude = 1000;
+  c->add_disturbance = FALSE;
+  c->rollfilt_bw = 40.;
+  c->enable_notch = TRUE;
 
   /* Initialize model matrices */
   indi_set_identity(c->D);
@@ -651,6 +662,28 @@ void stabilization_attitude_run(bool_t in_flight)
   if (guidance_v_mode == GUIDANCE_V_MODE_HELI_INDI_4DOF) {
     stabilization_cmd[COMMAND_THRUST] = c->command_out[__k][INDI_THRUST];
   }
+
+  if (c->add_disturbance) {
+    stabilization_cmd[COMMAND_ROLL] = stabilization_cmd[COMMAND_ROLL] + c->dist_magnitude;
+  }
+
+#if HELI_ROLL_DISTURBANCES
+  static uint32_t roll_dist_cnt = 0;
+  if (radio_control.values[SDLOGGER_CONTROL_SWITCH] > 0) {
+    /* Add disturbances from time to time */
+    if (roll_dist_cnt > 512*6) {
+      roll_dist_cnt = 0;
+    }
+    else if (roll_dist_cnt > 512*3) {
+      stabilization_cmd[COMMAND_ROLL] = stabilization_cmd[COMMAND_ROLL] + c->dist_magnitude;
+    }
+    else {
+      /*nothing, no disturbance first three secs */
+    }
+
+    roll_dist_cnt++;
+  }
+#endif
 
   // Disable tail when not armed
   if(!autopilot_motors_on)

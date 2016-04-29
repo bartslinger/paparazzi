@@ -95,6 +95,10 @@ struct IndiController_int {
   uint32_t roll_omega;
   uint32_t roll_delay;
   bool_t use_roll_dyn_filter;
+  uint16_t dist_magnitude;                                  ///< Magnitude of roll disturbance
+  bool_t add_disturbance;                                   ///< Wether or not to add this disturbance, set by external module
+  float rollfilt_bw;                                        ///< Bandwidth of the roll measurement filter
+  bool_t enable_notch;                                      ///< Use notch filters
 };
 
 extern struct IndiController_int new_heli_indi;
@@ -113,5 +117,6 @@ extern void stabilization_attitude_heli_indi_set_steadystate_pitchroll(void);
 
 extern void stabilization_attitude_heli_indi_set_roll_omega(uint32_t omega);
 extern void stabilization_attitude_heli_indi_set_roll_delay(uint8_t delay);
+extern void stabilization_attitude_heli_indi_set_rollfilter_bw(float bandwidth);
 
 #endif /* STABILIZATION_ATTITUDE_QUAT_INT_H */

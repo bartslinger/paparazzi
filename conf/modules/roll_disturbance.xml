@@ -1,0 +1,15 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module name="roll_disturbance">
+  <doc>
+    <description>disturbance roll command</description>
+  </doc>
+  <header>
+    <file name="roll_disturbance.h"/>
+  </header>
+  <periodic fun="roll_disturbance_periodic()" freq="512"/>
+  <makefile>
+    <file name="roll_disturbance.c"/>
+  </makefile>
+</module>
+

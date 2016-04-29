@@ -58,11 +58,18 @@
     <block name="Standby" strip_button="Standby" strip_icon="home.png">
       <stay wp="STDBY"/>
     </block>
+    <block name="Disturbances">
+      <go wp="p3"/>
+      <stay until="stage_time>3" wp="p3"/>
+      <call fun="roll_disturbance_restart()"/>
+      <attitude roll="0" until="stage_time > 2" alt="WaypointAlt(8)"/>
+      <deroute block="Disturbances"/>
+    </block>
     <block name="Doublet">
       <go wp="p3"/>
       <call fun="nav_set_heading_deg(327)"/>
-      <stay wp="p3" until="stage_time > 3"/>
-      <attitude roll="0" alt="WaypointAlt(8)" until="highres_stage_time > 6"/>
+      <stay until="stage_time > 3" wp="p3"/>
+      <attitude alt="WaypointAlt(8)" roll="0" until="highres_stage_time > 6"/>
       <deroute block="Doublet"/>
     </block>
     <block name="START" strip_button="Go" strip_icon="lookfore.png">
