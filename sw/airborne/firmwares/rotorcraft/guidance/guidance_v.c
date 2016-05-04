@@ -216,7 +216,7 @@ static inline void add_thrust_disturbance(void)
       int16_t add_thrust = pprz_itrig_sin(angle + shifts[i]);
       sum_thrust += add_thrust;
     }
-    stabilization_cmd[COMMAND_THRUST] += sum_thrust / 64;
+    stabilization_cmd[COMMAND_THRUST] += sum_thrust / 128;
 
     thrustcnt++;
   }
