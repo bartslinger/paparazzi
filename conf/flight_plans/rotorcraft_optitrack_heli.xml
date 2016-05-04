@@ -1,6 +1,6 @@
 <!DOCTYPE flight_plan SYSTEM "flight_plan.dtd">
 
-<flight_plan alt="1.5" ground_alt="0" lat0="51.990634" lon0="4.376789" max_dist_from_home="100" name="Rotorcraft Optitrack (Delft)" security_height="0.3">
+<flight_plan alt="2.0" ground_alt="0" lat0="51.990634" lon0="4.376789" max_dist_from_home="100" name="Rotorcraft Optitrack (Delft)" security_height="0.3">
   <header>
 #include "autopilot.h"
 </header>
@@ -58,13 +58,14 @@
     <block name="Standby" strip_button="Standby" strip_icon="home.png">
       <stay wp="STDBY"/>
     </block>
+    <!--
     <block name="Disturbances">
       <go wp="p3"/>
       <stay until="stage_time>3" wp="p3"/>
       <call fun="roll_disturbance_restart()"/>
       <attitude roll="0" until="stage_time > 1" alt="WaypointAlt(8)"/>
       <deroute block="Disturbances"/>
-    </block>
+    </block>-->
     <block name="Doublet">
       <go wp="p3"/>
       <call fun="nav_set_heading_deg(327)"/>

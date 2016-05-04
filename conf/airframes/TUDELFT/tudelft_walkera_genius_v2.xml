@@ -114,9 +114,9 @@
   </section>
 
   <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
-   <define name="PGAIN" value="165"/>
-   <define name="DGAIN" value="185"/>
-   <define name="IGAIN" value="31"/>
+   <define name="PGAIN" value="50"/> <!-- 165 -->
+   <define name="DGAIN" value="50"/> <!-- 185 -->
+   <define name="IGAIN" value="0"/> <!-- 31 -->
   </section>
 
   <modules main_freq="512">
@@ -127,7 +127,7 @@
     </load>
     <load name="heli_swashplate_mixing.xml"/>
     <load name="heli_throttle_curve.xml"/>
-    <load name="roll_disturbance.xml"/>
+    <!--load name="roll_disturbance.xml"/-->
     <!-- DISABLED MODULES
       <load name="gps_ubx_ucenter.xml"/>
       <load name="adc_expansion_uart.xml"/>

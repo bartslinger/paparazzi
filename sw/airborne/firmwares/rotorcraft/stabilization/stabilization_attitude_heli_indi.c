@@ -95,13 +95,13 @@ static void send_indi_debug_values(struct transport_tx *trans, struct link_devic
   //stab_att_sp_euler.phi
   pprz_msg_send_STAB_INDI_DEBUG(trans, dev, AC_ID,
                                 &stabilization_cmd[COMMAND_YAW],
-                                &new_heli_indi.reference[INDI_YAW],
-                                &new_heli_indi.measurement[INDI_YAW],
-                                &new_heli_indi.u_setpoint[INDI_YAW],
-                                &new_heli_indi.command_out[__k][INDI_YAW],
-                                &new_heli_indi.error[INDI_YAW],
-                                &new_heli_indi.dynamics_compensated_measurement[INDI_YAW],
-                                &new_heli_indi.filtered_measurement[1][INDI_YAW],
+                                &new_heli_indi.reference[INDI_ROLL],
+                                &new_heli_indi.measurement[INDI_ROLL],
+                                &new_heli_indi.u_setpoint[INDI_ROLL],
+                                &new_heli_indi.command_out[__k][INDI_ROLL],
+                                &new_heli_indi.error[INDI_ROLL],
+                                &new_heli_indi.dynamics_compensated_measurement[INDI_ROLL],
+                                &new_heli_indi.filtered_measurement[1][INDI_ROLL],
                                 &stabilization_cmd[COMMAND_THRUST]);
 }
 
