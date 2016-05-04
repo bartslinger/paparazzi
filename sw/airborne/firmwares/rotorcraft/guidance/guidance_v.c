@@ -216,7 +216,7 @@ static inline void add_thrust_disturbance(void)
       int16_t add_thrust = pprz_itrig_sin(angle + shifts[i]);
       sum_thrust += add_thrust;
     }
-    guidance_v_delta_t += sum_thrust / 16;
+    guidance_v_rc_delta_t += sum_thrust / 16;
 
     thrustcnt++;
   }
@@ -258,6 +258,9 @@ void guidance_v_read_rc(void)
 
   /* used in RC_DIRECT directly and as saturation in CLIMB and HOVER */
   guidance_v_rc_delta_t = (int32_t)radio_control.values[RADIO_THROTTLE];
+#if HELI_THRUST_IDENTIFICATION
+      add_thrust_disturbance();
+#endif
 
   /* used in RC_CLIMB */
   guidance_v_rc_zd_sp = (MAX_PPRZ / 2) - (int32_t)radio_control.values[RADIO_THROTTLE];
@@ -370,9 +373,6 @@ void guidance_v_run(bool_t in_flight)
       guidance_v_zd_sp = 0;
       gv_update_ref_from_z_sp(guidance_v_z_sp);
       run_hover_loop(in_flight);
-#if HELI_THRUST_IDENTIFICATION
-      add_thrust_disturbance();
-#endif
 
 #if !NO_RC_THRUST_LIMIT
       /* use rc limitation if available */
