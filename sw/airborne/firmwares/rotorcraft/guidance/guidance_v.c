@@ -212,11 +212,11 @@ static inline void add_thrust_disturbance(void)
   if(radio_control.values[SDLOGGER_CONTROL_SWITCH] > 0) {
     int32_t sum_thrust = 0;
     for(int i = 0; i < 4; i++) {
-      int32_t angle = INT32_ANGLE_2_PI * freqs[i] * thrustcnt / 512;
+      int32_t angle = INT32_ANGLE_2_PI * freqs[i] * thrustcnt / 512           ;
       int16_t add_thrust = pprz_itrig_sin(angle + shifts[i]);
       sum_thrust += add_thrust;
     }
-    guidance_v_rc_delta_t += sum_thrust / 16;
+    stabilization_cmd[COMMAND_THRUST] += sum_thrust / 64;
 
     thrustcnt++;
   }
@@ -258,9 +258,6 @@ void guidance_v_read_rc(void)
 
   /* used in RC_DIRECT directly and as saturation in CLIMB and HOVER */
   guidance_v_rc_delta_t = (int32_t)radio_control.values[RADIO_THROTTLE];
-#if HELI_THRUST_IDENTIFICATION
-      add_thrust_disturbance();
-#endif
 
   /* used in RC_CLIMB */
   guidance_v_rc_zd_sp = (MAX_PPRZ / 2) - (int32_t)radio_control.values[RADIO_THROTTLE];
@@ -347,6 +344,9 @@ void guidance_v_run(bool_t in_flight)
     case GUIDANCE_V_MODE_RC_DIRECT:
       guidance_v_z_sp = stateGetPositionNed_i()->z; // for display only
       stabilization_cmd[COMMAND_THRUST] = guidance_v_rc_delta_t;
+#if HELI_THRUST_IDENTIFICATION
+      add_thrust_disturbance();
+#endif
       break;
 
     case GUIDANCE_V_MODE_RC_CLIMB:
