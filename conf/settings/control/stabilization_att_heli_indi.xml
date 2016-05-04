@@ -16,7 +16,7 @@
       <dl_setting MAX="20000" MIN="0" step="10" var="actuator_model[INDI_ROLL].max_inc" shortname="roll.sat" module="stabilization/stabilization_attitude_heli_indi" unit="pprz"/>
       <dl_setting MAX="1" MIN="0" step="1" var="new_heli_indi.use_roll_dyn_filter" values="FALSE|TRUE" shortname="use.rollfilt" module="stabilization/stabilization_attitude_heli_indi"/>
       <dl_setting max="9000" min="0" step="100" var="new_heli_indi.dist_magnitude" shortname="roll.dist" module="stabilization/stabilization_attitude_heli_indi" unit="pprz"/>
-      <dl_setting max="100" min="8" step="1" var="new_heli_indi.rollfilt_bw" shortname="rolfilt.bw" module="stabilization/stabilization_attitude_heli_indi" unit="Hz" handler="set_rollfilter_bw" type="float"/>
+      <dl_setting max="200" min="8" step="1" var="new_heli_indi.rollfilt_bw" shortname="rolfilt.bw" module="stabilization/stabilization_attitude_heli_indi" unit="Hz" handler="set_rollfilter_bw" type="float"/>
       <dl_setting max="1" min="0" step="1" var="new_heli_indi.enable_notch" shortname="notch" module="stabilization/stabilization_attitude_heli_indi" values="Off|On"/>
     </dl_settings>
 

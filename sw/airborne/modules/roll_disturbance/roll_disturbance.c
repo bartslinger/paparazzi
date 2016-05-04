@@ -31,11 +31,11 @@ bool_t dist_is_counting = FALSE;
 void roll_disturbance_periodic()
 {
   if (dist_is_counting) {
-    if (dist_counter > 2*512) {
+    if (dist_counter > 512) {
       new_heli_indi.add_disturbance = FALSE;
       dist_is_counting = FALSE;
     }
-    else if (dist_counter > 256) {
+    else if (dist_counter > 100) {
       new_heli_indi.add_disturbance = TRUE;
     }
     else {

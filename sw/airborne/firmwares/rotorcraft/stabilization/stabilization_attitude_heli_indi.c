@@ -348,6 +348,7 @@ void stabilization_attitude_heli_indi_set_roll_delay(uint8_t delay)
 
 void stabilization_attitude_heli_indi_set_rollfilter_bw(float bandwidth)
 {
+  new_heli_indi.rollfilt_bw = bandwidth;
   // Cutoff frequencies are in Hz!!!
   init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_ROLL], bandwidth, 1.0/PERIODIC_FREQUENCY, 0);
   init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_ROLL], bandwidth, 1.0/PERIODIC_FREQUENCY, 0);
