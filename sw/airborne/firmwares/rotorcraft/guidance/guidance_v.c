@@ -194,6 +194,7 @@ static void send_tune_vert(struct transport_tx *trans, struct link_device *dev)
 #endif
 
 #if HELI_THRUST_IDENTIFICATION
+#define JUST_STEP_THRUST 1
 static inline void add_thrust_disturbance(void)
 {
   /* Add a sum of sines to the thrust control signal for identification */
@@ -210,6 +211,11 @@ static inline void add_thrust_disturbance(void)
                        (int32_t)ANGLE_BFP_OF_REAL(2.8025) };
   static int32_t thrustcnt = 0; // increases at 512 hz
   if(radio_control.values[SDLOGGER_CONTROL_SWITCH] > 0) {
+#if JUST_STEP_THRUST
+    if (thrustcnt % (PERIODIC_FREQUENCY*5) < 256) {
+      stabilization_cmd[COMMAND_THRUST] += 3000;
+    }
+#else
     int32_t sum_thrust = 0;
     for(int i = 0; i < 4; i++) {
       int32_t angle = INT32_ANGLE_2_PI * freqs[i] * thrustcnt / 512           ;
@@ -217,6 +223,7 @@ static inline void add_thrust_disturbance(void)
       sum_thrust += add_thrust;
     }
     stabilization_cmd[COMMAND_THRUST] += sum_thrust / 128;
+#endif
 
     thrustcnt++;
   }

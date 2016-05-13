@@ -631,7 +631,7 @@ void stabilization_attitude_run(bool_t in_flight)
   BoundAbs(c->u_setpoint[INDI_ROLL], MAX_PPRZ);
   BoundAbs(c->u_setpoint[INDI_PITCH], MAX_PPRZ);
   Bound(c->u_setpoint[INDI_YAW], 0, MAX_PPRZ);
-  Bound(c->u_setpoint[INDI_THRUST], 2000, MAX_PPRZ);
+  Bound(c->u_setpoint[INDI_THRUST], 0.15*MAX_PPRZ, MAX_PPRZ);
 
   /* Apply a compensator to the actuator setpoint to obtain actuator command */
   c->apply_compensator_filters(c->command_out[__k], c->u_setpoint);

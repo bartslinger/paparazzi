@@ -148,8 +148,8 @@ static void send_indi_debug_values(struct transport_tx *trans, struct link_devic
                                 &stabilization_cmd[COMMAND_PITCH],
                                 &stabilization_cmd[COMMAND_YAW],
                                 &stabilization_cmd[COMMAND_THRUST],
-                                &stabilization_cmd[COMMAND_YAW],
-                                &stabilization_cmd[COMMAND_YAW]);
+                                &att_ref_quat_i.euler.theta,
+                                &stab_att_sp_euler.psi);
 }
 
 #endif
