@@ -221,7 +221,7 @@ void sdlogger_spi_direct_index_received(void)
 
   switch (sdlogger_spi.status) {
     case SDLogger_RetreivingIndex:
-      sdlogger_spi.next_available_address = 0x00004000;
+      sdlogger_spi.next_available_address = 0x00005000;
       sdlogger_spi.last_completed = 0;
       /* Save data for later use
       sdlogger_spi.next_available_address = (sdcard1.input_buf[0] << 24) |
