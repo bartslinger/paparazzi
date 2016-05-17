@@ -93,7 +93,7 @@ struct IndiController_int new_heli_indi;
 static void send_indi_debug_values(struct transport_tx *trans, struct link_device *dev)
 {
   //stab_att_sp_euler.phi
-  /*pprz_msg_send_STAB_INDI_DEBUG(trans, dev, AC_ID,
+  pprz_msg_send_STAB_INDI_DEBUG(trans, dev, AC_ID,
                                 &stabilization_cmd[COMMAND_YAW],
                                 &new_heli_indi.reference[INDI_ROLL],
                                 &new_heli_indi.measurement[INDI_ROLL],
@@ -103,7 +103,8 @@ static void send_indi_debug_values(struct transport_tx *trans, struct link_devic
                                 &new_heli_indi.dynamics_compensated_measurement[INDI_ROLL],
                                 &new_heli_indi.filtered_measurement[1][INDI_ROLL],
                                 &stabilization_cmd[COMMAND_THRUST]);
-  */
+
+  /*
   struct Int32Rates *body_rate = stateGetBodyRates_i();
   pprz_msg_send_STAB_INDI_DEBUG(trans, dev, AC_ID,
                                 &(body_rate->p), &(body_rate->q), &(body_rate->r),
@@ -113,6 +114,7 @@ static void send_indi_debug_values(struct transport_tx *trans, struct link_devic
                                 &stabilization_cmd[COMMAND_THRUST],
                                 &new_heli_indi.error[INDI_YAW],
                                 &stab_att_sp_euler.psi);
+                                */
 }
 
 static void send_indi_euler_setpoint(struct transport_tx *trans, struct link_device *dev)

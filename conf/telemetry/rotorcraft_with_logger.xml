@@ -158,7 +158,7 @@
       <message name="IMU_ACCEL_FILTERED"     period="0.002"/-->
       <!--message name="TCAS_DEBUG"             period="0.002"/-->
       <!--message name="TUNE_VERT"              period="0.02"/-->
-      <!--message name="STAB_INDI_DEBUG"         period=".002"/-->
+      <message name="STAB_INDI_DEBUG"         period=".002"/>
       <!--message name="IMU_ACCEL_SCALED"       period=".002"/-->
       <!--message name="IMU_GYRO_SCALED"        period=".002"/-->
       <!--message name="IMU_MAG_SCALED"         period=".1"/>-->

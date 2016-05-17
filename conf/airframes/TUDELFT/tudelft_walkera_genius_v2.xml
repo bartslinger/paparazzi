@@ -61,7 +61,7 @@
     <set servo="CIC_FRONT" value="-swashplate_mixing.commands[SW_FRONT]"/>
     <set servo="CIC_LEFT" value="-swashplate_mixing.commands[SW_LEFTBACK]"/>
     <set servo="CIC_RIGHT" value="swashplate_mixing.commands[SW_RIGHTBACK]"/>
-    <set servo="TAIL" value="@YAW+0.4*@THRUST"/> <!-- +0.4*@THRUST met pid -->    
+    <set servo="TAIL" value="@YAW"/> <!-- +0.4*@THRUST met pid -->    
     <set servo="GAS" value="$halfway * MAX_PPRZ"/>
     <!--set servo="CIC_LEFT" value="0"/>
     <set servo="CIC_RIGHT" value="0"/>
@@ -114,9 +114,9 @@
   </section>
 
   <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
-   <define name="PGAIN" value="165"/> <!-- 50/165 -->
-   <define name="DGAIN" value="185"/> <!-- 50/185 -->
-   <define name="IGAIN" value="31"/> <!-- 0/31 -->
+   <define name="PGAIN" value="50"/> <!-- 50/165 -->
+   <define name="DGAIN" value="50"/> <!-- 50/185 -->
+   <define name="IGAIN" value="0"/> <!-- 0/31 -->
   </section>
 
   <modules main_freq="512">
@@ -175,7 +175,7 @@
       <define name="LISA_S_UPSIDE_DOWN"/> <!-- wtf hij zit gewoon rechtop maargoed -->
     </subsystem>
     <subsystem name="gps" type="datalink"/>
-    <subsystem name="stabilization" type="int_quat"/> <!-- int_quat / heli_indi -->
+    <subsystem name="stabilization" type="heli_indi"/> <!-- int_quat / heli_indi -->
     <subsystem name="rpm_sensor" type="eagletree"/>
     <subsystem name="ahrs" type="int_cmpl_quat"/>
     <subsystem name="ins"/>
