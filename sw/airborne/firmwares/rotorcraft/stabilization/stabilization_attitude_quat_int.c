@@ -70,6 +70,9 @@ struct AttRefQuatInt att_ref_quat_i;
 
 int32_t identification_amplitude_div = 32;
 
+int32_t roll_comp_angle = ANGLE_BFP_OF_REAL(30.0*M_PI/180.0);
+int32_t pitch_comp_angle = ANGLE_BFP_OF_REAL(11.0*M_PI/180.0);
+
 #define IERROR_SCALE 128
 #define GAIN_PRESCALER_FF 48
 #define GAIN_PRESCALER_P 12
@@ -152,6 +155,14 @@ static void send_indi_debug_values(struct transport_tx *trans, struct link_devic
                                 &stab_att_sp_euler.psi);
 }
 
+static void send_indi_euler_setpoint(struct transport_tx *trans, struct link_device *dev)
+{
+  pprz_msg_send_INDI_EULER_SETPOINT(trans, dev, AC_ID,
+                                    &stab_att_sp_euler.phi,
+                                    &stab_att_sp_euler.theta,
+                                    &stab_att_sp_euler.psi);
+}
+
 #endif
 
 void stabilization_attitude_init(void)
@@ -167,6 +178,8 @@ void stabilization_attitude_init(void)
   register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_STAB_ATTITUDE_REF_INT, send_att_ref);
   register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_AHRS_REF_QUAT, send_ahrs_ref_quat);
   register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_STAB_INDI_DEBUG, send_indi_debug_values);
+  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_INDI_EULER_SETPOINT, send_indi_euler_setpoint);
+
 #endif
 }
 
@@ -388,6 +401,14 @@ void stabilization_attitude_run(bool_t enable_integrator)
     pitchcnt++;
   }
 #endif
+
+  int32_t untransformed_roll = stabilization_cmd[COMMAND_ROLL];
+  int32_t untransformed_pitch = stabilization_cmd[COMMAND_PITCH];
+  stabilization_cmd[COMMAND_ROLL] = untransformed_roll
+                                  + untransformed_pitch * pprz_itrig_sin(pitch_comp_angle) / pprz_itrig_cos(pitch_comp_angle);
+  stabilization_cmd[COMMAND_PITCH] = untransformed_pitch
+                                   - untransformed_roll * pprz_itrig_sin(roll_comp_angle) / pprz_itrig_cos(roll_comp_angle);
+
 
   /* bound the result */
   BoundAbs(stabilization_cmd[COMMAND_ROLL], MAX_PPRZ);

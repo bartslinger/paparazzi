@@ -58,6 +58,13 @@
     <block name="Standby" strip_button="Standby" strip_icon="home.png">
       <stay wp="STDBY"/>
     </block>
+    <block name="Doublet">
+      <go wp="p3"/>
+      <call fun="nav_set_heading_deg(327)"/>
+      <stay until="stage_time > 3" wp="p3"/>
+      <attitude alt="WaypointAlt(8)" roll="0" until="highres_stage_time > 6"/>
+      <deroute block="Doublet"/>
+    </block>
     <block name="yawdoubs">
       <go wp="p3"/>
       <stay until="stage_time > 2" wp="p3"/>
@@ -65,13 +72,6 @@
       <stay until="highres_stage_time > 6" wp="p3"/>
       <call fun="nav_set_heading_deg(360)"/>
       <deroute block="yawdoubs"/>
-    </block>
-    <block name="Doublet">
-      <go wp="p3"/>
-      <call fun="nav_set_heading_deg(327)"/>
-      <stay until="stage_time > 3" wp="p3"/>
-      <attitude alt="WaypointAlt(8)" roll="0" until="highres_stage_time > 6"/>
-      <deroute block="Doublet"/>
     </block>
     <block name="START" strip_button="Go" strip_icon="lookfore.png">
       <call fun="NavSetWaypointHere(WP_GOAL)"/>
