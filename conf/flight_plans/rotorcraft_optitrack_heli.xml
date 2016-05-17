@@ -58,6 +58,15 @@
     <block name="Standby" strip_button="Standby" strip_icon="home.png">
       <stay wp="STDBY"/>
     </block>
+    <block name="yawdoubs">
+      <go wp="p3"/>
+      <stay wp="p3"/>
+      <stay until="stage_time > 2" wp="p3"/>
+      <call fun="nav_set_heading_deg(330)"/>
+      <stay until="highres_stage_time > 6" wp="p3"/>
+      <call fun="nav_set_heading_deg(360)"/>
+      <deroute block="yawdoubs"/>
+    </block>
     <!--
     <block name="Disturbances">
       <go wp="p3"/>

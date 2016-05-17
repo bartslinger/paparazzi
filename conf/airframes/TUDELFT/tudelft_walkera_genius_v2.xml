@@ -144,7 +144,7 @@
       <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="0"/>
       <define name="HELI_ROLL_DOUBLET_ACTIVE" value="0"/>
       <define name="HELI_YAW_IDENTIFICATION" value="0"/>
-      <define name="HELI_THRUST_IDENTIFICATION" value="1"/>
+      <define name="HELI_THRUST_IDENTIFICATION" value="0"/>
       <define name="HELI_ROLL_IDENTIFICATION" value="0"/>
       <define name="HELI_PITCH_IDENTIFICATION" value="0"/>
       <define name="HELI_ROLL_DISTURBANCES" value="0"/>

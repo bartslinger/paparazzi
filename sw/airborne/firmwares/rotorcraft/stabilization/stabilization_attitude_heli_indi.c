@@ -210,9 +210,11 @@ static inline void indi_apply_actuator_models(int32_t _out[], int32_t _in[])
   if(_in[INDI_YAW] - prev > 0) {
     // Tail spinning up
     actuator_model[INDI_YAW].alpha = alpha_yaw_inc;
+    //actuator_model[INDI_YAW].alpha = alpha_yaw_dec; // TEMP USE ONLY DEC MODEL
   } else {
     // Tail spinning down
     actuator_model[INDI_YAW].alpha = alpha_yaw_dec;
+    //actuator_model[INDI_YAW].alpha = alpha_yaw_inc;  // TEMP USE ONLY INC MODEL
   }
   _out[INDI_YAW] = heli_rate_filter_propagate(&actuator_model[INDI_YAW], _in[INDI_YAW]);
 
@@ -247,6 +249,7 @@ static inline void indi_apply_compensator_filters(int32_t _out[], int32_t _in[])
   yaw_output_buffer[buf_idx] = _in[INDI_YAW];
   buf_idx++;
 
+  // Disregard, just use input:
   _out[INDI_YAW] = _in[INDI_YAW];
 
   /* Thrust compensated for slow tail dynamics:
