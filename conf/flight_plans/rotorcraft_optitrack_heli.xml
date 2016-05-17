@@ -12,7 +12,7 @@
     <waypoint name="TD" x="-0.9" y="-0.8"/>
     <waypoint lat="51.990624" lon="4.376843" name="p1"/>
     <waypoint lat="51.990638" lon="4.376749" name="p2"/>
-    <waypoint lat="51.990628" lon="4.376794" name="p3"/>
+    <waypoint lat="51.990641" lon="4.376755" name="p3"/>
     <waypoint lat="51.990646" lon="4.376784" name="p4"/>
     <waypoint lat="51.9906213" lon="4.3768628" name="_CZ1"/>
     <waypoint lat="51.9905874" lon="4.3767766" name="_CZ2"/>
@@ -60,21 +60,12 @@
     </block>
     <block name="yawdoubs">
       <go wp="p3"/>
-      <stay wp="p3"/>
       <stay until="stage_time > 2" wp="p3"/>
       <call fun="nav_set_heading_deg(330)"/>
       <stay until="highres_stage_time > 6" wp="p3"/>
       <call fun="nav_set_heading_deg(360)"/>
       <deroute block="yawdoubs"/>
     </block>
-    <!--
-    <block name="Disturbances">
-      <go wp="p3"/>
-      <stay until="stage_time>3" wp="p3"/>
-      <call fun="roll_disturbance_restart()"/>
-      <attitude roll="0" until="stage_time > 1" alt="WaypointAlt(8)"/>
-      <deroute block="Disturbances"/>
-    </block>-->
     <block name="Doublet">
       <go wp="p3"/>
       <call fun="nav_set_heading_deg(327)"/>

@@ -114,9 +114,9 @@
   </section>
 
   <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
-   <define name="PGAIN" value="50"/> <!-- 165 -->
-   <define name="DGAIN" value="50"/> <!-- 185 -->
-   <define name="IGAIN" value="0"/> <!-- 31 -->
+   <define name="PGAIN" value="165"/> <!-- 50/165 -->
+   <define name="DGAIN" value="185"/> <!-- 50/185 -->
+   <define name="IGAIN" value="31"/> <!-- 0/31 -->
   </section>
 
   <modules main_freq="512">
@@ -148,6 +148,7 @@
       <define name="HELI_ROLL_IDENTIFICATION" value="0"/>
       <define name="HELI_PITCH_IDENTIFICATION" value="0"/>
       <define name="HELI_ROLL_DISTURBANCES" value="0"/>
+      <define name="HELI_ADD_YAW_DOUBLET" value="0"/>
       
       <subsystem name="radio_control" type="ppm">
         <configure name="RADIO_CONTROL_PPM_PIN" value="SUPERBIT_RST"/>

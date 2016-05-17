@@ -289,6 +289,17 @@ void stabilization_attitude_read_rc_setpoint_eulers(struct Int32Eulers *sp, bool
     sp->psi = stateGetNedToBodyEulers_i()->psi;
   }
 
+  /* BARTS EXPERIMENT ADD STEP COMMANDS TO YAW ANGLE */
+#ifdef HELI_ADD_YAW_DOUBLET
+  static uint8_t yaw_doublet_counter = 0;
+  if(radio_control.values[SDLOGGER_CONTROL_SWITCH] > 0) {
+    if (yaw_doublet_counter == 0) sp->psi += ANGLE_BFP_OF_REAL(30.0*M_PI/180.0);
+    if (yaw_doublet_counter == 60) sp->psi -= ANGLE_BFP_OF_REAL(30.0*M_PI/180.0);
+    yaw_doublet_counter++;
+    if (yaw_doublet_counter == 120) yaw_doublet_counter = 0;
+  }
+#endif
+
   /* update timestamp for dt calculation */
   last_ts = get_sys_time_float();
 }
