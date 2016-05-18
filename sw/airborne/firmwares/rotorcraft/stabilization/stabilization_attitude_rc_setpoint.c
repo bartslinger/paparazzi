@@ -290,7 +290,7 @@ void stabilization_attitude_read_rc_setpoint_eulers(struct Int32Eulers *sp, bool
   }
 
   /* BARTS EXPERIMENT ADD STEP COMMANDS TO YAW ANGLE */
-#ifdef HELI_ADD_YAW_DOUBLET
+#if HELI_ADD_YAW_DOUBLET
   static uint8_t yaw_doublet_counter = 0;
   if(radio_control.values[SDLOGGER_CONTROL_SWITCH] > 0) {
     if (yaw_doublet_counter == 0) sp->psi += ANGLE_BFP_OF_REAL(30.0*M_PI/180.0);

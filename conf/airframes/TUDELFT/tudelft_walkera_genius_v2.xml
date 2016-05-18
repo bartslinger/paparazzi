@@ -137,11 +137,11 @@
       <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="0"/>
       <define name="HELI_ROLL_DOUBLET_ACTIVE" value="0"/>
       <define name="HELI_YAW_IDENTIFICATION" value="0"/>
-      <define name="HELI_THRUST_IDENTIFICATION" value="0"/>
+      <define name="HELI_THRUST_IDENTIFICATION" value="1"/>
       <define name="HELI_ROLL_IDENTIFICATION" value="0"/>
       <define name="HELI_PITCH_IDENTIFICATION" value="0"/>
       <define name="HELI_ROLL_DISTURBANCES" value="0"/>
-      <define name="HELI_ADD_YAW_DOUBLET" value="1"/>
+      <define name="HELI_ADD_YAW_DOUBLET" value="0"/>
       
       <subsystem name="radio_control" type="ppm">
         <configure name="RADIO_CONTROL_PPM_PIN" value="SUPERBIT_RST"/>
