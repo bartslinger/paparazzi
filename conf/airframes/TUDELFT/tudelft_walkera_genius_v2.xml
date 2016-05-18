@@ -107,9 +107,9 @@
   </section>
 
   <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
-   <define name="PGAIN" value="50"/> <!-- 50/165 -->
-   <define name="DGAIN" value="50"/> <!-- 50/185 -->
-   <define name="IGAIN" value="0"/> <!-- 0/31 -->
+   <define name="PGAIN" value="165"/> <!-- 50/165 -->
+   <define name="DGAIN" value="185"/> <!-- 50/185 -->
+   <define name="IGAIN" value="31"/> <!-- 0/31 -->
   </section>
 
   <modules main_freq="512">
@@ -137,7 +137,7 @@
       <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="0"/>
       <define name="HELI_ROLL_DOUBLET_ACTIVE" value="0"/>
       <define name="HELI_YAW_IDENTIFICATION" value="0"/>
-      <define name="HELI_THRUST_IDENTIFICATION" value="1"/>
+      <define name="HELI_THRUST_IDENTIFICATION" value="0"/>
       <define name="HELI_ROLL_IDENTIFICATION" value="0"/>
       <define name="HELI_PITCH_IDENTIFICATION" value="0"/>
       <define name="HELI_ROLL_DISTURBANCES" value="0"/>
