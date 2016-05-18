@@ -46,23 +46,16 @@
     <!--let var="hoverpower" value=".85*MAX_PPRZ"/-->
     <let var="hoverstick" value=".1*MAX_PPRZ"/>
     <let var="halfway" value="(@THRUST >= ($hoverstick) ? 1 : 0)"/>
-    <!--let var="collective" value="@THRUST"/-->
-    <!--let var="gas" value="($hoverpower) + $halfway * (((@THRUST) - ($hoverstick)) * (MAX_PPRZ - ($hoverpower))) / (MAX_PPRZ - ($hoverstick))  + (1 - $halfway) * ((@THRUST - ($hoverstick)) * ($hoverpower)) / ($hoverstick)"/-->
-
-    <!--set servo="CIC_LEFT" value="((@PITCH*1.75*0.5*0.5)-(@ROLL*1.75*0.5*0.73))-($collective)"/>
-    <set servo="CIC_RIGHT" value="((-@PITCH*1.75*0.5*0.5)-(@ROLL*1.75*0.5*0.73))+($collective)"/>
-    <set servo="CIC_FRONT" value="-@PITCH*1.75*0.5-($collective)"/>    
-    <set servo="GAS" value="$halfway*MAX_PPRZ"/>
-<set servo="TAIL" value="@YAW + throttle_curve.throttle*2800/7000"/>
-    <set servo="TAIL" value="@YAW+0.4"/-->
 
     <call fun="throttle_curve_run(autopilot_motors_on, values)"/>
     <call fun="swashplate_mixing_run(values)"/>
     <set servo="CIC_FRONT" value="-swashplate_mixing.commands[SW_FRONT]"/>
     <set servo="CIC_LEFT" value="-swashplate_mixing.commands[SW_LEFTBACK]"/>
     <set servo="CIC_RIGHT" value="swashplate_mixing.commands[SW_RIGHTBACK]"/>
-    <set servo="TAIL" value="@YAW+0.4*@THRUST"/> <!-- +0.4*@THRUST met pid -->    
+    <set servo="TAIL" value="@YAW"/> <!-- +0.4*@THRUST met pid -->    
     <set servo="GAS" value="$halfway * MAX_PPRZ"/>
+
+
     <!--set servo="CIC_LEFT" value="0"/>
     <set servo="CIC_RIGHT" value="0"/>
     <set servo="CIC_FRONT" value="0"/>
@@ -80,8 +73,8 @@
   <section name="STABILIZATION_ATTITUDE_HELI_INDI" prefix="STABILIZATION_ATTITUDE_HELI_INDI_">
     <define name="ROLL_P" value="12"/><!--20 3052 -->
     <define name="PITCH_P" value="8"/><!--20 3052 -->
-    <define name="YAW_P" value="20"/>
-    <define name="YAW_D" value="25"/>
+    <define name="YAW_P" value="10"/>
+    <define name="YAW_D" value="30"/>
     <define name="USE_FAST_DYN_FILTERS" value="1" />
     <define name="FAST_DYN_ROLL_BW" value="68" />
     <define name="FAST_DYN_PITCH_BW" value="17" />
@@ -148,7 +141,7 @@
       <define name="HELI_ROLL_IDENTIFICATION" value="0"/>
       <define name="HELI_PITCH_IDENTIFICATION" value="0"/>
       <define name="HELI_ROLL_DISTURBANCES" value="0"/>
-      <define name="HELI_ADD_YAW_DOUBLET" value="0"/>
+      <define name="HELI_ADD_YAW_DOUBLET" value="1"/>
       
       <subsystem name="radio_control" type="ppm">
         <configure name="RADIO_CONTROL_PPM_PIN" value="SUPERBIT_RST"/>
@@ -175,7 +168,7 @@
       <define name="LISA_S_UPSIDE_DOWN"/> <!-- wtf hij zit gewoon rechtop maargoed -->
     </subsystem>
     <subsystem name="gps" type="datalink"/>
-    <subsystem name="stabilization" type="int_quat"/> <!-- int_quat / heli_indi -->
+    <subsystem name="stabilization" type="heli_indi"/> <!-- int_quat / heli_indi -->
     <subsystem name="rpm_sensor" type="eagletree"/>
     <subsystem name="ahrs" type="int_cmpl_quat"/>
     <subsystem name="ins"/>
