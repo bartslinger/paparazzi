@@ -2,8 +2,16 @@
 
 <layout width="1920" height="1028">
   <rows>
-    <widget NAME="map2d" size="584">
-      <papget type="message_field" display="text" x="18" y="435">
+    <widget NAME="map2d" size="632">
+      <papget type="message_field" display="text" x="1463" y="495">
+        <property name="scale" value="1."/>
+        <property name="field" value="ENERGY:bat"/>
+        <property name="ac_id" value="114"/>
+        <property name="format" value="Batt: %.2f V"/>
+        <property name="size" value="60."/>
+        <property name="color" value="#00ff00"/>
+      </papget>
+      <papget type="message_field" display="text" x="24" y="471">
         <property name="scale" value="1."/>
         <property name="field" value="TCAS_DEBUG:tau"/>
         <property name="ac_id" value="114"/>
@@ -14,10 +22,10 @@
     </widget>
     <columns>
       <rows SIZE="375">
-        <widget NAME="strips" size="436"/>
+        <widget NAME="strips" size="388"/>
       </rows>
       <widget NAME="aircraft" size="1240"/>
-      <widget NAME="alarms" size="291"/>
+      <widget NAME="alarms" size="306"/>
     </columns>
   </rows>
 </layout>
