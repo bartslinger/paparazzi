@@ -138,7 +138,7 @@
       <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="0"/>
 
       <subsystem name="radio_control" type="ppm">
-        <!--configure name="RADIO_CONTROL_PPM_PIN" value="SUPERBIT_RST"/-->
+        <configure name="RADIO_CONTROL_PPM_PIN" value="SUPERBIT_RST"/>
       </subsystem>
 
       <!--configure name="USE_BARO_BOARD" value="0"/-->

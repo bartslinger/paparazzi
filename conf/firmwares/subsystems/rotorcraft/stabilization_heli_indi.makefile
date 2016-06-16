@@ -4,7 +4,7 @@ STAB_ATT_SRCS += $(SRC_FIRMWARE)/stabilization/stabilization_attitude_heli_indi.
 STAB_ATT_SRCS += $(SRC_FIRMWARE)/stabilization/stabilization_attitude_quat_transformations.c
 STAB_ATT_SRCS += $(SRC_FIRMWARE)/stabilization/stabilization_attitude_rc_setpoint.c
 STAB_ATT_SRCS += $(PAPARAZZI_SRC)/sw/airborne/filters/heli_rate_filter.c
-STAB_ATT_SRCS += filters/notch_filter.c
+#STAB_ATT_SRCS += filters/notch_filter.c
 ap.CFLAGS += $(STAB_ATT_CFLAGS)
 ap.srcs += $(STAB_ATT_SRCS)
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Bart Slinger
+ * Copyright (C) 2016 Bart Slinger
  *
  * This file is part of paparazzi.
  *
@@ -39,9 +39,74 @@ struct SecondOrderNotchFilter {
   int32_t yn2;
 };
 
-extern void notch_filter_set_sampling_frequency(struct SecondOrderNotchFilter *filter, uint16_t frequency);
-extern void notch_filter_set_bandwidth(struct SecondOrderNotchFilter *filter, float bandwidth);
-extern void notch_filter_set_filter_frequency(struct SecondOrderNotchFilter *filter, float frequency);
-extern void notch_filter_update(struct SecondOrderNotchFilter *filter, int32_t *input_signal, int32_t *output_signal);
+/** Set sampling frequency of the notch filter
+ *
+ * @param frequency frequency at which the filter is updated
+ */
+static inline void notch_filter_set_sampling_frequency(struct SecondOrderNotchFilter *filter, uint16_t frequency)
+{
+  filter->Ts = 1.0/frequency;
+}
+
+/** Set bandwidth of the notch filter
+ *
+ * @param bandwidth bandwidth of the filter [Hz]
+ */
+static inline void notch_filter_set_bandwidth(struct SecondOrderNotchFilter *filter, float bandwidth)
+{
+  float d = exp(-M_PI*bandwidth*filter->Ts);
+  filter->d2 = d*d;
+}
+
+/** Set notch filter frequency in Hz
+ *
+ * @param frequency to attenuate [Hz]
+ */
+static inline void notch_filter_set_filter_frequency(struct SecondOrderNotchFilter *filter, float frequency)
+{
+  float theta = 2.0*M_PI*frequency*filter->Ts;
+  filter->costheta = cos(theta);
+}
+
+/** Notch filter propagate
+ *
+ * Discrete implementation:
+ * y[n] = b * y[n-1] - d^2 * y[n-2] + a * x[n] - b * x[n-1] + a * x[n-2]
+ *
+ * @param input_signal input x[n]
+ * @param output_signal output y[n]
+ */
+static inline void notch_filter_update(struct SecondOrderNotchFilter *filter, int32_t *input_signal, int32_t *output_signal)
+{
+  float a = (1 + filter->d2) * 0.5;
+  float b = (1 + filter->d2) * filter->costheta;
+  *output_signal = (b * filter->yn1) - (filter->d2 * filter->yn2) + (a * *input_signal) - (b * filter->xn1) + (a * filter->xn2);
+
+  /* Update values for next update */
+  filter->xn2 = filter->xn1;
+  filter->xn1 = *input_signal;
+  filter->yn2 = filter->yn1;
+  filter->yn1 = *output_signal;
+}
+
+/** Initialize second order notch filter
+ *
+ * Discrete implementation:
+ * y[n] = b * y[n-1] - d^2 * y[n-2] + a * x[n] - b * x[n-1] + a * x[n-2]
+ *
+ * @param cutoff_frequency frequency to attenuate [Hz]
+ * @param bandwidth bandwidth of the filter [Hz]
+ * @param sample_frequency frequency at which the filter is updated
+ */
+static inline void notch_filter_init(struct SecondOrderNotchFilter *filter, float cutoff_frequency, float bandwidth, uint16_t sample_frequency)
+{
+  notch_filter_set_sampling_frequency(filter, sample_frequency);
+  notch_filter_set_filter_frequency(filter, cutoff_frequency);
+  notch_filter_set_bandwidth(filter, bandwidth);
+  filter->xn1 = 0;
+  filter->xn2 = 0;
+  filter->yn1 = 0;
+  filter->yn2 = 0;
+}
 
 #endif
