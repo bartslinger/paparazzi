@@ -90,41 +90,6 @@ struct IndiController_int new_heli_indi;
 
 /* Telemetry messages here */
 
-static void send_indi_debug_values(struct transport_tx *trans, struct link_device *dev)
-{
-  //stab_att_sp_euler.phi
-  pprz_msg_send_STAB_INDI_DEBUG(trans, dev, AC_ID,
-                                &stabilization_cmd[COMMAND_YAW],
-                                &new_heli_indi.reference[INDI_ROLL],
-                                &new_heli_indi.measurement[INDI_ROLL],
-                                &new_heli_indi.u_setpoint[INDI_ROLL],
-                                &new_heli_indi.command_out[__k][INDI_ROLL],
-                                &new_heli_indi.error[INDI_ROLL],
-                                &new_heli_indi.dynamics_compensated_measurement[INDI_ROLL],
-                                &new_heli_indi.filtered_measurement[1][INDI_ROLL],
-                                &stabilization_cmd[COMMAND_THRUST]);
-
-  /*
-  struct Int32Rates *body_rate = stateGetBodyRates_i();
-  pprz_msg_send_STAB_INDI_DEBUG(trans, dev, AC_ID,
-                                &(body_rate->p), &(body_rate->q), &(body_rate->r),
-                                &new_heli_indi.reference[INDI_YAW],
-                                &stabilization_cmd[COMMAND_PITCH],
-                                &stabilization_cmd[COMMAND_YAW],
-                                &stabilization_cmd[COMMAND_THRUST],
-                                &new_heli_indi.error[INDI_YAW],
-                                &stab_att_sp_euler.psi);
-                                */
-}
-
-static void send_indi_euler_setpoint(struct transport_tx *trans, struct link_device *dev)
-{
-  pprz_msg_send_INDI_EULER_SETPOINT(trans, dev, AC_ID,
-                                    &stab_att_sp_euler.phi,
-                                    &stab_att_sp_euler.theta,
-                                    &stab_att_sp_euler.psi);
-}
-
 #endif
 
 void stabilization_attitude_heli_indi_set_steadystate_pitch(float pitch)
@@ -282,11 +247,11 @@ struct SecondOrderNotchFilter actuator_notchfilter[INDI_DOF];
 struct SecondOrderNotchFilter measurement_notchfilter[INDI_DOF];
 static inline void indi_apply_actuator_notch_filters(int32_t _out[], int32_t _in[])
 {
-  if (rpm_sensor.motor_frequency > 25.0f && new_heli_indi.enable_notch) {
-    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_ROLL], rpm_sensor.motor_frequency);
-    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_PITCH], rpm_sensor.motor_frequency);
-    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_YAW], rpm_sensor.motor_frequency);
-    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_THRUST], rpm_sensor.motor_frequency);
+  if (new_heli_indi.motor_rpm > 1500 && new_heli_indi.enable_notch) {
+    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_ROLL], new_heli_indi.motor_rpm/60.0f);
+    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_PITCH], new_heli_indi.motor_rpm/60.0f);
+    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_YAW], new_heli_indi.motor_rpm/60.0f);
+    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_THRUST], new_heli_indi.motor_rpm/60.0f);
     notch_filter_update(&actuator_notchfilter[INDI_ROLL], &_in[INDI_ROLL], &_out[INDI_ROLL]);
     notch_filter_update(&actuator_notchfilter[INDI_PITCH], &_in[INDI_PITCH], &_out[INDI_PITCH]);
     notch_filter_update(&actuator_notchfilter[INDI_YAW], &_in[INDI_YAW], &_out[INDI_YAW]);
@@ -301,11 +266,11 @@ static inline void indi_apply_actuator_notch_filters(int32_t _out[], int32_t _in
 
 static inline void indi_apply_measurement_notch_filters(int32_t _out[], int32_t _in[])
 {
-  if (rpm_sensor.motor_frequency > 25.0f && new_heli_indi.enable_notch) {
-    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_ROLL], rpm_sensor.motor_frequency);
-    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_PITCH], rpm_sensor.motor_frequency);
-    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_YAW], rpm_sensor.motor_frequency);
-    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_THRUST], rpm_sensor.motor_frequency);
+  if (new_heli_indi.motor_rpm > 1500 && new_heli_indi.enable_notch) {
+    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_ROLL], new_heli_indi.motor_rpm/60.0f);
+    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_PITCH], new_heli_indi.motor_rpm/60.0f);
+    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_YAW], new_heli_indi.motor_rpm/60.0f);
+    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_THRUST], new_heli_indi.motor_rpm/60.0f);
     notch_filter_update(&measurement_notchfilter[INDI_ROLL], &_in[INDI_ROLL], &_out[INDI_ROLL]);
     notch_filter_update(&measurement_notchfilter[INDI_PITCH], &_in[INDI_PITCH], &_out[INDI_PITCH]);
     notch_filter_update(&measurement_notchfilter[INDI_YAW], &_in[INDI_YAW], &_out[INDI_YAW]);
@@ -371,7 +336,6 @@ void stabilization_attitude_heli_indi_set_rollfilter_bw(float bandwidth)
 
 void stabilization_attitude_init(void)
 {
-  rpm_sensor_init();
   /* Set steady-state pitch and roll values */
   stabilization_attitude_heli_indi_set_steadystate_pitchroll();
 
@@ -384,6 +348,7 @@ void stabilization_attitude_init(void)
   c->add_disturbance = FALSE;
   c->rollfilt_bw = 40.;
   c->enable_notch = TRUE;
+  c->motor_rpm = 0;
 
   /* Initialize model matrices */
   indi_set_identity(c->D);
@@ -442,8 +407,6 @@ void stabilization_attitude_init(void)
   c->apply_actuator_filters[1] = &indi_apply_actuator_butterworth_filters;
 
 #if PERIODIC_TELEMETRY
-  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_STAB_INDI_DEBUG, send_indi_debug_values);
-  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_INDI_EULER_SETPOINT, send_indi_euler_setpoint);
   //register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_<<MSG>>, function);
 #endif
 }
@@ -510,7 +473,9 @@ void stabilization_attitude_run(bool in_flight)
   struct Int32Quat att_err;
   struct Int32Quat *att_quat = stateGetNedToBodyQuat_i();
 
-  /* Add steady-state value to attitude setpoint */
+  /* Add steady-state value to attitude setpoint, because heli has
+   * non-zero roll angle by default
+   */
   struct Int32Quat corr_att_sp_quat; // Corrected attitude setpoint
   INT32_QUAT_COMP_INV(corr_att_sp_quat, stab_att_sp_quat, sp_offset);
 
@@ -553,27 +518,12 @@ void stabilization_attitude_run(bool in_flight)
   filtered_measurement_vector[INDI_YAW] = 512*(c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW] - previous_filt_yawrate);  // = approximately yaw acceleration error
   previous_filt_yawrate = c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW];
 
-  //static int32_t previous_thrust = 0;
-  //int32_t delta_thrust_cmd = stabilization_cmd[COMMAND_THRUST] - previous_thrust;
-  //previous_thrust = stabilization_cmd[COMMAND_THRUST];
-
   /* Apply model dynamics matrix, is diagonal of ones when model dynamics are neglected. */
   indi_matrix_multiply_vector(c->dynamics_compensated_measurement, c->D, filtered_measurement_vector);
 
   /* Use the filtered measurements for PID control as well */
   int32_t roll_virtual_control  = (heli_indi_gains.roll_p * att_err.qx)  / 4;
   int32_t pitch_virtual_control = (heli_indi_gains.pitch_p * att_err.qy) / 4;
-  /* For yaw control implement a yawrate saturation
-   * Saturation implemented by bounding the att_err.
-   * Unsaturated control => v = P*att_err - D*rate
-   * Theory: During maximum yawrate, the virtual control = 0.
-   * P*(att_err)_sat = D*(rate)_max
-   * (att_err)_sat = D/P * (rate)_max
-   */
-  //int32_t yaw_att_err_saturated = att_err.qz;
-  //int32_t yaw_att_err_max = (heli_indi_gains.yaw_d * (int32_t) ANGLE_BFP_OF_REAL(STABILIZATION_ATTITUDE_SP_MAX_R)) / heli_indi_gains.yaw_p;
-  //BoundAbs(yaw_att_err_saturated, yaw_att_err_max);
-  //int32_t yaw_virtual_control  = (heli_indi_gains.yaw_p * yaw_att_err_saturated) - (c->filtered_measurement[INDI_NR_FILTERS-1][INDI_YAW] * heli_indi_gains.yaw_d);
 
   /* Try with a cascaded controller */
   int32_t yaw_rate_reference = (heli_indi_gains.yaw_p * att_err.qz / 8);
@@ -584,12 +534,10 @@ void stabilization_attitude_run(bool in_flight)
   c->reference[INDI_ROLL]   = roll_virtual_control;
   c->reference[INDI_PITCH]  = pitch_virtual_control;
   c->reference[INDI_YAW]    = yaw_virtual_control;
-  c->reference[INDI_THRUST] = accel_z_sp;
+  //c->reference[INDI_THRUST] = accel_z_sp;
 
   /* Subtract (filtered) measurement from reference to get the error */
   indi_subtract_vect(c->error, c->reference, c->dynamics_compensated_measurement);
-
-  //c->error[INDI_THRUST] = delta_thrust_meas;
 
   /* Multiply error with inverse of actuator effectiveness, to get delta u (required increment in input) */
   indi_matrix_multiply_vector(c->du, c->invG, c->error);
@@ -598,49 +546,11 @@ void stabilization_attitude_run(bool in_flight)
   c->du[INDI_ROLL]  >>= 16;
   c->du[INDI_PITCH] >>= 16;
   c->du[INDI_YAW]   >>= 16;
-  c->du[INDI_THRUST]>>= 16;  // to get -1/4
-
-  /* Try compensate pitch command depending on roll rate */
-  //float compensation = 5.5357* c->measurement[INDI_ROLL] / 512;
-  //c->du[INDI_PITCH] += (int32_t)compensation;
-
-  //c->du[INDI_YAW] = (c->error[INDI_YAW] + 69*delta_thrust_meas) / 31;
+  c->du[INDI_THRUST]>>= 16;
 
   /* Take the current (filtered) actuator position and add the incremental value. */
   indi_add_vect(c->u_setpoint, c->filtered_actuator[INDI_NR_FILTERS-1], c->du);
   //c->u_setpoint[INDI_THRUST] = stabilization_cmd[COMMAND_THRUST];
-
-#if HELI_YAW_IDENTIFICATION
-  /* Add a sum of sines to the yaw control signal for identification */
-  /* shifts
-  3.5125 2hz
-  5.3665 4hz
-  2.1858 6hz
-  2.8025 8hz
-  */
-  const int32_t freqs[4] = {2, 4, 6, 8}; // Hz
-  const int32_t shifts[4] = {(int32_t)ANGLE_BFP_OF_REAL(3.5125),
-                       (int32_t)ANGLE_BFP_OF_REAL(5.3665),
-                       (int32_t)ANGLE_BFP_OF_REAL(2.1858),
-                       (int32_t)ANGLE_BFP_OF_REAL(2.8025) };
-  static int32_t yawcnt = 0; // increases at 512 hz
-  if(radio_control.values[SDLOGGER_CONTROL_SWITCH] > 0) {
-    int32_t sum_yaw = 0;
-    for(int i = 0; i < 4; i++) {
-      int32_t angle = INT32_ANGLE_2_PI * freqs[i] * yawcnt / 512;
-      int16_t add_yaw = pprz_itrig_sin(angle + shifts[i]);
-      sum_yaw += add_yaw;
-    }
-    c->u_setpoint[INDI_YAW] += sum_yaw / 8;
-
-    yawcnt++;
-  }
-#endif
-
-  /* Add compensation for thrust */
-  // int32_t thrust_correction = 20 * stabilization_cmd[COMMAND_THRUST] * c->invG[2][2]; // <<<<<  +=
-  // thrust_correction >>= 16;
-  // c->u_setpoint[INDI_YAW] += thrust_correction;
 
   /* bound the result */
   BoundAbs(c->u_setpoint[INDI_ROLL], MAX_PPRZ);
@@ -654,17 +564,6 @@ void stabilization_attitude_run(bool in_flight)
   /* At the end, set 'previous' output to current output */
   indi_copy_vect(c->command_out[__k-1], c->command_out[__k]);
 
-  /* Set stabilization commands to output values of the INDI controller */
-  //stabilization_cmd[COMMAND_ROLL] = c->command_out[__k][INDI_ROLL];
-  //stabilization_cmd[COMMAND_PITCH] = c->command_out[__k][INDI_PITCH];
-
-  /* Rotate both commands
-  stabilization_cmd[COMMAND_ROLL] = (pprz_itrig_cos(c->adj_angle) * c->command_out[__k][INDI_ROLL] +
-                                     pprz_itrig_sin(c->adj_angle) * c->command_out[__k][INDI_PITCH]) >> 14;
-  stabilization_cmd[COMMAND_PITCH] = (-pprz_itrig_sin(c->adj_angle) * c->command_out[__k][INDI_ROLL] +
-                                      pprz_itrig_cos(c->adj_angle) * c->command_out[__k][INDI_PITCH]) >> 14;
-  */
-
   /* Two correction angles, don't rotate but just add.
    * sin/cos = tan
    */
@@ -674,44 +573,13 @@ void stabilization_attitude_run(bool in_flight)
                                    - c->command_out[__k][INDI_ROLL] * pprz_itrig_sin(c->roll_comp_angle) / pprz_itrig_cos(c->roll_comp_angle);
 
   stabilization_cmd[COMMAND_YAW] = c->command_out[__k][INDI_YAW];
-  // Do not overwrite thrust unless when in 4DOF mode
-  if (guidance_v_mode == GUIDANCE_V_MODE_HELI_INDI_4DOF) {
-    stabilization_cmd[COMMAND_THRUST] = c->command_out[__k][INDI_THRUST];
-  }
+  /* Thrust is not applied */
 
-  if (c->add_disturbance) {
-    stabilization_cmd[COMMAND_ROLL] = stabilization_cmd[COMMAND_ROLL] + c->dist_magnitude;
-  }
-
-#if HELI_ROLL_DISTURBANCES
-  static uint32_t roll_dist_cnt = 0;
-  if (radio_control.values[SDLOGGER_CONTROL_SWITCH] > 0) {
-    /* Add disturbances from time to time */
-    if (roll_dist_cnt > 512*6) {
-      roll_dist_cnt = 0;
-    }
-    else if (roll_dist_cnt > 512*3) {
-      stabilization_cmd[COMMAND_ROLL] = stabilization_cmd[COMMAND_ROLL] + c->dist_magnitude;
-    }
-    else {
-      /*nothing, no disturbance first three secs */
-    }
-
-    roll_dist_cnt++;
-  }
-#endif
-
-  // Disable tail when not armed
+  /* Disable tail when not armed, because this thing goes crazy */
   if(!autopilot_motors_on)
   {
     stabilization_cmd[COMMAND_YAW] = 0;
   }
-
-  // OVERWRITE YAW STABILIZATION WITH DIRECT PID //
-  //stabilization_cmd[COMMAND_YAW] = yaw_virtual_control / 32 + 6500;
-  //stabilization_cmd[COMMAND_YAW] = 6500;
-
-  //BoundAbs(stabilization_cmd[COMMAND_YAW], MAX_PPRZ);
 }
 
 void stabilization_attitude_read_rc(bool in_flight, bool in_carefree, bool coordinated_turn)
@@ -724,36 +592,3 @@ void stabilization_attitude_read_rc(bool in_flight, bool in_carefree, bool coord
 #endif
   QUAT_BFP_OF_REAL(stab_att_sp_quat, q_sp);
 }
-
-#if 0
-/* Function to convert actuator deflections back to pitch/roll 'commands'
- * Values are hard-coded.
- */
-void stabilization_attitude_get_measured_commands(){
-  /* Convert analog signals to corresponding steady-state PWM values */
-  int32_t servo_left  = adc_uart_values[0] * (float)0.54486 + 697;
-  int32_t servo_front = adc_uart_values[1] * (float)0.54827 + 703;
-  int32_t servo_right = adc_uart_values[2] * (float)0.54983 + 685;
-
-  /* Convert servo deflections back to pitch and roll commands */
-  servo_left  -= SERVO_CIC_LEFT_NEUTRAL;
-  servo_front -= SERVO_CIC_FRONT_NEUTRAL;
-  servo_right -= SERVO_CIC_RIGHT_NEUTRAL;
-
-  servo_left  *= servo_left>0 ?  SERVO_CIC_LEFT_TRAVEL_UP_DEN : SERVO_CIC_LEFT_TRAVEL_DOWN_DEN;
-  servo_front *= servo_front>0 ? SERVO_CIC_FRONT_TRAVEL_UP_DEN : SERVO_CIC_FRONT_TRAVEL_DOWN_DEN;
-  servo_right *= servo_right>0 ? SERVO_CIC_RIGHT_TRAVEL_UP_DEN : SERVO_CIC_RIGHT_TRAVEL_DOWN_DEN;
-
-  //  B = A*x (matrix multiply)
-  //  B = servo_values left, right, front
-  //  x = cmd pitch, cmd roll, var_collective
-  /* inverse (A) bitshifted <<16 =
-  //   24966      -24966      -49932
-  //  -51300      -51300           0
-  //  -21845       21845      -21845
-  */
-  heli_indi.measured_cmd[0] = (+ 24966 * servo_left - 24966 * servo_right - 49932 * servo_front) >> 16; // pitch
-  heli_indi.measured_cmd[1] = (- 51300 * servo_left - 51300 * servo_right) >> 16;                       // roll
-  heli_indi.measured_cmd[2] = (- 21845 * servo_left + 21845 * servo_right - 21845 * servo_front) >> 16; // var_collective
-}
-#endif

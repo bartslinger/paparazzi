@@ -99,6 +99,7 @@ struct IndiController_int {
   bool add_disturbance;                                   ///< Wether or not to add this disturbance, set by external module
   float rollfilt_bw;                                        ///< Bandwidth of the roll measurement filter
   bool enable_notch;                                      ///< Use notch filters
+  int16_t motor_rpm;                                      ///< RPM of the main motor
 };
 
 extern struct IndiController_int new_heli_indi;

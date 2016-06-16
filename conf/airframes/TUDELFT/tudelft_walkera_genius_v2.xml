@@ -32,6 +32,7 @@
     <axis name="PITCH" failsafe_value="0"/>
     <axis name="YAW" failsafe_value="0"/>
     <axis name="THRUST" failsafe_value="0"/>
+    <axis name="FMODE" failsafe_value="-9600"/>
   </commands>
 
   <section name="MIXING" prefix="SW_MIXING_">
@@ -67,7 +68,7 @@
  <section name="AUTOPILOT">
    <define name="MODE_AUTO2" value="AP_MODE_NAV"/> <!--AP_MODE_ATTITUDE_DIRECT-->
    <define name="MODE_AUTO1" value="AP_MODE_HOVER_Z_HOLD"/> <!--AP_MODE_HELI_INDI_4DOF-->
-   <define name="MODE_MANUAL" value="AP_MODE_HELI_INDI"/> <!--AP_MODE_ATTITUDE_Z_HOLD-->
+   <define name="MODE_MANUAL" value="AP_MODE_ATTITUDE_DIRECT"/> <!--AP_MODE_ATTITUDE_Z_HOLD-->
  </section>
 
   <section name="STABILIZATION_ATTITUDE_HELI_INDI" prefix="STABILIZATION_ATTITUDE_HELI_INDI_">
@@ -143,7 +144,7 @@
       <define name="HELI_ROLL_DISTURBANCES" value="0"/>
       <define name="HELI_ADD_YAW_DOUBLET" value="0"/>
       
-      <subsystem name="radio_control" type="datalink">
+      <subsystem name="radio_control" type="ppm">
         <!--configure name="RADIO_CONTROL_PPM_PIN" value="SUPERBIT_RST"/-->
       </subsystem>
 

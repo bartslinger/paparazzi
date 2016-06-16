@@ -701,11 +701,13 @@ static uint8_t ap_mode_of_3way_switch(void)
 {
   if (radio_control.values[RADIO_MODE] > THRESHOLD_2_PPRZ) {
     return autopilot_mode_auto2;
-  } else if (radio_control.values[RADIO_MODE] > THRESHOLD_1_PPRZ) {
-    return MODE_AUTO1;
-  } else {
-    return MODE_MANUAL;
   }
+
+  if (radio_control.values[RADIO_MODE] > THRESHOLD_1_PPRZ) {
+    return MODE_AUTO1;
+  }
+
+  return MODE_MANUAL;
 }
 
 /**

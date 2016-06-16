@@ -62,9 +62,8 @@ static inline bool kill_switch_is_on(void)
 {
   if (radio_control.values[RADIO_KILL_SWITCH] < 0) {
     return true;
-  } else {
-    return false;
   }
+  return false;
 }
 #else
 static inline bool kill_switch_is_on(void)
