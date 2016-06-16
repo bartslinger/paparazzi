@@ -370,15 +370,12 @@ void stabilization_attitude_init(void)
 
   /* Notch filter initialization */
   for (uint8_t i = 0; i < INDI_DOF; i++) {
-    // Sampe parameters in each degree of freedom */
-    //notch_filter_set_sampling_frequency(&actuator_notchfilter[i], PERIODIC_FREQUENCY);
-    //notch_filter_set_bandwidth(&actuator_notchfilter[i], 10.0);
-    //notch_filter_set_sampling_frequency(&measurement_notchfilter[i], PERIODIC_FREQUENCY);
-    //notch_filter_set_bandwidth(&measurement_notchfilter[i], 10.0);
+    // Same parameters in each degree of freedom */
     notch_filter_init(&actuator_notchfilter[i], 100.0, 10.0, PERIODIC_FREQUENCY);
     notch_filter_init(&measurement_notchfilter[i], 100.0, 10.0, PERIODIC_FREQUENCY);
   }
 
+  /* Different bandwidth in yaw */
   notch_filter_set_bandwidth(&actuator_notchfilter[INDI_YAW], 20.0);
   notch_filter_set_bandwidth(&measurement_notchfilter[INDI_YAW], 20.0);
 
