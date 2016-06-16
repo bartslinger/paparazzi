@@ -492,7 +492,7 @@ void stabilization_attitude_set_earth_cmd_i(struct Int32Vect2 *cmd, int32_t head
 #define OFFSET_AND_ROUND(_a, _b) (((_a)+(1<<((_b)-1)))>>(_b))
 #define OFFSET_AND_ROUND2(_a, _b) (((_a)+(1<<((_b)-1))-((_a)<0?1:0))>>(_b))
 
-void stabilization_attitude_run(bool_t in_flight)
+void stabilization_attitude_run(bool in_flight)
 {
   (void) in_flight; // unused variable
   struct IndiController_int *c = &new_heli_indi;
@@ -714,7 +714,7 @@ void stabilization_attitude_run(bool_t in_flight)
   //BoundAbs(stabilization_cmd[COMMAND_YAW], MAX_PPRZ);
 }
 
-void stabilization_attitude_read_rc(bool_t in_flight, bool_t in_carefree, bool_t coordinated_turn)
+void stabilization_attitude_read_rc(bool in_flight, bool in_carefree, bool coordinated_turn)
 {
   struct FloatQuat q_sp;
 #if USE_EARTH_BOUND_RC_SETPOINT
