@@ -79,11 +79,6 @@ struct HeliIndiGains heli_indi_gains = {
 #define HELI_INDI_YAWRATE_FILTSIZE 8
 
 struct IndiController_int new_heli_indi;
-//struct HeliIndiStab heli_indi;
-//int32_t global_delta_u;
-//int32_t global_pitch_model;
-//int32_t global_delta_thrust;
-//struct Int32Vect3 global_body_accelerations;
 
 #if PERIODIC_TELEMETRY
 #include "subsystems/datalink/telemetry.h"
@@ -352,11 +347,9 @@ void stabilization_attitude_init(void)
 
   /* Initialize model matrices */
   indi_set_identity(c->D);
-  // matlab new method
-  //  47948       14952
-  // -31016       27170
+
   c->invG[0][0] =   +11681; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =       0;
-  c->invG[1][0] =        0; c->invG[1][1] =  +17341*.8; c->invG[1][2] =    0; c->invG[1][3] =       0; // was 17341
+  c->invG[1][0] =        0; c->invG[1][1] =  +17341*.8; c->invG[1][2] =    0; c->invG[1][3] =       0;
   c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] =  730; c->invG[2][3] =       0;
   c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] =  -50000;
 
@@ -364,7 +357,7 @@ void stabilization_attitude_init(void)
   heli_rate_filter_initialize(&actuator_model[INDI_ROLL], 70, 9, 900);
   heli_rate_filter_initialize(&actuator_model[INDI_PITCH], 70, 9, 900);
   heli_rate_filter_initialize(&actuator_model[INDI_YAW], 37, 0, 9600);
-  heli_rate_filter_initialize(&actuator_model[INDI_THRUST], 70, 9, 450); /* 450 because dynamic range is only 0-9600 */
+  heli_rate_filter_initialize(&actuator_model[INDI_THRUST], 70, 9, 900/2); /* 450 because dynamic range is only 0-9600 */
   // Different dynamics for up and down
   alpha_yaw_inc = actuator_model[INDI_YAW].alpha;
   alpha_yaw_dec = (PERIODIC_FREQUENCY << 14)/(PERIODIC_FREQUENCY + 13); // OMEGA_DOWN = 13 rad/s, shift = 14
