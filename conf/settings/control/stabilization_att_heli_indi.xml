@@ -1,0 +1,36 @@
+<!DOCTYPE settings SYSTEM "../settings.dtd">
+
+<settings target="ap|nps">
+  <dl_settings>
+
+    <dl_settings NAME="INDI Heli LC">
+      <dl_setting var="heli_indi_gains.roll_p" min="0" step="1" max="100"   module="stabilization/stabilization_attitude_heli_indi" shortname="pgain roll" param="STABILIZATION_ATTITUDE_HELI_INDI_ROLL_P" type="int32" persistent="true"/>
+      <dl_setting var="heli_indi_gains.pitch_p" min="0" step="1" max="100"   module="stabilization/stabilization_attitude_heli_indi" shortname="pgain pitch" param="STABILIZATION_ATTITUDE_HELI_INDI_PITCH_P" type="int32" persistent="true"/>
+      <dl_setting var="heli_indi_gains.yaw_p" min="0" step="1" max="100"   module="stabilization/stabilization_attitude_heli_indi" shortname="pgain yaw" param="STABILIZATION_ATTITUDE_HELI_INDI_YAW_P" type="int32" persistent="true"/>
+      <dl_setting var="heli_indi_gains.yaw_d" min="0" step="1" max="100"   module="stabilization/stabilization_attitude_heli_indi" shortname="dgain yaw" param="STABILIZATION_ATTITUDE_HELI_INDI_YAW_D" type="int32" persistent="true"/>
+    </dl_settings>
+
+    <dl_settings NAME="INDI Actuators">
+      <dl_setting MAX="300" MIN="1" step="1" var="actuator_model[INDI_ROLL].omega" shortname="roll.omega" module="stabilization/stabilization_attitude_heli_indi" unit="rad/s" handler="set_roll_omega" type="uint32_t"/>
+      <dl_setting MAX="20" MIN="0" step="1" var="actuator_model[INDI_ROLL].delay" shortname="roll.delay" module="stabilization/stabilization_attitude_heli_indi" unit="discrete steps" handler="set_roll_delay" type="uint8_t"/>
+      <dl_setting MAX="20000" MIN="0" step="10" var="actuator_model[INDI_ROLL].max_inc" shortname="roll.sat" module="stabilization/stabilization_attitude_heli_indi" unit="pprz"/>
+      <dl_setting MAX="1" MIN="0" step="1" var="new_heli_indi.use_roll_dyn_filter" values="FALSE|TRUE" shortname="use.rollfilt" module="stabilization/stabilization_attitude_heli_indi"/>
+      <dl_setting max="9000" min="0" step="100" var="new_heli_indi.dist_magnitude" shortname="roll.dist" module="stabilization/stabilization_attitude_heli_indi" unit="pprz"/>
+      <dl_setting max="200" min="8" step="1" var="new_heli_indi.rollfilt_bw" shortname="rolfilt.bw" module="stabilization/stabilization_attitude_heli_indi" unit="Hz" handler="set_rollfilter_bw" type="float"/>
+      <dl_setting max="1" min="0" step="1" var="new_heli_indi.enable_notch" shortname="notch" module="stabilization/stabilization_attitude_heli_indi" values="Off|On"/>
+    </dl_settings>
+
+    <dl_settings NAME="INDI Heli invG">
+      <dl_setting var="new_heli_indi.roll_comp_angle" min="-50" step="0.5" max="50" module="stabilization/stabilization_attitude_heli_indi" shortname="roll.comp" type="int32" unit="raddinges" alt_unit="deg" alt_unit_coef="0.0139882"/>
+      <dl_setting var="new_heli_indi.pitch_comp_angle" min="-50" step="0.5" max="50" module="stabilization/stabilization_attitude_heli_indi" shortname="pitch.comp" type="int32" unit="raddinges" alt_unit="deg" alt_unit_coef="0.0139882"/>
+      <dl_setting var="new_heli_indi.invG[0][0]" min="0" step="1" max="100000"   module="stabilization/stabilization_attitude_heli_indi" shortname="[0][0]" type="int32"/>
+      <dl_setting var="new_heli_indi.invG[0][1]" min="-100000" step="1" max="100000"   module="stabilization/stabilization_attitude_heli_indi" shortname="[0][1]" type="int32"/>
+      <dl_setting var="new_heli_indi.invG[1][0]" min="-100000" step="1" max="100000"   module="stabilization/stabilization_attitude_heli_indi" shortname="[1][0]" type="int32"/>
+      <dl_setting var="new_heli_indi.invG[1][1]" min="0" step="1" max="100000"   module="stabilization/stabilization_attitude_heli_indi" shortname="[1][1]" type="int32"/>
+      <dl_setting var="new_heli_indi.invG[2][2]" min="0" step="1" max="10000"   module="stabilization/stabilization_attitude_heli_indi" shortname="[2][2]" type="int32"/>
+      <dl_setting var="new_heli_indi.invG[2][3]" min="-500000" step="1" max="500000"   module="stabilization/stabilization_attitude_heli_indi" shortname="[2][3]" type="int32"/>
+      <dl_setting var="new_heli_indi.invG[3][3]" min="-500000" step="1" max="500000"   module="stabilization/stabilization_attitude_heli_indi" shortname="[3][3]" type="int32"/>
+    </dl_settings>
+
+  </dl_settings>
+</settings>
