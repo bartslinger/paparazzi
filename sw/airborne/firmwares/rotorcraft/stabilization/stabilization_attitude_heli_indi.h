@@ -38,6 +38,7 @@
 #ifndef INDI_NOTCH_MIN_RPM
 #define INDI_NOTCH_MIN_RPM 1500
 #endif
+
 struct HeliIndiGains {
   int32_t roll_p;
   int32_t pitch_p;
