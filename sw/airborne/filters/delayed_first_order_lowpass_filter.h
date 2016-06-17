@@ -30,7 +30,7 @@
 #include "paparazzi.h"
 
 #define DELAYED_FIRST_ORDER_LOWPASS_FILTER_BUFFER_SIZE 20
-#define HELI_FILTER_ALPHA_SHIFT 14
+#define DELAYED_FIRST_ORDER_LOWPASS_FILTER_FILTER_ALPHA_SHIFT 14
 
 struct delayed_first_order_lowpass_t {
   uint32_t omega;
@@ -43,7 +43,7 @@ struct delayed_first_order_lowpass_t {
 
 /**
  * @brief delayed_first_order_lowpass_propagate
- * @param f Reference to the heli rate filter.
+ * @param f Reference to the filter.
  * @param input Value that needs to be filtered.
  * @return alpha*previous + (1 - alpha)*input
  *
@@ -55,7 +55,7 @@ static inline int32_t delayed_first_order_lowpass_propagate(struct delayed_first
   int32_t prev = f->buffer[f->idx];
   uint8_t next_idx = ++f->idx % DELAYED_FIRST_ORDER_LOWPASS_FILTER_BUFFER_SIZE;
   f->idx = next_idx;
-  f->buffer[next_idx] = (f->alpha*prev + ((1<<HELI_FILTER_ALPHA_SHIFT) - f->alpha)*input) >> HELI_FILTER_ALPHA_SHIFT;
+  f->buffer[next_idx] = (f->alpha*prev + ((1<<DELAYED_FIRST_ORDER_LOWPASS_FILTER_FILTER_ALPHA_SHIFT) - f->alpha)*input) >> DELAYED_FIRST_ORDER_LOWPASS_FILTER_FILTER_ALPHA_SHIFT;
 
   /* Check if new value exceeds maximum increase */
   if ((f->buffer[next_idx] - prev) > f->max_inc) {
@@ -72,7 +72,7 @@ static inline int32_t delayed_first_order_lowpass_propagate(struct delayed_first
 
 /**
  * @brief delayed_first_order_lowpass_set_omega
- * @param f Reference to the heli rate filter.
+ * @param f Reference to the filter.
  * @param omega Filter bandwidth in [rad/s], only positive integer values.
  *
  * Function to change the bandwidth of the filter, can be done in run-time.
@@ -81,12 +81,12 @@ static inline void delayed_first_order_lowpass_set_omega(struct delayed_first_or
 {
   /* alpha = 1 / ( 1 + omega_c * Ts) */
   f->omega = omega;
-  f->alpha = (PERIODIC_FREQUENCY << HELI_FILTER_ALPHA_SHIFT)/(PERIODIC_FREQUENCY + f->omega);
+  f->alpha = (PERIODIC_FREQUENCY << DELAYED_FIRST_ORDER_LOWPASS_FILTER_FILTER_ALPHA_SHIFT)/(PERIODIC_FREQUENCY + f->omega);
 }
 
 /**
  * @brief delayed_first_order_lowpass_set_delay
- * @param f Reference to the heli rate filter.
+ * @param f Reference to the filter.
  * @param delay Number of timesteps delay in the signal. Maximum defined by buffer size.
  *
  * Function to change the number of timesteps delay. This can be done during
@@ -105,7 +105,7 @@ static inline void delayed_first_order_lowpass_set_delay(struct delayed_first_or
 
 /**
  * @brief delayed_first_order_lowpass_initialize
- * @param f Reference to the heli rate filter.
+ * @param f Reference to the filter.
  * @param omega Filter bandwidth in [rad/s], only positive integer values.
  * @param delay Number of timesteps delay in the signal. Maximum defined by buffer size.
  *
