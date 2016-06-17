@@ -19,30 +19,30 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/** @file filters/heli_rate_filter.h
+/** @file filters/delayed_first_order_lowpass.h
  *  @brief First order low-pass filter with delay
  *
  */
 
-#ifndef HELI_RATE_FILTER_H
-#define HELI_RATE_FILTER_H
+#ifndef DELAYED_FIRST_ORDER_LOWPASS_FILTER_H
+#define DELAYED_FIRST_ORDER_LOWPASS_FILTER_H
 
 #include "paparazzi.h"
 
-#define HELI_RATE_FILTER_BUFFER_SIZE 20
+#define DELAYED_FIRST_ORDER_LOWPASS_FILTER_BUFFER_SIZE 20
 #define HELI_FILTER_ALPHA_SHIFT 14
 
-struct heli_rate_filter_t {
+struct delayed_first_order_lowpass_t {
   uint32_t omega;
   uint8_t delay;
   int32_t alpha;
   uint16_t max_inc;
-  int32_t buffer[HELI_RATE_FILTER_BUFFER_SIZE];
+  int32_t buffer[DELAYED_FIRST_ORDER_LOWPASS_FILTER_BUFFER_SIZE];
   uint8_t idx;
 };
 
 /**
- * @brief heli_rate_filter_propagate
+ * @brief delayed_first_order_lowpass_propagate
  * @param f Reference to the heli rate filter.
  * @param input Value that needs to be filtered.
  * @return alpha*previous + (1 - alpha)*input
@@ -50,10 +50,10 @@ struct heli_rate_filter_t {
  * The actual low-pass filter with delay. Delay is accomplished by internal
  * buffer.
  */
-static inline int32_t heli_rate_filter_propagate(struct heli_rate_filter_t *f, int32_t input)
+static inline int32_t delayed_first_order_lowpass_propagate(struct delayed_first_order_lowpass_t *f, int32_t input)
 {
   int32_t prev = f->buffer[f->idx];
-  uint8_t next_idx = ++f->idx % HELI_RATE_FILTER_BUFFER_SIZE;
+  uint8_t next_idx = ++f->idx % DELAYED_FIRST_ORDER_LOWPASS_FILTER_BUFFER_SIZE;
   f->idx = next_idx;
   f->buffer[next_idx] = (f->alpha*prev + ((1<<HELI_FILTER_ALPHA_SHIFT) - f->alpha)*input) >> HELI_FILTER_ALPHA_SHIFT;
 
@@ -66,18 +66,18 @@ static inline int32_t heli_rate_filter_propagate(struct heli_rate_filter_t *f, i
       f->buffer[next_idx] = prev - f->max_inc;
   }
 
-  uint8_t req_idx = (f->idx - f->delay + HELI_RATE_FILTER_BUFFER_SIZE) % HELI_RATE_FILTER_BUFFER_SIZE;
+  uint8_t req_idx = (f->idx - f->delay + DELAYED_FIRST_ORDER_LOWPASS_FILTER_BUFFER_SIZE) % DELAYED_FIRST_ORDER_LOWPASS_FILTER_BUFFER_SIZE;
   return f->buffer[req_idx];
 }
 
 /**
- * @brief heli_rate_filter_set_omega
+ * @brief delayed_first_order_lowpass_set_omega
  * @param f Reference to the heli rate filter.
  * @param omega Filter bandwidth in [rad/s], only positive integer values.
  *
  * Function to change the bandwidth of the filter, can be done in run-time.
  */
-static inline void heli_rate_filter_set_omega(struct heli_rate_filter_t *f, uint32_t omega)
+static inline void delayed_first_order_lowpass_set_omega(struct delayed_first_order_lowpass_t *f, uint32_t omega)
 {
   /* alpha = 1 / ( 1 + omega_c * Ts) */
   f->omega = omega;
@@ -85,7 +85,7 @@ static inline void heli_rate_filter_set_omega(struct heli_rate_filter_t *f, uint
 }
 
 /**
- * @brief heli_rate_filter_set_delay
+ * @brief delayed_first_order_lowpass_set_delay
  * @param f Reference to the heli rate filter.
  * @param delay Number of timesteps delay in the signal. Maximum defined by buffer size.
  *
@@ -93,38 +93,38 @@ static inline void heli_rate_filter_set_omega(struct heli_rate_filter_t *f, uint
  * run-time. It basically changes the offset to the buffer value which is
  * returned on a propagation.
  */
-static inline void heli_rate_filter_set_delay(struct heli_rate_filter_t *f, uint8_t delay)
+static inline void delayed_first_order_lowpass_set_delay(struct delayed_first_order_lowpass_t *f, uint8_t delay)
 {
   /* Delay cannot be more than buffer size minus one */
-  if (delay >= HELI_RATE_FILTER_BUFFER_SIZE) {
-    f->delay = HELI_RATE_FILTER_BUFFER_SIZE - 1;
+  if (delay >= DELAYED_FIRST_ORDER_LOWPASS_FILTER_BUFFER_SIZE) {
+    f->delay = DELAYED_FIRST_ORDER_LOWPASS_FILTER_BUFFER_SIZE - 1;
   } else {
     f->delay = delay;
   }
 }
 
 /**
- * @brief heli_rate_filter_initialize
+ * @brief delayed_first_order_lowpass_initialize
  * @param f Reference to the heli rate filter.
  * @param omega Filter bandwidth in [rad/s], only positive integer values.
  * @param delay Number of timesteps delay in the signal. Maximum defined by buffer size.
  *
  * Initializes the filter, should be done before using it.
  */
-static inline void heli_rate_filter_initialize(struct heli_rate_filter_t *f, uint32_t omega, uint8_t delay, uint16_t max_inc)
+static inline void delayed_first_order_lowpass_initialize(struct delayed_first_order_lowpass_t *f, uint32_t omega, uint8_t delay, uint16_t max_inc)
 {
   /* Set delay */
-  heli_rate_filter_set_delay(f, delay);
+  delayed_first_order_lowpass_set_delay(f, delay);
 
   /* Set omega and calculate alpha */
-  heli_rate_filter_set_omega(f, omega);
+  delayed_first_order_lowpass_set_omega(f, omega);
 
   /* Set maximum increase per cycle */
   f->max_inc = max_inc;
 
   /* Clear the buffer */
   f->idx = 0;
-  for (uint8_t i = 0; i < HELI_RATE_FILTER_BUFFER_SIZE; i++) {
+  for (uint8_t i = 0; i < DELAYED_FIRST_ORDER_LOWPASS_FILTER_BUFFER_SIZE; i++) {
     f->buffer[i] = 0;
   }
 }
