@@ -34,7 +34,10 @@
 #define INDI_PITCH 1
 #define INDI_YAW 2
 #define INDI_THRUST 3
-
+#define INDI_YAW_BUFFER_SIZE 9
+#ifndef INDI_NOTCH_MIN_RPM
+#define INDI_NOTCH_MIN_RPM 1500
+#endif
 struct HeliIndiGains {
   int32_t roll_p;
   int32_t pitch_p;
@@ -91,14 +94,12 @@ struct IndiController_int {
   uint32_t roll_omega;
   uint32_t roll_delay;
   bool use_roll_dyn_filter;
-  uint16_t dist_magnitude;                                  ///< Magnitude of roll disturbance
-  bool add_disturbance;                                   ///< Wether or not to add this disturbance, set by external module
   float rollfilt_bw;                                        ///< Bandwidth of the roll measurement filter
   bool enable_notch;                                      ///< Use notch filters
   int16_t motor_rpm;                                      ///< RPM of the main motor
 };
 
-extern struct IndiController_int new_heli_indi;
+extern struct IndiController_int heli_indi_ctl;
 
 extern struct delayed_first_order_lowpass_filter_t actuator_model[INDI_DOF];
 extern struct Int32Quat   stab_att_sp_quat;  ///< with #INT32_QUAT_FRAC

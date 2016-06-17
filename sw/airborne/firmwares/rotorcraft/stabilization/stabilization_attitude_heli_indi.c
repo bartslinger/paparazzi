@@ -20,10 +20,14 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/** @file stabilization_attitude_quat_int.c
- * Rotorcraft quaternion attitude stabilization
+/** @file stabilization_attitude_heli_indi.c
+ * Helicopter quaternion INDI attitude stabilization
  */
 
+#include "paparazzi.h"
+#include "math/pprz_algebra_float.h"
+#include "math/pprz_algebra_int.h"
+#include "state.h"
 #include "generated/airframe.h"
 #include "autopilot.h"
 
@@ -34,16 +38,6 @@
 #include "modules/sensors/rpm_sensor.h"
 #include "filters/low_pass_filter.h"
 #include "subsystems/radio_control.h"
-
-/* This is a beun hack to the max, but that is perfectly in line with the rest of pprz */
-#include "firmwares/rotorcraft/guidance/guidance_v.h"
-extern int32_t guidance_v_rc_delta_t; // private variable of stabilization_v.c
-
-#include "std.h"
-#include "paparazzi.h"
-#include "math/pprz_algebra_float.h"
-#include "math/pprz_algebra_int.h"
-#include "state.h"
 
 #ifndef STABILIZATION_ATTITUDE_STEADY_STATE_ROLL
   #define STABILIZATION_ATTITUDE_STEADY_STATE_ROLL 0
@@ -65,7 +59,22 @@ struct HeliIndiGains heli_indi_gains = {
   STABILIZATION_ATTITUDE_HELI_INDI_YAW_D
 };
 
-struct IndiController_int new_heli_indi;
+/* Main controller struct */
+struct IndiController_int heli_indi_ctl;
+
+/* Filter functions referenced to */
+struct delayed_first_order_lowpass_filter_t actuator_model[INDI_DOF];
+#if STABILIZATION_ATTITUDE_HELI_INDI_USE_FAST_DYN_FILTERS
+struct delayed_first_order_lowpass_filter_t fast_dynamics_model[2]; // only pitch and roll
+#endif
+/* Tail model parameters for spinning up and down */
+int32_t alpha_yaw_inc;
+int32_t alpha_yaw_dec;
+/* Measurement filters */
+Butterworth2LowPass_int actuator_lowpass_filters[INDI_DOF];
+Butterworth2LowPass_int measurement_lowpass_filters[INDI_DOF];
+struct SecondOrderNotchFilter actuator_notchfilter[INDI_DOF];
+struct SecondOrderNotchFilter measurement_notchfilter[INDI_DOF];
 
 #if PERIODIC_TELEMETRY
 #include "subsystems/datalink/telemetry.h"
@@ -140,13 +149,6 @@ static inline void indi_set_identity(int32_t _matrix[][INDI_DOF])
   }
 }
 
-/* Filter functions referenced to */
-struct delayed_first_order_lowpass_filter_t actuator_model[INDI_DOF];
-#if STABILIZATION_ATTITUDE_HELI_INDI_USE_FAST_DYN_FILTERS
-struct delayed_first_order_lowpass_filter_t fast_dynamics_model[2]; // only pitch and roll
-#endif
-int32_t alpha_yaw_inc;
-int32_t alpha_yaw_dec;
 static inline void indi_apply_actuator_models(int32_t _out[], int32_t _in[])
 {
   int32_t temp_roll;
@@ -159,11 +161,9 @@ static inline void indi_apply_actuator_models(int32_t _out[], int32_t _in[])
   if(_in[INDI_YAW] - prev > 0) {
     // Tail spinning up
     actuator_model[INDI_YAW].alpha = alpha_yaw_inc;
-    //actuator_model[INDI_YAW].alpha = alpha_yaw_dec; // TEMP USE ONLY DEC MODEL
   } else {
     // Tail spinning down
     actuator_model[INDI_YAW].alpha = alpha_yaw_dec;
-    //actuator_model[INDI_YAW].alpha = alpha_yaw_inc;  // TEMP USE ONLY INC MODEL
   }
   _out[INDI_YAW] = delayed_first_order_lowpass_propagate(&actuator_model[INDI_YAW], _in[INDI_YAW]);
 
@@ -174,7 +174,7 @@ static inline void indi_apply_actuator_models(int32_t _out[], int32_t _in[])
   _out[INDI_ROLL]  = delayed_first_order_lowpass_propagate(&fast_dynamics_model[INDI_ROLL], temp_roll);
   _out[INDI_PITCH] = delayed_first_order_lowpass_propagate(&fast_dynamics_model[INDI_PITCH], temp_pitch);
   /* For experiment, allow to (temporarily) disable the filter in roll */
-  if (!new_heli_indi.use_roll_dyn_filter) {
+  if (!heli_indi_ctl.use_roll_dyn_filter) {
     _out[INDI_ROLL] = temp_roll;
   }
 #else
@@ -189,11 +189,10 @@ static inline void indi_apply_compensator_filters(int32_t _out[], int32_t _in[])
   _out[INDI_PITCH]  = _in[INDI_PITCH];
 
   /* Delay the tail by 9 samples */
-#define YAW_BUFFER_SIZE 9
-  static int32_t yaw_output_buffer[YAW_BUFFER_SIZE];
+  static int32_t yaw_output_buffer[INDI_YAW_BUFFER_SIZE];
   static uint8_t buf_idx = 0;
 
-  buf_idx %= (YAW_BUFFER_SIZE-1);
+  buf_idx %= (INDI_YAW_BUFFER_SIZE-1);
   _out[INDI_YAW] = yaw_output_buffer[buf_idx];
   yaw_output_buffer[buf_idx] = _in[INDI_YAW];
   buf_idx++;
@@ -219,21 +218,18 @@ static inline void indi_apply_compensator_filters(int32_t _out[], int32_t _in[])
   /* Now the target output is known, the collective dynamics is known. What input is required? */
   int32_t alpha_thrust = actuator_model[INDI_THRUST].alpha;
   _out[INDI_THRUST] = ((output_target << 14) - alpha_thrust*prev_thrust_out) / ((1<<14) - alpha_thrust);
-
   prev_thrust_out =_out[INDI_THRUST];
 
   //_out[INDI_THRUST] = _in[INDI_THRUST];
 }
 
-struct SecondOrderNotchFilter actuator_notchfilter[INDI_DOF];
-struct SecondOrderNotchFilter measurement_notchfilter[INDI_DOF];
 static inline void indi_apply_actuator_notch_filters(int32_t _out[], int32_t _in[])
 {
-  if (new_heli_indi.motor_rpm > 1500 && new_heli_indi.enable_notch) {
-    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_ROLL], new_heli_indi.motor_rpm/60.0f);
-    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_PITCH], new_heli_indi.motor_rpm/60.0f);
-    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_YAW], new_heli_indi.motor_rpm/60.0f);
-    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_THRUST], new_heli_indi.motor_rpm/60.0f);
+  if (heli_indi_ctl.motor_rpm > INDI_NOTCH_MIN_RPM && heli_indi_ctl.enable_notch) {
+    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_ROLL], heli_indi_ctl.motor_rpm/60.0f);
+    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_PITCH], heli_indi_ctl.motor_rpm/60.0f);
+    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_YAW], heli_indi_ctl.motor_rpm/60.0f);
+    notch_filter_set_filter_frequency(&actuator_notchfilter[INDI_THRUST], heli_indi_ctl.motor_rpm/60.0f);
     notch_filter_update(&actuator_notchfilter[INDI_ROLL], &_in[INDI_ROLL], &_out[INDI_ROLL]);
     notch_filter_update(&actuator_notchfilter[INDI_PITCH], &_in[INDI_PITCH], &_out[INDI_PITCH]);
     notch_filter_update(&actuator_notchfilter[INDI_YAW], &_in[INDI_YAW], &_out[INDI_YAW]);
@@ -248,11 +244,11 @@ static inline void indi_apply_actuator_notch_filters(int32_t _out[], int32_t _in
 
 static inline void indi_apply_measurement_notch_filters(int32_t _out[], int32_t _in[])
 {
-  if (new_heli_indi.motor_rpm > 1500 && new_heli_indi.enable_notch) {
-    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_ROLL], new_heli_indi.motor_rpm/60.0f);
-    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_PITCH], new_heli_indi.motor_rpm/60.0f);
-    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_YAW], new_heli_indi.motor_rpm/60.0f);
-    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_THRUST], new_heli_indi.motor_rpm/60.0f);
+  if (heli_indi_ctl.motor_rpm > INDI_NOTCH_MIN_RPM && heli_indi_ctl.enable_notch) {
+    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_ROLL], heli_indi_ctl.motor_rpm/60.0f);
+    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_PITCH], heli_indi_ctl.motor_rpm/60.0f);
+    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_YAW], heli_indi_ctl.motor_rpm/60.0f);
+    notch_filter_set_filter_frequency(&measurement_notchfilter[INDI_THRUST], heli_indi_ctl.motor_rpm/60.0f);
     notch_filter_update(&measurement_notchfilter[INDI_ROLL], &_in[INDI_ROLL], &_out[INDI_ROLL]);
     notch_filter_update(&measurement_notchfilter[INDI_PITCH], &_in[INDI_PITCH], &_out[INDI_PITCH]);
     notch_filter_update(&measurement_notchfilter[INDI_YAW], &_in[INDI_YAW], &_out[INDI_YAW]);
@@ -264,9 +260,6 @@ static inline void indi_apply_measurement_notch_filters(int32_t _out[], int32_t 
     _out[INDI_THRUST] = _in[INDI_THRUST];
   }
 }
-
-Butterworth2LowPass_int actuator_lowpass_filters[INDI_DOF];
-Butterworth2LowPass_int measurement_lowpass_filters[INDI_DOF];
 
 static inline void indi_apply_actuator_butterworth_filters(int32_t _out[], int32_t _in[])
 {
@@ -294,7 +287,7 @@ void stabilization_attitude_heli_indi_set_roll_delay(uint8_t delay)
 
 void stabilization_attitude_heli_indi_set_rollfilter_bw(float bandwidth)
 {
-  new_heli_indi.rollfilt_bw = bandwidth;
+  heli_indi_ctl.rollfilt_bw = bandwidth;
   // Cutoff frequencies are in Hz!!!
   init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_ROLL], bandwidth, 1.0/PERIODIC_FREQUENCY, 0);
   init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_ROLL], bandwidth, 1.0/PERIODIC_FREQUENCY, 0);
@@ -306,12 +299,10 @@ void stabilization_attitude_init(void)
   stabilization_attitude_heli_indi_set_steadystate_pitchroll();
 
   /* Initialization code INDI */
-  struct IndiController_int* c = &new_heli_indi;
+  struct IndiController_int* c = &heli_indi_ctl;
   c->roll_comp_angle = ANGLE_BFP_OF_REAL(30.0*M_PI/180.0);
   c->pitch_comp_angle = ANGLE_BFP_OF_REAL(11.0*M_PI/180.0);
   c->use_roll_dyn_filter = TRUE;
-  c->dist_magnitude = 1000;
-  c->add_disturbance = FALSE;
   c->rollfilt_bw = 40.;
   c->enable_notch = TRUE;
   c->motor_rpm = 0;
@@ -421,7 +412,7 @@ void stabilization_attitude_set_earth_cmd_i(struct Int32Vect2 *cmd, int32_t head
 void stabilization_attitude_run(bool in_flight)
 {
   (void) in_flight; // unused variable
-  struct IndiController_int *c = &new_heli_indi;
+  struct IndiController_int *c = &heli_indi_ctl;
 
   /* calculate acceleration in body frame */
   struct NedCoor_i *ltp_accel_nedcoor = stateGetAccelNed_i();
@@ -457,8 +448,8 @@ void stabilization_attitude_run(bool in_flight)
   c->measurement[INDI_THRUST]= body_accel.z;
 
   /* Get RPM measurement */
-  if (new_heli_indi.enable_notch) {
-    new_heli_indi.motor_rpm = rpm_sensor_get_rpm();
+  if (heli_indi_ctl.enable_notch) {
+    heli_indi_ctl.motor_rpm = rpm_sensor_get_rpm();
   }
 
   /* Apply actuator dynamics model to previously commanded values
@@ -476,8 +467,8 @@ void stabilization_attitude_run(bool in_flight)
   }
 
   /* RADIO throttle stick value, for 4dof mode */
-  int32_t accel_z_sp = (-1)*3*((guidance_v_rc_delta_t - MAX_PPRZ/2) << INT32_ACCEL_FRAC) / (MAX_PPRZ/2);
-  accel_z_sp = ((accel_z_sp << INT32_TRIG_FRAC) / guidance_v_thrust_coeff);
+  //int32_t accel_z_sp = (-1)*3*((guidance_v_rc_delta_t - MAX_PPRZ/2) << INT32_ACCEL_FRAC) / (MAX_PPRZ/2);
+  //accel_z_sp = ((accel_z_sp << INT32_TRIG_FRAC) / guidance_v_thrust_coeff);
 
   /* Transform yaw into a delta yaw while keeping filtered yawrate (kinda hacky)*/
   int32_t filtered_measurement_vector[INDI_DOF];
