@@ -1,4 +1,5 @@
 ﻿/*
+ * Copyright (c) 2016 Bart Slinger <bartslinger@gmail.com>
  * Copyright (C) 2008-2009 Antoine Drouin <poinix@gmail.com>
  *
  * This file is part of paparazzi.
@@ -30,8 +31,7 @@
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_rc_setpoint.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_quat_transformations.h"
-//#include "modules/adc_expansion_uart/adc_expansion_uart.h"
-//#include "modules/sensors/rpm_sensor.h"
+#include "modules/sensors/rpm_sensor.h"
 #include "filters/low_pass_filter.h"
 #include "subsystems/radio_control.h"
 
@@ -50,7 +50,7 @@ extern int32_t guidance_v_rc_delta_t; // private variable of stabilization_v.c
      COMMAND_PITCH  != 1 | \
      COMMAND_YAW    != 2 | \
      COMMAND_THRUST != 3)
-#warning "Order of commands incorrect"
+#warning "Order of commands should be roll, pitch, yaw, thrust"
 #endif
 
 #ifndef STABILIZATION_ATTITUDE_STEADY_STATE_ROLL
@@ -484,6 +484,11 @@ void stabilization_attitude_run(bool in_flight)
   c->measurement[INDI_PITCH] = body_rate->q;
   c->measurement[INDI_YAW]   = body_rate->r;
   c->measurement[INDI_THRUST]= body_accel.z;
+
+  /* Get RPM measurement */
+  if (new_heli_indi.enable_notch) {
+    new_heli_indi.motor_rpm = rpm_sensor_get_rpm();
+  }
 
   /* Apply actuator dynamics model to previously commanded values
    * input  = actuator command in previous cycle
