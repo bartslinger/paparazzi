@@ -115,7 +115,9 @@
 
   <modules main_freq="512">
     <load name="pwm_meas.xml"/>
-    <load name="rpm_sensor.xml"/>
+    <load name="rpm_sensor.xml">
+      <define name="RPM_PULSE_PER_RND" value="18"/>
+    </load>
     <load name="send_imu_mag_current.xml"/>
     <load name="logger_sd_spi_direct.xml">
       <configure name="LOGGER_CONTROL_SWITCH" value="RADIO_AUX2"/>
@@ -163,7 +165,7 @@
     <subsystem name="imu" type="lisa_s_v1.0">
       <define name="LISA_S_UPSIDE_DOWN"/> <!-- wtf hij zit gewoon rechtop maargoed -->
     </subsystem>
-    <subsystem name="gps" type="datalink"/>
+    <module name="gps" type="datalink"/>
     <subsystem name="stabilization" type="heli_indi"/> <!-- int_quat / heli_indi -->
     <!--subsystem name="rpm_sensor" type="eagletree"/-->
     <subsystem name="ahrs" type="int_cmpl_quat"/>
