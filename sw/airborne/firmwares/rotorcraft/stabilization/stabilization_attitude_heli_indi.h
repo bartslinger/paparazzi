@@ -25,7 +25,7 @@
 #include "math/pprz_algebra_int.h"
 
 #include "filters/notch_filter.h"
-#include "filters/heli_rate_filter.h"
+#include "filters/delayed_first_order_lowpass_filter.h"
 
 #define GAIN_MULTIPLIER_P 12
 #define GAIN_MULTIPLIER_D 3
@@ -47,11 +47,11 @@ struct HeliIndiStab {
   struct Int32Rates rate_notched;
   struct Int32Rates rate_filt;
   struct Int32Rates rate_previous;
-  struct heli_rate_filter_t tail_model;
+  struct delayed_first_order_lowpass_filter_t tail_model;
   int32_t alpha_tail_inc;
   int32_t alpha_tail_dec;
-  struct heli_rate_filter_t roll_model; // haha woordgrapje
-  struct heli_rate_filter_t pitch_model;
+  struct delayed_first_order_lowpass_filter_t roll_model; // haha woordgrapje
+  struct delayed_first_order_lowpass_filter_t pitch_model;
   struct SecondOrderNotchFilter p_filter;
   struct SecondOrderNotchFilter q_filter;
   struct SecondOrderNotchFilter r_filter;
@@ -104,7 +104,7 @@ struct IndiController_int {
 
 extern struct IndiController_int new_heli_indi;
 
-extern struct heli_rate_filter_t actuator_model[INDI_DOF];
+extern struct delayed_first_order_lowpass_filter_t actuator_model[INDI_DOF];
 extern struct Int32Quat   stab_att_sp_quat;  ///< with #INT32_QUAT_FRAC
 extern struct Int32Eulers stab_att_sp_euler; ///< with #INT32_ANGLE_FRAC
 extern float sp_offset_roll;

@@ -154,9 +154,9 @@ static inline void indi_set_identity(int32_t _matrix[][INDI_DOF])
 }
 
 /* Filter functions referenced to */
-struct heli_rate_filter_t actuator_model[INDI_DOF];
+struct delayed_first_order_lowpass_filter_t actuator_model[INDI_DOF];
 #if STABILIZATION_ATTITUDE_HELI_INDI_USE_FAST_DYN_FILTERS
-struct heli_rate_filter_t fast_dynamics_model[2]; // only pitch and roll
+struct delayed_first_order_lowpass_filter_t fast_dynamics_model[2]; // only pitch and roll
 #endif
 int32_t alpha_yaw_inc;
 int32_t alpha_yaw_dec;
@@ -164,8 +164,8 @@ static inline void indi_apply_actuator_models(int32_t _out[], int32_t _in[])
 {
   int32_t temp_roll;
   int32_t temp_pitch;
-  temp_roll  = heli_rate_filter_propagate(&actuator_model[INDI_ROLL], _in[INDI_ROLL]);
-  temp_pitch = heli_rate_filter_propagate(&actuator_model[INDI_PITCH], _in[INDI_PITCH]);
+  temp_roll  = delayed_first_order_lowpass_propagate(&actuator_model[INDI_ROLL], _in[INDI_ROLL]);
+  temp_pitch = delayed_first_order_lowpass_propagate(&actuator_model[INDI_PITCH], _in[INDI_PITCH]);
 
   /* Depending on yaw direction, change filter coefficient */
   int32_t prev = actuator_model[INDI_YAW].buffer[actuator_model[INDI_YAW].idx];
@@ -178,14 +178,14 @@ static inline void indi_apply_actuator_models(int32_t _out[], int32_t _in[])
     actuator_model[INDI_YAW].alpha = alpha_yaw_dec;
     //actuator_model[INDI_YAW].alpha = alpha_yaw_inc;  // TEMP USE ONLY INC MODEL
   }
-  _out[INDI_YAW] = heli_rate_filter_propagate(&actuator_model[INDI_YAW], _in[INDI_YAW]);
+  _out[INDI_YAW] = delayed_first_order_lowpass_propagate(&actuator_model[INDI_YAW], _in[INDI_YAW]);
 
-  _out[INDI_THRUST] = heli_rate_filter_propagate(&actuator_model[INDI_THRUST], _in[INDI_THRUST]);
+  _out[INDI_THRUST] = delayed_first_order_lowpass_propagate(&actuator_model[INDI_THRUST], _in[INDI_THRUST]);
 
 #if STABILIZATION_ATTITUDE_HELI_INDI_USE_FAST_DYN_FILTERS
   /* Also apply first order filter that represents fast damping dynamics in pitch and roll rate */
-  _out[INDI_ROLL]  = heli_rate_filter_propagate(&fast_dynamics_model[INDI_ROLL], temp_roll);
-  _out[INDI_PITCH] = heli_rate_filter_propagate(&fast_dynamics_model[INDI_PITCH], temp_pitch);
+  _out[INDI_ROLL]  = delayed_first_order_lowpass_propagate(&fast_dynamics_model[INDI_ROLL], temp_roll);
+  _out[INDI_PITCH] = delayed_first_order_lowpass_propagate(&fast_dynamics_model[INDI_PITCH], temp_pitch);
   /* For experiment, allow to (temporarily) disable the filter in roll */
   if (!new_heli_indi.use_roll_dyn_filter) {
     _out[INDI_ROLL] = temp_roll;
@@ -313,12 +313,12 @@ static inline void indi_apply_measurement_butterworth_filters(int32_t _out[], in
 
 void stabilization_attitude_heli_indi_set_roll_omega(uint32_t omega)
 {
-  heli_rate_filter_set_omega(&actuator_model[INDI_ROLL], omega);
+  delayed_first_order_lowpass_set_omega(&actuator_model[INDI_ROLL], omega);
 }
 
 void stabilization_attitude_heli_indi_set_roll_delay(uint8_t delay)
 {
-  heli_rate_filter_set_delay(&actuator_model[INDI_ROLL], delay);
+  delayed_first_order_lowpass_set_delay(&actuator_model[INDI_ROLL], delay);
 }
 
 void stabilization_attitude_heli_indi_set_rollfilter_bw(float bandwidth)
@@ -354,18 +354,18 @@ void stabilization_attitude_init(void)
   c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] =  -50000;
 
   /* Actuator filter initialization */
-  heli_rate_filter_initialize(&actuator_model[INDI_ROLL], 70, 9, 900);
-  heli_rate_filter_initialize(&actuator_model[INDI_PITCH], 70, 9, 900);
-  heli_rate_filter_initialize(&actuator_model[INDI_YAW], 37, 0, 9600);
-  heli_rate_filter_initialize(&actuator_model[INDI_THRUST], 70, 9, 900/2); /* 450 because dynamic range is only 0-9600 */
+  delayed_first_order_lowpass_initialize(&actuator_model[INDI_ROLL], 70, 9, 900, PERIODIC_FREQUENCY);
+  delayed_first_order_lowpass_initialize(&actuator_model[INDI_PITCH], 70, 9, 900, PERIODIC_FREQUENCY);
+  delayed_first_order_lowpass_initialize(&actuator_model[INDI_YAW], 37, 0, 9600, PERIODIC_FREQUENCY);
+  delayed_first_order_lowpass_initialize(&actuator_model[INDI_THRUST], 70, 9, 900/2, PERIODIC_FREQUENCY); /* 450 because dynamic range is only 0-9600 */
   // Different dynamics for up and down
   alpha_yaw_inc = actuator_model[INDI_YAW].alpha;
   alpha_yaw_dec = (PERIODIC_FREQUENCY << 14)/(PERIODIC_FREQUENCY + 13); // OMEGA_DOWN = 13 rad/s, shift = 14
 
 #if STABILIZATION_ATTITUDE_HELI_INDI_USE_FAST_DYN_FILTERS
   /* Fast dynamics in roll and pitch model */
-  heli_rate_filter_initialize(&fast_dynamics_model[INDI_ROLL], STABILIZATION_ATTITUDE_HELI_INDI_FAST_DYN_ROLL_BW, 0, 9600); // TODO: Fix value
-  heli_rate_filter_initialize(&fast_dynamics_model[INDI_PITCH], STABILIZATION_ATTITUDE_HELI_INDI_FAST_DYN_PITCH_BW, 0, 9600); // "       "
+  delayed_first_order_lowpass_initialize(&fast_dynamics_model[INDI_ROLL], STABILIZATION_ATTITUDE_HELI_INDI_FAST_DYN_ROLL_BW, 0, 9600, PERIODIC_FREQUENCY); // TODO: Fix value
+  delayed_first_order_lowpass_initialize(&fast_dynamics_model[INDI_PITCH], STABILIZATION_ATTITUDE_HELI_INDI_FAST_DYN_PITCH_BW, 0, 9600, PERIODIC_FREQUENCY); // "       "
 #endif
 
   /* Notch filter initialization */
