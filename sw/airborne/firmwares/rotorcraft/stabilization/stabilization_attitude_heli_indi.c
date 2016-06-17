@@ -45,14 +45,6 @@ extern int32_t guidance_v_rc_delta_t; // private variable of stabilization_v.c
 #include "math/pprz_algebra_int.h"
 #include "state.h"
 
-/* Check order of commands for effectiveness matrix */
-#if (COMMAND_ROLL   != 0 | \
-     COMMAND_PITCH  != 1 | \
-     COMMAND_YAW    != 2 | \
-     COMMAND_THRUST != 3)
-#warning "Order of commands should be roll, pitch, yaw, thrust"
-#endif
-
 #ifndef STABILIZATION_ATTITUDE_STEADY_STATE_ROLL
   #define STABILIZATION_ATTITUDE_STEADY_STATE_ROLL 0
 #endif
@@ -72,11 +64,6 @@ struct HeliIndiGains heli_indi_gains = {
   STABILIZATION_ATTITUDE_HELI_INDI_YAW_P,
   STABILIZATION_ATTITUDE_HELI_INDI_YAW_D
 };
-
-
-#define HELI_INDI_ROLLRATE_FILTSIZE 16
-#define HELI_INDI_PITCHRATE_FILTSIZE 16
-#define HELI_INDI_YAWRATE_FILTSIZE 8
 
 struct IndiController_int new_heli_indi;
 
@@ -276,22 +263,6 @@ static inline void indi_apply_measurement_notch_filters(int32_t _out[], int32_t 
     _out[INDI_YAW]    = _in[INDI_YAW];
     _out[INDI_THRUST] = _in[INDI_THRUST];
   }
-}
-
-static inline void indi_apply_actuator_lowpass_filters(int32_t _out[], int32_t _in[])
-{
-  _out[INDI_ROLL]   = ((_out[INDI_ROLL] * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + _in[INDI_ROLL]) / HELI_INDI_ROLLRATE_FILTSIZE;
-  _out[INDI_PITCH]   = ((_out[INDI_PITCH] * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + _in[INDI_PITCH]) / HELI_INDI_ROLLRATE_FILTSIZE;
-  _out[INDI_YAW]   = ((_out[INDI_YAW] * (HELI_INDI_YAWRATE_FILTSIZE-1)) + _in[INDI_YAW]) / HELI_INDI_YAWRATE_FILTSIZE;
-  _out[INDI_THRUST]   = ((_out[INDI_THRUST] * (HELI_INDI_YAWRATE_FILTSIZE-1)) + _in[INDI_THRUST]) / HELI_INDI_YAWRATE_FILTSIZE;
-}
-
-static inline void indi_apply_measurement_lowpass_filters(int32_t _out[], int32_t _in[])
-{
-  _out[INDI_ROLL]   = ((_out[INDI_ROLL] * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + _in[INDI_ROLL]) / HELI_INDI_ROLLRATE_FILTSIZE;
-  _out[INDI_PITCH]   = ((_out[INDI_PITCH] * (HELI_INDI_ROLLRATE_FILTSIZE-1)) + _in[INDI_PITCH]) / HELI_INDI_ROLLRATE_FILTSIZE;
-  _out[INDI_YAW]   = ((_out[INDI_YAW] * (HELI_INDI_YAWRATE_FILTSIZE-1)) + _in[INDI_YAW]) / HELI_INDI_YAWRATE_FILTSIZE;
-  _out[INDI_THRUST]   = ((_out[INDI_THRUST] * (HELI_INDI_YAWRATE_FILTSIZE-1)) + _in[INDI_THRUST]) / HELI_INDI_YAWRATE_FILTSIZE;
 }
 
 Butterworth2LowPass_int actuator_lowpass_filters[INDI_DOF];

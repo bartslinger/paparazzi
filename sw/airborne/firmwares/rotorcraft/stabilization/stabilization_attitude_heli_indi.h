@@ -27,8 +27,13 @@
 #include "filters/notch_filter.h"
 #include "filters/delayed_first_order_lowpass_filter.h"
 
-#define GAIN_MULTIPLIER_P 12
-#define GAIN_MULTIPLIER_D 3
+#define __k 1
+#define INDI_NR_FILTERS 2
+#define INDI_DOF 4
+#define INDI_ROLL 0
+#define INDI_PITCH 1
+#define INDI_YAW 2
+#define INDI_THRUST 3
 
 struct HeliIndiGains {
   int32_t roll_p;
@@ -62,15 +67,6 @@ struct HeliIndiStab {
   struct Int32Rates inputmodel_filtered;
   int32_t measured_cmd[3];
 };
-
-
-#define __k 1
-#define INDI_NR_FILTERS 2
-#define INDI_DOF 4
-#define INDI_ROLL 0
-#define INDI_PITCH 1
-#define INDI_YAW 2
-#define INDI_THRUST 3
 
 /* All these values are in the struct to make it easier for logging */
 struct IndiController_int {
