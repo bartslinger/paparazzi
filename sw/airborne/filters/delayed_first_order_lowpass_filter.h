@@ -116,7 +116,8 @@ static inline void delayed_first_order_lowpass_set_delay(struct delayed_first_or
  *
  * Initializes the filter, should be done before using it.
  */
-static inline void delayed_first_order_lowpass_initialize(struct delayed_first_order_lowpass_t *f, uint32_t omega, uint8_t delay, uint16_t max_inc)
+static inline void delayed_first_order_lowpass_initialize(struct delayed_first_order_lowpass_filter_t *f,
+    uint32_t omega, uint8_t delay, uint16_t max_inc, uint16_t sample_frequency)
 {
   /* Set sample frequency */
   f->sample_frequency = sample_frequency;
