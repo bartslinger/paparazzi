@@ -35,9 +35,10 @@
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_rc_setpoint.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_quat_transformations.h"
-#include "modules/sensors/rpm_sensor.h"
 #include "filters/low_pass_filter.h"
-#include "subsystems/radio_control.h"
+#ifdef STABILIZATION_ATTITUDE_HELI_INDI_USE_NOTCHFILTER
+#include "modules/sensors/rpm_sensor.h"
+#endif
 
 #ifndef STABILIZATION_ATTITUDE_STEADY_STATE_ROLL
 #define STABILIZATION_ATTITUDE_STEADY_STATE_ROLL 0
@@ -97,7 +98,7 @@ void stabilization_attitude_heli_indi_set_steadystate_roll(float roll)
 
 void stabilization_attitude_heli_indi_set_steadystate_pitchroll()
 {
-  /* Pitch roll setpoint not zero */
+  /* Pitch roll setpoint not zero, because then helicopter drifts sideways */
   /* orientation vector describing simultaneous rotation of roll/pitch */
   struct FloatVect3 ov;
   struct FloatQuat q;
@@ -306,7 +307,11 @@ void stabilization_attitude_init(void)
   c->pitch_comp_angle = ANGLE_BFP_OF_REAL(11.0 * M_PI / 180.0);
   c->use_roll_dyn_filter = TRUE;
   c->rollfilt_bw = 40.;
+#ifdef STABILIZATION_ATTITUDE_HELI_INDI_USE_NOTCHFILTER
   c->enable_notch = TRUE;
+#else
+  c->enable_notch = FALSE;
+#endif
   c->motor_rpm = 0;
 
   /* Initialize model matrices */
@@ -451,11 +456,13 @@ void stabilization_attitude_run(bool in_flight)
   c->measurement[INDI_THRUST] = body_accel.z;
 
   /* Get RPM measurement */
+#ifdef STABILIZATION_ATTITUDE_HELI_INDI_USE_NOTCHFILTER
   if (heli_indi_ctl.enable_notch) {
     heli_indi_ctl.motor_rpm = rpm_sensor_get_rpm();
   } else {
     heli_indi_ctl.motor_rpm = 0;
   }
+#endif
 
   /* Apply actuator dynamics model to previously commanded values
    * input  = actuator command in previous cycle
