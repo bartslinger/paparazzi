@@ -191,6 +191,7 @@
     <define name="PITCH_P" value="8"/><!--20 3052 -->
     <define name="YAW_P" value="10"/>
     <define name="YAW_D" value="30"/>
+    <define name="USE_NOTCHFILTER" value="1"/>
     <define name="USE_FAST_DYN_FILTERS" value="1" />
     <define name="FAST_DYN_ROLL_BW" value="68" />
     <define name="FAST_DYN_PITCH_BW" value="17" />

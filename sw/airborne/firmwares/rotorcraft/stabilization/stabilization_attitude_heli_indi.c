@@ -36,7 +36,11 @@
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_rc_setpoint.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_quat_transformations.h"
 #include "filters/low_pass_filter.h"
-#ifdef STABILIZATION_ATTITUDE_HELI_INDI_USE_NOTCHFILTER
+
+#if STABILIZATION_ATTITUDE_HELI_INDI_USE_NOTCHFILTER
+#ifndef RPM_PWM_CHANNEL
+#error notch filter requires module rpm_sensor
+#endif
 #include "modules/sensors/rpm_sensor.h"
 #endif
 
@@ -307,7 +311,7 @@ void stabilization_attitude_init(void)
   c->pitch_comp_angle = ANGLE_BFP_OF_REAL(11.0 * M_PI / 180.0);
   c->use_roll_dyn_filter = TRUE;
   c->rollfilt_bw = 40.;
-#ifdef STABILIZATION_ATTITUDE_HELI_INDI_USE_NOTCHFILTER
+#if STABILIZATION_ATTITUDE_HELI_INDI_USE_NOTCHFILTER
   c->enable_notch = TRUE;
 #else
   c->enable_notch = FALSE;
@@ -456,7 +460,7 @@ void stabilization_attitude_run(bool in_flight)
   c->measurement[INDI_THRUST] = body_accel.z;
 
   /* Get RPM measurement */
-#ifdef STABILIZATION_ATTITUDE_HELI_INDI_USE_NOTCHFILTER
+#if STABILIZATION_ATTITUDE_HELI_INDI_USE_NOTCHFILTER
   if (heli_indi_ctl.enable_notch) {
     heli_indi_ctl.motor_rpm = rpm_sensor_get_rpm();
   } else {
