@@ -30,6 +30,7 @@
 #include "abi_messages.h"
 
 struct OrientationReps imu_to_mag;
+struct Int32Vect3 raw_mag;
 
 #if PERIODIC_TELEMETRY
 #include "subsystems/datalink/telemetry.h"
@@ -54,11 +55,10 @@ void mag_through_datalink_init() {
 
 void mag_through_datalink_parse_msg() {
   uint32_t now_ts = get_sys_time_usec();
-  struct Int32Vect3 raw_mag;
   /* (Ab)used HITL_INFRARED message for this */
-  raw_mag.x = DL_HITL_INFRARED_roll(dl_buffer);
-  raw_mag.y = DL_HITL_INFRARED_pitch(dl_buffer);
-  raw_mag.z = DL_HITL_INFRARED_top(dl_buffer);
+  raw_mag.x = (int16_t) (dl_buffer[2] << 8) | (int16_t) (dl_buffer[3]);
+  raw_mag.y = (int16_t) (dl_buffer[4] << 8) | (int16_t) (dl_buffer[5]);
+  raw_mag.z = (int16_t) (dl_buffer[6] << 8) | (int16_t) (dl_buffer[7]);
 
   /* Rotate the magneto */
   struct Int32RMat *imu_to_mag_rmat = orientationGetRMat_i(&imu_to_mag);
