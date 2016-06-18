@@ -117,14 +117,6 @@
     <define name="PSI_AGAIN" value="0"/>
   </section>
 
-  <section name="AHRS" prefix="AHRS_">
-    <!--define name="HEADING_UPDATE_GPS_MIN_SPEED" value="0"/--> <!-- not required anymore with gps=optitrack -->
-  </section>
-
-  <section name="RPM_SENSOR" prefix="RPM_SENSOR_">
-    <define name="PULSES_PER_ROTATION" value="6"/>
-  </section>
-
   <!-- magneto calibration -->
   <include href="conf/airframes/TUDELFT/calibrations/walkera_2016_06_19_external_magneto.xml"/>
 
@@ -232,9 +224,6 @@
   </section>
 
   <section name="AHRS" prefix="AHRS_">
-    <define name="HEADING_UPDATE_GPS_MIN_SPEED" value="0"/>
-    <define name="USE_RPM_SENSOR_NOTCH" value="0"/>
-    <define name="NOTCH_FILTER_BANDWIDTH" value="10"/>
   </section>
 
   <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
@@ -245,7 +234,6 @@
 
   <modules main_freq="512">
     <load name="gps_ubx_ucenter.xml"/>
-    <load name="air_data.xml"/>
     <load name="mag_through_datalink.xml"/>
     <load name="pwm_meas.xml"/>
     <load name="rpm_sensor.xml">
