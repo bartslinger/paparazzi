@@ -35,41 +35,12 @@
 #define INDI_YAW 2
 #define INDI_THRUST 3
 #define INDI_YAW_BUFFER_SIZE 9
-#ifndef INDI_NOTCH_MIN_RPM
-#define INDI_NOTCH_MIN_RPM 1500
-#endif
 
 struct HeliIndiGains {
   int32_t roll_p;
   int32_t pitch_p;
   int32_t yaw_p;
   int32_t yaw_d;
-};
-
-struct HeliIndiStab {
-  float heli_roll_effectiveness_inv;
-  int32_t yawrate_setpoint;
-  int32_t yawrate_err;
-  int32_t filter_out;
-  int32_t yaw_incremental_cmd;
-  int32_t previous_thrust;
-  struct Int32Rates rate_notched;
-  struct Int32Rates rate_filt;
-  struct Int32Rates rate_previous;
-  struct delayed_first_order_lowpass_filter_t tail_model;
-  int32_t alpha_tail_inc;
-  int32_t alpha_tail_dec;
-  struct delayed_first_order_lowpass_filter_t roll_model; // haha woordgrapje
-  struct delayed_first_order_lowpass_filter_t pitch_model;
-  struct SecondOrderNotchFilter p_filter;
-  struct SecondOrderNotchFilter q_filter;
-  struct SecondOrderNotchFilter r_filter;
-  struct SecondOrderNotchFilter p_inner_filter;
-  struct SecondOrderNotchFilter q_inner_filter;
-  struct SecondOrderNotchFilter r_inner_filter;
-  struct Int32Rates inputmodel_notched;
-  struct Int32Rates inputmodel_filtered;
-  int32_t measured_cmd[3];
 };
 
 /* All these values are in the struct to make it easier for logging */
@@ -101,17 +72,10 @@ struct IndiController_int {
 extern struct delayed_first_order_lowpass_filter_t actuator_model[INDI_DOF];
 extern struct Int32Quat   stab_att_sp_quat;  ///< with #INT32_QUAT_FRAC
 extern struct Int32Eulers stab_att_sp_euler; ///< with #INT32_ANGLE_FRAC
-extern struct HeliIndiStab heli_indi;
 extern struct HeliIndiGains heli_indi_gains;
 
 extern void stabilization_attitude_heli_indi_set_steadystate_pitch(float pitch);
 extern void stabilization_attitude_heli_indi_set_steadystate_roll(float roll);
 extern void stabilization_attitude_heli_indi_set_steadystate_pitchroll(void);
-
-#ifdef INDI_EXPERIMENTS
-extern void stabilization_attitude_heli_indi_set_roll_omega(uint32_t omega);
-extern void stabilization_attitude_heli_indi_set_roll_delay(uint8_t delay);
-extern void stabilization_attitude_heli_indi_set_rollfilter_bw(float bandwidth);
-#endif // INDI_EXPERIMENTS
 
 #endif /* STABILIZATION_ATTITUDE_QUAT_INT_H */

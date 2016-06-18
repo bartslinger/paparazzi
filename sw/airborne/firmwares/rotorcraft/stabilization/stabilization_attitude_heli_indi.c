@@ -111,6 +111,10 @@
 #ifndef STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_THRUST
 #define STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_THRUST STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_DEFAULT
 #endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_NOTCH_MIN_RPM
+#define STABILIZATION_ATTITUDE_HELI_INDI_NOTCH_MIN_RPM 1500
+#endif
+#define INDI_NOTCH_MIN_RPM STABILIZATION_ATTITUDE_HELI_INDI_NOTCH_MIN_RPM
 
 /* Shorter defines to use lateron in the matrix */
 #define INVG_00 STABILIZATION_ATTITUDE_HELI_INDI_GINV_ROLL_TO_ROLL
@@ -120,7 +124,7 @@
 
 struct Int32Quat   stab_att_sp_quat;
 struct Int32Eulers stab_att_sp_euler;
-struct Int32Quat sp_offset;
+struct Int32Quat sp_offset; // non-zero neutral attitude
 
 struct HeliIndiGains heli_indi_gains = {
   STABILIZATION_ATTITUDE_HELI_INDI_ROLL_P,
