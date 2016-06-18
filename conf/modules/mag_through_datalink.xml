@@ -3,6 +3,9 @@
 <module name="mag_through_datalink" dir="sensors">
   <doc>
     <description>gets magneto data through datalink</description>
+    <define name="IMU_TO_MAG_PHI" value="0" description="rotation of magneto compared to the magneto in roll axis"/>
+    <define name="IMU_TO_MAG_THETA" value="0" description="rotation of magneto compared to the magneto in pitch axis"/>
+    <define name="IMU_TO_MAG_PSI" value="0" description="rotation of magneto compared to the magneto in yaw axis"/>
   </doc>
   <header>
     <file name="mag_through_datalink.h"/>

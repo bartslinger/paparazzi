@@ -25,14 +25,46 @@
 
 #include "modules/sensors/mag_through_datalink.h"
 #include "subsystems/datalink/datalink.h"
+#include "subsystems/imu.h"
+#include "state.h"
+#include "abi_messages.h"
+
+struct OrientationReps imu_to_mag;
+
+#if PERIODIC_TELEMETRY
+#include "subsystems/datalink/telemetry.h"
+
+static void mag_through_datalink_raw_downlink(struct transport_tx *trans, struct link_device *dev)
+{
+  pprz_msg_send_IMU_MAG_RAW(trans, dev, AC_ID, &imu.mag_unscaled.x, &imu.mag_unscaled.y,
+                             &imu.mag_unscaled.z);
+}
+#endif
 
 void mag_through_datalink_init() {
+  /* Set imu to magneto rotation */
+  struct FloatEulers imu_to_mag_eulers =
+    {IMU_TO_MAG_PHI, IMU_TO_MAG_THETA, IMU_TO_MAG_PSI};
+  orientationSetEulers_f(&imu_to_mag, &imu_to_mag_eulers);
 
+#if PERIODIC_TELEMETRY
+  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_IMU_MAG_RAW, mag_through_datalink_raw_downlink);
+#endif
 }
 
 void mag_through_datalink_parse_msg() {
+  uint32_t now_ts = get_sys_time_usec();
+  struct Int32Vect3 raw_mag;
   /* (Ab)used HITL_INFRARED message for this */
-  //int16_t mag_x = DL_HITL_INFRARED_roll(dl_buffer);
-  //int16_t mag_y = DL_HITL_INFRARED_pitch(dl_buffer);
-  //int16_t mag_z = DL_HITL_INFRARED_top(dl_buffer);
+  raw_mag.x = DL_HITL_INFRARED_roll(dl_buffer);
+  raw_mag.y = DL_HITL_INFRARED_pitch(dl_buffer);
+  raw_mag.z = DL_HITL_INFRARED_top(dl_buffer);
+
+  /* Rotate the magneto */
+  struct Int32RMat *imu_to_mag_rmat = orientationGetRMat_i(&imu_to_mag);
+  int32_rmat_vmult(&imu.mag_unscaled, imu_to_mag_rmat, &raw_mag);
+
+  // Send and set the magneto IMU data
+  imu_scale_mag(&imu);
+  AbiSendMsgIMU_MAG_INT32(MAG_HMC58XX_SENDER_ID, now_ts, &imu.mag);
 }

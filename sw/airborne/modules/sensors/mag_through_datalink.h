@@ -26,6 +26,13 @@
 #ifndef MAG_THROUGH_DATALINK_H
 #define MAG_THROUGH_DATALINK_H
 
+/* Set default rotation to 0 */
+#if !defined IMU_TO_MAG_PHI && !defined IMU_TO_MAG_THETA && !defined IMU_TO_MAG_PSI
+#define IMU_TO_MAG_PHI   0
+#define IMU_TO_MAG_THETA 0
+#define IMU_TO_MAG_PSI   0
+#endif
+
 extern void mag_through_datalink_init(void);
 extern void mag_through_datalink_parse_msg(void);
 

@@ -14,8 +14,8 @@
   <firmware name="rotorcraft">
     <target name="ap" board="lisa_s_1.0">
       <!--define name="USE_KILL_SWITCH_FOR_MOTOR_ARMING" value="1"/-->
-      <configure name="USE_MAGNETOMETER" value="0"/>
-      <define name="AHRS_USE_GPS_HEADING" value="1"/>
+      <configure name="USE_MAGNETOMETER" value="1"/>
+      <define name="AHRS_USE_GPS_HEADING" value="0"/>
       <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="0"/>
 
       <module name="radio_control" type="ppm">
@@ -118,7 +118,7 @@
   </section>
 
   <section name="AHRS" prefix="AHRS_">
-    <define name="HEADING_UPDATE_GPS_MIN_SPEED" value="0"/>
+    <!--define name="HEADING_UPDATE_GPS_MIN_SPEED" value="0"/--> <!-- not required anymore with gps=optitrack -->
   </section>
 
   <section name="RPM_SENSOR" prefix="RPM_SENSOR_">
