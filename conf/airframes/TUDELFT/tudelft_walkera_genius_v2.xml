@@ -197,9 +197,17 @@
     <define name="ROLL_COMMAND_ROTATION" value="11.0"/>
     <define name="PITCH_COMMAND_ROTATION" value="-30.0"/>
     <define name="USE_NOTCHFILTER" value="1"/>
-    <define name="USE_FAST_DYN_FILTERS" value="1" />
-    <define name="FAST_DYN_ROLL_BW" value="68" />
-    <define name="FAST_DYN_PITCH_BW" value="17" />
+    <define name="NOTCHFILT_BW_ROLL" value="10.0" unit="Hz"/>
+    <define name="NOTCHFILT_BW_PITCH" value="10.0" unit="Hz"/>
+    <define name="NOTCHFILT_BW_YAW" value="20.0" unit="Hz"/>
+    <define name="NOTCHFILT_BW_THRUST" value="10.0" unit="Hz"/>
+    <define name="BUTTERW_CUTOFF_ROLL" value="40.0" unit="Hz"/>
+    <define name="BUTTERW_CUTOFF_PITCH" value="40.0" unit="Hz"/>
+    <define name="BUTTERW_CUTOFF_YAW" value="20.0" unit="Hz"/>
+    <define name="BUTTERW_CUTOFF_THRUST" value="10.0" unit="Hz"/>
+    <define name="USE_FAST_DYN_FILTERS" value="1"/>
+    <define name="FAST_DYN_ROLL_BW" value="68" unit="rad/s"/>
+    <define name="FAST_DYN_PITCH_BW" value="17" unit="rad/s"/>
   </section>
 
   <section name="STABILIZATION_ATTITUDE" prefix="STABILIZATION_ATTITUDE_">

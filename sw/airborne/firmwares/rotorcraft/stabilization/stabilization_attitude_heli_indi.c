@@ -45,11 +45,11 @@
 #error notch filter requires module rpm_sensor.xml
 #endif
 #include "modules/sensors/rpm_sensor.h"
-#endif
+#endif // USE_NOTCHFILTER
 
 /* Setup of all default values, these are configured for walkera genius cp v2 */
 #ifndef STABILIZATION_ATTITUDE_HELI_INDI_STEADY_STATE_ROLL
-#define STABILIZATION_ATTITUDE_HELI_INDI_STEADY_STATE_ROLL 0
+#define STABILIZATION_ATTITUDE_HELI_INDI_STEADY_STATE_ROLL 4.5
 #endif
 #ifndef STABILIZATION_ATTITUDE_HELI_INDI_STEADY_STATE_PITCH
 #define STABILIZATION_ATTITUDE_HELI_INDI_STEADY_STATE_PITCH 0
@@ -81,7 +81,38 @@
 #ifndef STABILIZATION_ATTITUDE_HELI_INDI_PITCH_COMMAND_ROTATION
 #define STABILIZATION_ATTITUDE_HELI_INDI_PITCH_COMMAND_ROTATION -30.0
 #endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_DEFAULT
+#define STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_DEFAULT 10.0
+#endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_ROLL
+#define STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_ROLL STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_DEFAULT
+#endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_PITCH
+#define STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_PITCH STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_DEFAULT
+#endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_YAW
+#define STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_YAW STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_DEFAULT
+#endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_THRUST
+#define STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_THRUST STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_DEFAULT
+#endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_DEFAULT
+#define STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_DEFAULT 40.0
+#endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_ROLL
+#define STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_ROLL STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_DEFAULT
+#endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_PITCH
+#define STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_PITCH STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_DEFAULT
+#endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_YAW
+#define STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_YAW STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_DEFAULT
+#endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_THRUST
+#define STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_THRUST STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_DEFAULT
+#endif
 
+/* Shorter defines to use lateron in the matrix */
 #define INVG_00 STABILIZATION_ATTITUDE_HELI_INDI_GINV_ROLL_TO_ROLL
 #define INVG_11 STABILIZATION_ATTITUDE_HELI_INDI_GINV_PITCH_TO_PITCH
 #define INVG_22 STABILIZATION_ATTITUDE_HELI_INDI_GINV_YAW_TO_YAW
@@ -90,8 +121,6 @@
 struct Int32Quat   stab_att_sp_quat;
 struct Int32Eulers stab_att_sp_euler;
 struct Int32Quat sp_offset;
-float sp_offset_roll = STABILIZATION_ATTITUDE_HELI_INDI_STEADY_STATE_ROLL;
-float sp_offset_pitch = STABILIZATION_ATTITUDE_HELI_INDI_STEADY_STATE_PITCH;
 
 struct HeliIndiGains heli_indi_gains = {
   STABILIZATION_ATTITUDE_HELI_INDI_ROLL_P,
@@ -105,50 +134,23 @@ struct IndiController_int heli_indi_ctl;
 
 /* Filter functions */
 struct delayed_first_order_lowpass_filter_t actuator_model[INDI_DOF];
-#if STABILIZATION_ATTITUDE_HELI_INDI_USE_FAST_DYN_FILTERS
-struct delayed_first_order_lowpass_filter_t fast_dynamics_model[2]; // only pitch and roll
-#endif
-/* Tail model parameters for spinning up and down */
-int32_t alpha_yaw_inc;
-int32_t alpha_yaw_dec;
+int32_t alpha_yaw_inc; // Tail model parameters for spinning up
+int32_t alpha_yaw_dec; // Tail model parameters for spinning down
 /* Measurement filters */
 Butterworth2LowPass_int actuator_lowpass_filters[INDI_DOF];
 Butterworth2LowPass_int measurement_lowpass_filters[INDI_DOF];
 struct SecondOrderNotchFilter actuator_notchfilter[INDI_DOF];
 struct SecondOrderNotchFilter measurement_notchfilter[INDI_DOF];
+#if STABILIZATION_ATTITUDE_HELI_INDI_USE_FAST_DYN_FILTERS
+struct delayed_first_order_lowpass_filter_t fast_dynamics_model[2]; // only pitch and roll
+#endif
 
 #if PERIODIC_TELEMETRY
 #include "subsystems/datalink/telemetry.h"
 
-/* Telemetry messages here */
+/* Telemetry messages here, at the moment there are none */
 
-#endif
-
-void stabilization_attitude_heli_indi_set_steadystate_pitch(float pitch)
-{
-  sp_offset_pitch = pitch;
-  stabilization_attitude_heli_indi_set_steadystate_pitchroll();
-}
-
-void stabilization_attitude_heli_indi_set_steadystate_roll(float roll)
-{
-  sp_offset_roll = roll;
-  stabilization_attitude_heli_indi_set_steadystate_pitchroll();
-}
-
-void stabilization_attitude_heli_indi_set_steadystate_pitchroll()
-{
-  /* Pitch roll setpoint not zero, because then helicopter drifts sideways */
-  /* orientation vector describing simultaneous rotation of roll/pitch */
-  struct FloatVect3 ov;
-  struct FloatQuat q;
-  ov.x = -sp_offset_roll * M_PI / 180;
-  ov.y = -sp_offset_pitch * M_PI / 180;
-  ov.z = 0.0;
-  /* quaternion from that orientation vector */
-  float_quat_of_orientation_vect(&q, &ov);
-  QUAT_BFP_OF_REAL(sp_offset, q);
-}
+#endif // PERIODIC_TELEMETRY
 
 static inline void indi_subtract_vect(int32_t _out[], int32_t _in1[], int32_t _in2[])
 {
@@ -224,6 +226,15 @@ static inline void indi_apply_actuator_models(int32_t _out[], int32_t _in[])
 #endif
 }
 
+/**
+ * The main idea of this function is to slow down a certain actuator, so that
+ * the actuator dynamics filtered by the compensater are equal to another
+ * slower actuator. In this case, the tail rotor is slower than collective
+ * pitch. The collective pitch signal can be reduced so that the total dynamics
+ * match the dynamics of the tail rotor. This prevents the tail from
+ * breaking out. But at the moment thrust is not implemented so this is not
+ * used.
+ */
 static inline void indi_apply_compensator_filters(int32_t _out[], int32_t _in[])
 {
   _out[INDI_ROLL]   = _in[INDI_ROLL];
@@ -263,6 +274,7 @@ static inline void indi_apply_compensator_filters(int32_t _out[], int32_t _in[])
                        prev_thrust_out) / ((1 << DELAYED_FIRST_ORDER_LOWPASS_FILTER_FILTER_ALPHA_SHIFT) - alpha_thrust);
   prev_thrust_out = _out[INDI_THRUST];
 
+  /* At the moment, thrust is not fully implemented */
   //_out[INDI_THRUST] = _in[INDI_THRUST];
 }
 
@@ -318,41 +330,74 @@ static inline void indi_apply_measurement_butterworth_filters(int32_t _out[], in
   }
 }
 
-void stabilization_attitude_heli_indi_set_roll_omega(uint32_t omega)
+/**
+ * @brief stabilization_attitude_heli_indi_set_steadystate_pitch
+ * @param pitch neutral pitch angle [deg].
+ *
+ * Change the neutral pitch angle.
+ */
+void stabilization_attitude_heli_indi_set_steadystate_pitch(float pitch)
 {
-  delayed_first_order_lowpass_set_omega(&actuator_model[INDI_ROLL], omega);
+  heli_indi_ctl.sp_offset_pitch = pitch;
+  stabilization_attitude_heli_indi_set_steadystate_pitchroll();
 }
 
-void stabilization_attitude_heli_indi_set_roll_delay(uint8_t delay)
+/**
+ * @brief stabilization_attitude_heli_indi_set_steadystate_roll
+ * @param roll neutral roll angle [deg].
+ *
+ * Change the neutral roll angle. Especially useful for helicopters,
+ * since they need a small roll angle in hover to compensate the tail force.
+ */
+void stabilization_attitude_heli_indi_set_steadystate_roll(float roll)
 {
-  delayed_first_order_lowpass_set_delay(&actuator_model[INDI_ROLL], delay);
+  heli_indi_ctl.sp_offset_roll = roll;
+  stabilization_attitude_heli_indi_set_steadystate_pitchroll();
 }
 
-void stabilization_attitude_heli_indi_set_rollfilter_bw(float bandwidth)
+/**
+ * @brief stabilization_attitude_heli_indi_set_steadystate_pitchroll
+ *
+ * Updates the neutral pitch and roll angles and calculates the
+ * compensation quaternion.
+ */
+void stabilization_attitude_heli_indi_set_steadystate_pitchroll()
 {
-  heli_indi_ctl.rollfilt_bw = bandwidth;
-  // Cutoff frequencies are in Hz!!!
-  init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_ROLL], bandwidth, 1.0 / PERIODIC_FREQUENCY, 0);
-  init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_ROLL], bandwidth, 1.0 / PERIODIC_FREQUENCY, 0);
+  /* Pitch roll setpoint not zero, because then helicopter drifts sideways */
+  /* orientation vector describing simultaneous rotation of roll/pitch */
+  struct FloatVect3 ov;
+  struct FloatQuat q;
+  ov.x = -heli_indi_ctl.sp_offset_roll * M_PI / 180;
+  ov.y = -heli_indi_ctl.sp_offset_pitch * M_PI / 180;
+  ov.z = 0.0;
+  /* quaternion from that orientation vector */
+  float_quat_of_orientation_vect(&q, &ov);
+  QUAT_BFP_OF_REAL(sp_offset, q);
 }
 
+/**
+ * @brief stabilization_attitude_init
+ *
+ * Initialize the heli indi attitude controller.
+ */
 void stabilization_attitude_init(void)
 {
-  /* Set steady-state pitch and roll values */
-  stabilization_attitude_heli_indi_set_steadystate_pitchroll();
-
   /* Initialization code INDI */
   struct IndiController_int *c = &heli_indi_ctl;
   c->roll_comp_angle = ANGLE_BFP_OF_REAL(STABILIZATION_ATTITUDE_HELI_INDI_PITCH_COMMAND_ROTATION * M_PI / 180.0);
   c->pitch_comp_angle = ANGLE_BFP_OF_REAL(STABILIZATION_ATTITUDE_HELI_INDI_ROLL_COMMAND_ROTATION * M_PI / 180.0);
   c->use_roll_dyn_filter = TRUE;
-  c->rollfilt_bw = 40.;
 #if STABILIZATION_ATTITUDE_HELI_INDI_USE_NOTCHFILTER
   c->enable_notch = TRUE;
 #else
   c->enable_notch = FALSE;
 #endif
   c->motor_rpm = 0;
+
+  /* Set steady-state pitch and roll values */
+  c->sp_offset_roll = STABILIZATION_ATTITUDE_HELI_INDI_STEADY_STATE_ROLL;
+  c->sp_offset_pitch = STABILIZATION_ATTITUDE_HELI_INDI_STEADY_STATE_PITCH;
+  stabilization_attitude_heli_indi_set_steadystate_pitchroll();
 
   /* Initialize model matrices */
   indi_set_identity(c->D);
@@ -373,35 +418,49 @@ void stabilization_attitude_init(void)
   alpha_yaw_dec = (PERIODIC_FREQUENCY << DELAYED_FIRST_ORDER_LOWPASS_FILTER_FILTER_ALPHA_SHIFT) /
                   (PERIODIC_FREQUENCY + 13); // OMEGA_DOWN = 13 rad/s, shift = 14
 
+  /* Notch filter initialization, bandwidth in Hz */
+  notch_filter_init(&actuator_notchfilter[INDI_ROLL], 0.0, STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_ROLL,
+                    PERIODIC_FREQUENCY);
+  notch_filter_init(&measurement_notchfilter[INDI_ROLL], 0.0, STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_ROLL,
+                    PERIODIC_FREQUENCY);
+  notch_filter_init(&actuator_notchfilter[INDI_PITCH], 0.0, STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_PITCH,
+                    PERIODIC_FREQUENCY);
+  notch_filter_init(&measurement_notchfilter[INDI_PITCH], 0.0, STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_PITCH,
+                    PERIODIC_FREQUENCY);
+  notch_filter_init(&actuator_notchfilter[INDI_YAW], 0.0, STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_YAW,
+                    PERIODIC_FREQUENCY);
+  notch_filter_init(&measurement_notchfilter[INDI_YAW], 0.0, STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_YAW,
+                    PERIODIC_FREQUENCY);
+  notch_filter_init(&actuator_notchfilter[INDI_THRUST], 0.0, STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_THRUST,
+                    PERIODIC_FREQUENCY);
+  notch_filter_init(&measurement_notchfilter[INDI_THRUST], 0.0, STABILIZATION_ATTITUDE_HELI_INDI_NOTCHFILT_BW_THRUST,
+                    PERIODIC_FREQUENCY);
+
+  /* Low pass filter initialization, cutoff frequency in Hz */
+  init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_ROLL],
+                                  STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_ROLL, 1.0 / PERIODIC_FREQUENCY, 0);
+  init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_ROLL],
+                                  STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_ROLL, 1.0 / PERIODIC_FREQUENCY, 0);
+  init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_PITCH],
+                                  STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_PITCH, 1.0 / PERIODIC_FREQUENCY, 0);
+  init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_PITCH],
+                                  STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_PITCH, 1.0 / PERIODIC_FREQUENCY, 0);
+  init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_YAW],
+                                  STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_YAW, 1.0 / PERIODIC_FREQUENCY, 0);
+  init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_YAW],
+                                  STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_YAW, 1.0 / PERIODIC_FREQUENCY, 0);
+  init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_THRUST],
+                                  STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_THRUST, 1.0 / PERIODIC_FREQUENCY, 0);
+  init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_THRUST],
+                                  STABILIZATION_ATTITUDE_HELI_INDI_BUTTERW_CUTOFF_THRUST, 1.0 / PERIODIC_FREQUENCY, 0);
+
 #if STABILIZATION_ATTITUDE_HELI_INDI_USE_FAST_DYN_FILTERS
   /* Fast dynamics in roll and pitch model */
   delayed_first_order_lowpass_initialize(&fast_dynamics_model[INDI_ROLL],
-                                         STABILIZATION_ATTITUDE_HELI_INDI_FAST_DYN_ROLL_BW, 0, 9600, PERIODIC_FREQUENCY); // TODO: Fix value
+                                         STABILIZATION_ATTITUDE_HELI_INDI_FAST_DYN_ROLL_BW, 0, MAX_PPRZ, PERIODIC_FREQUENCY);
   delayed_first_order_lowpass_initialize(&fast_dynamics_model[INDI_PITCH],
-                                         STABILIZATION_ATTITUDE_HELI_INDI_FAST_DYN_PITCH_BW, 0, 9600, PERIODIC_FREQUENCY); // "       "
+                                         STABILIZATION_ATTITUDE_HELI_INDI_FAST_DYN_PITCH_BW, 0, MAX_PPRZ, PERIODIC_FREQUENCY);
 #endif
-
-  /* Notch filter initialization */
-  for (uint8_t i = 0; i < INDI_DOF; i++) {
-    // Same parameters in each degree of freedom */
-    notch_filter_init(&actuator_notchfilter[i], 100.0, 10.0, PERIODIC_FREQUENCY);
-    notch_filter_init(&measurement_notchfilter[i], 100.0, 10.0, PERIODIC_FREQUENCY);
-  }
-
-  /* Different bandwidth in yaw */
-  notch_filter_set_bandwidth(&actuator_notchfilter[INDI_YAW], 20.0);
-  notch_filter_set_bandwidth(&measurement_notchfilter[INDI_YAW], 20.0);
-
-  /* Low pass filter initialization */
-  for (uint8_t i = 0; i < INDI_DOF - 2; i++) {
-    // Cutoff frequencies are in Hz!!!
-    init_butterworth_2_low_pass_int(&actuator_lowpass_filters[i], 40, 1.0 / PERIODIC_FREQUENCY, 0);
-    init_butterworth_2_low_pass_int(&measurement_lowpass_filters[i], 40, 1.0 / PERIODIC_FREQUENCY, 0);
-  }
-  init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_YAW], 20, 1.0 / PERIODIC_FREQUENCY, 0);
-  init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_YAW], 20, 1.0 / PERIODIC_FREQUENCY, 0);
-  init_butterworth_2_low_pass_int(&actuator_lowpass_filters[INDI_THRUST], 10, 1.0 / PERIODIC_FREQUENCY, 0);
-  init_butterworth_2_low_pass_int(&measurement_lowpass_filters[INDI_THRUST], 10, 1.0 / PERIODIC_FREQUENCY, 0);
 
   /* Assign filter functions: */
   c->apply_actuator_models = &indi_apply_actuator_models;
@@ -414,47 +473,6 @@ void stabilization_attitude_init(void)
 #if PERIODIC_TELEMETRY
   //register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_<<MSG>>, function);
 #endif
-}
-
-void stabilization_attitude_enter(void)
-{
-  /* reset psi setpoint to current psi angle */
-  stab_att_sp_euler.psi = stabilization_attitude_get_heading_i();
-}
-
-void stabilization_attitude_set_failsafe_setpoint(void)
-{
-  /* set failsafe to zero roll/pitch and current heading */
-  int32_t heading2 = stabilization_attitude_get_heading_i() / 2;
-  PPRZ_ITRIG_COS(stab_att_sp_quat.qi, heading2);
-  stab_att_sp_quat.qx = 0;
-  stab_att_sp_quat.qy = 0;
-  PPRZ_ITRIG_SIN(stab_att_sp_quat.qz, heading2);
-}
-
-void stabilization_attitude_set_rpy_setpoint_i(struct Int32Eulers *rpy)
-{
-  // stab_att_sp_euler.psi still used in ref..
-  stab_att_sp_euler = *rpy;
-
-  int32_quat_of_eulers(&stab_att_sp_quat, &stab_att_sp_euler);
-}
-
-void stabilization_attitude_set_earth_cmd_i(struct Int32Vect2 *cmd, int32_t heading)
-{
-  // stab_att_sp_euler.psi still used in ref..
-  stab_att_sp_euler.psi = heading;
-
-  // compute sp_euler phi/theta for debugging/telemetry
-  /* Rotate horizontal commands to body frame by psi */
-  int32_t psi = stateGetNedToBodyEulers_i()->psi;
-  int32_t s_psi, c_psi;
-  PPRZ_ITRIG_SIN(s_psi, psi);
-  PPRZ_ITRIG_COS(c_psi, psi);
-  stab_att_sp_euler.phi = (-s_psi * cmd->x + c_psi * cmd->y) >> INT32_TRIG_FRAC;
-  stab_att_sp_euler.theta = -(c_psi * cmd->x + s_psi * cmd->y) >> INT32_TRIG_FRAC;
-
-  quat_from_earth_cmd_i(&stab_att_sp_quat, cmd, heading);
 }
 
 void stabilization_attitude_run(bool in_flight)
@@ -582,7 +600,6 @@ void stabilization_attitude_run(bool in_flight)
                                     + c->command_out[__k][INDI_PITCH] * pprz_itrig_sin(c->pitch_comp_angle) / pprz_itrig_cos(c->pitch_comp_angle);
   stabilization_cmd[COMMAND_PITCH] = c->command_out[__k][INDI_PITCH]
                                      + c->command_out[__k][INDI_ROLL] * pprz_itrig_sin(c->roll_comp_angle) / pprz_itrig_cos(c->roll_comp_angle);
-
   stabilization_cmd[COMMAND_YAW] = c->command_out[__k][INDI_YAW];
   /* Thrust is not applied */
 
@@ -590,6 +607,47 @@ void stabilization_attitude_run(bool in_flight)
   if (!autopilot_motors_on) {
     stabilization_cmd[COMMAND_YAW] = 0;
   }
+}
+
+void stabilization_attitude_enter(void)
+{
+  /* reset psi setpoint to current psi angle */
+  stab_att_sp_euler.psi = stabilization_attitude_get_heading_i();
+}
+
+void stabilization_attitude_set_failsafe_setpoint(void)
+{
+  /* set failsafe to zero roll/pitch and current heading */
+  int32_t heading2 = stabilization_attitude_get_heading_i() / 2;
+  PPRZ_ITRIG_COS(stab_att_sp_quat.qi, heading2);
+  stab_att_sp_quat.qx = 0;
+  stab_att_sp_quat.qy = 0;
+  PPRZ_ITRIG_SIN(stab_att_sp_quat.qz, heading2);
+}
+
+void stabilization_attitude_set_rpy_setpoint_i(struct Int32Eulers *rpy)
+{
+  // stab_att_sp_euler.psi still used in ref..
+  stab_att_sp_euler = *rpy;
+
+  int32_quat_of_eulers(&stab_att_sp_quat, &stab_att_sp_euler);
+}
+
+void stabilization_attitude_set_earth_cmd_i(struct Int32Vect2 *cmd, int32_t heading)
+{
+  // stab_att_sp_euler.psi still used in ref..
+  stab_att_sp_euler.psi = heading;
+
+  // compute sp_euler phi/theta for debugging/telemetry
+  /* Rotate horizontal commands to body frame by psi */
+  int32_t psi = stateGetNedToBodyEulers_i()->psi;
+  int32_t s_psi, c_psi;
+  PPRZ_ITRIG_SIN(s_psi, psi);
+  PPRZ_ITRIG_COS(c_psi, psi);
+  stab_att_sp_euler.phi = (-s_psi * cmd->x + c_psi * cmd->y) >> INT32_TRIG_FRAC;
+  stab_att_sp_euler.theta = -(c_psi * cmd->x + s_psi * cmd->y) >> INT32_TRIG_FRAC;
+
+  quat_from_earth_cmd_i(&stab_att_sp_quat, cmd, heading);
 }
 
 void stabilization_attitude_read_rc(bool in_flight, bool in_carefree, bool coordinated_turn)

@@ -74,15 +74,15 @@ struct HeliIndiStab {
 
 /* All these values are in the struct to make it easier for logging */
 struct IndiController_int {
-  int32_t reference[INDI_DOF];                              ///< Range -MAX_PPRZ:MAX_PPRZ
+  int32_t reference[INDI_DOF];                                      ///< Range -MAX_PPRZ:MAX_PPRZ
   int32_t dynamics_compensated_measurement[INDI_DOF];
-  int32_t error[INDI_DOF];                                  ///<
-  int32_t invG[INDI_DOF][INDI_DOF];                         ///< Inverse control effectiveness matrix
-  int32_t D[INDI_DOF][INDI_DOF];                            ///< Dynamics matrix, use identity matrix if not compensating for dynamics
-  int32_t du[INDI_DOF];
-  int32_t u_setpoint[INDI_DOF];                             ///< Actuator setpoint without compensator
+  int32_t error[INDI_DOF];                                          ///< virtual control minus measurement
+  int32_t invG[INDI_DOF][INDI_DOF];                                 ///< Inverse control effectiveness matrix
+  int32_t D[INDI_DOF][INDI_DOF];                                    ///< Dynamics matrix, use identity matrix if not compensating for dynamics
+  int32_t du[INDI_DOF];                                             ///< Actuator commanded increment
+  int32_t u_setpoint[INDI_DOF];                                     ///< Actuator setpoint without compensator
   void (*apply_compensator_filters)(int32_t _out[], int32_t _in[]);
-  int32_t command_out[2][INDI_DOF];                         ///< Command and command from previous measurement
+  int32_t command_out[2][INDI_DOF];                                 ///< Command and command from previous measurement
   void (*apply_actuator_models)(int32_t _out[], int32_t _in[]);
   void (*apply_actuator_filters[INDI_NR_FILTERS])(int32_t _out[], int32_t _in[]);
   int32_t actuator_out[INDI_DOF];
@@ -90,23 +90,20 @@ struct IndiController_int {
   int32_t filtered_actuator[INDI_NR_FILTERS][INDI_DOF];
   int32_t measurement[INDI_DOF];
   int32_t filtered_measurement[INDI_NR_FILTERS][INDI_DOF];
-  int32_t roll_comp_angle;                                        ///< Angle to rotate pitch/roll commands with INT32_ANGLE_FRAC
-  int32_t pitch_comp_angle;                                        ///< Angle to rotate pitch/roll commands with INT32_ANGLE_FRAC
-  uint32_t roll_omega;
-  uint32_t roll_delay;
+  int32_t roll_comp_angle;                                          ///< Angle to rotate pitch/roll commands with INT32_ANGLE_FRAC
+  int32_t pitch_comp_angle;                                         ///< Angle to rotate pitch/roll commands with INT32_ANGLE_FRAC
   bool use_roll_dyn_filter;
-  float rollfilt_bw;                                        ///< Bandwidth of the roll measurement filter
   bool enable_notch;                                      ///< Use notch filters
   int16_t motor_rpm;                                      ///< RPM of the main motor
+  float sp_offset_roll;
+  float sp_offset_pitch;
 };
 
-extern struct IndiController_int heli_indi_ctl;
+//extern struct IndiController_int heli_indi_ctl; // keep private
 
 extern struct delayed_first_order_lowpass_filter_t actuator_model[INDI_DOF];
 extern struct Int32Quat   stab_att_sp_quat;  ///< with #INT32_QUAT_FRAC
 extern struct Int32Eulers stab_att_sp_euler; ///< with #INT32_ANGLE_FRAC
-extern float sp_offset_roll;
-extern float sp_offset_pitch;
 extern struct HeliIndiStab heli_indi;
 extern struct HeliIndiGains heli_indi_gains;
 
@@ -114,8 +111,10 @@ extern void stabilization_attitude_heli_indi_set_steadystate_pitch(float pitch);
 extern void stabilization_attitude_heli_indi_set_steadystate_roll(float roll);
 extern void stabilization_attitude_heli_indi_set_steadystate_pitchroll(void);
 
+#ifdef INDI_EXPERIMENTS
 extern void stabilization_attitude_heli_indi_set_roll_omega(uint32_t omega);
 extern void stabilization_attitude_heli_indi_set_roll_delay(uint8_t delay);
 extern void stabilization_attitude_heli_indi_set_rollfilter_bw(float bandwidth);
+#endif // INDI_EXPERIMENTS
 
 #endif /* STABILIZATION_ATTITUDE_QUAT_INT_H */
