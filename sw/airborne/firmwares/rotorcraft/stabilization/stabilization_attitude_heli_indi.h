@@ -75,10 +75,8 @@ struct HeliIndiStab {
 /* All these values are in the struct to make it easier for logging */
 struct IndiController_int {
   int32_t reference[INDI_DOF];                                      ///< Range -MAX_PPRZ:MAX_PPRZ
-  int32_t dynamics_compensated_measurement[INDI_DOF];               ///< About to remove this one
   int32_t error[INDI_DOF];                                          ///< virtual control minus measurement
   int32_t invG[INDI_DOF][INDI_DOF];                                 ///< Inverse control effectiveness matrix
-  int32_t D[INDI_DOF][INDI_DOF];                                    ///< Dynamics matrix, use identity matrix if not compensating for dynamics
   int32_t du[INDI_DOF];                                             ///< Actuator commanded increment
   int32_t u_setpoint[INDI_DOF];                                     ///< Actuator setpoint without compensator
   int32_t actuator_out[INDI_DOF];                                   ///< Actuator position

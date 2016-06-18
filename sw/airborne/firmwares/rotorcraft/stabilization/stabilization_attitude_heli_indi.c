@@ -394,9 +394,7 @@ void stabilization_attitude_init(void)
   c->sp_offset_pitch = STABILIZATION_ATTITUDE_HELI_INDI_STEADY_STATE_PITCH;
   stabilization_attitude_heli_indi_set_steadystate_pitchroll();
 
-  /* Initialize model matrices */
-  indi_set_identity(c->D);
-
+  /* Initialize inv(G) */
   c->invG[0][0] = INVG_00; c->invG[0][1] =       0; c->invG[0][2] =       0; c->invG[0][3] =       0;
   c->invG[1][0] =       0; c->invG[1][1] = INVG_11; c->invG[1][2] =       0; c->invG[1][3] =       0;
   c->invG[2][0] =       0; c->invG[2][1] =       0; c->invG[2][2] = INVG_22; c->invG[2][3] =       0;
@@ -543,9 +541,6 @@ void stabilization_attitude_run(bool in_flight)
                                           previous_filt_yawrate);  // = approximately yaw acceleration error
   previous_filt_yawrate = c->filtered_measurement[INDI_NR_FILTERS - 1][INDI_YAW];
 
-  /* Apply model dynamics matrix, is diagonal of ones when model dynamics are neglected. */
-  indi_matrix_multiply_vector(c->dynamics_compensated_measurement, c->D, filtered_measurement_vector);
-
   /* Obtain virtual control input with P controller on pitch and roll */
   int32_t roll_virtual_control  = (heli_indi_gains.roll_p * att_err.qx)  / 4;
   int32_t pitch_virtual_control = (heli_indi_gains.pitch_p * att_err.qy) / 4;
@@ -561,7 +556,7 @@ void stabilization_attitude_run(bool in_flight)
   //c->reference[INDI_THRUST] = accel_z_sp;
 
   /* Subtract (filtered) measurement from reference to get the error */
-  indi_subtract_vect(c->error, c->reference, c->dynamics_compensated_measurement);
+  indi_subtract_vect(c->error, c->reference, filtered_measurement_vector);
 
   /* Multiply error with inverse of actuator effectiveness, to get delta u (required increment in input) */
   indi_matrix_multiply_vector(c->du, c->invG, c->error);
