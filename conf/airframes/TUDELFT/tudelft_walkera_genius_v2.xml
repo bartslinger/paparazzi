@@ -74,9 +74,6 @@
 
   <!-- This section contains gains for PID -->
   <section name="STABILIZATION_ATTITUDE" prefix="STABILIZATION_ATTITUDE_">
-    <!-- setpoints -->
-    <define name="STEADY_STATE_ROLL" value="4.5"/>
-    <define name="STEADY_STATE_PITCH" value="0"/>
     <define name="DEADBAND_R" value="250"/>
     <define name="DEADBAND_A" value="250"/>
 
@@ -187,10 +184,16 @@
  </section>
 
   <section name="STABILIZATION_ATTITUDE_HELI_INDI" prefix="STABILIZATION_ATTITUDE_HELI_INDI_">
-    <define name="ROLL_P" value="12"/><!--20 3052 -->
-    <define name="PITCH_P" value="8"/><!--20 3052 -->
+    <!-- setpoints -->
+    <define name="STEADY_STATE_ROLL" value="4.5"/>
+    <define name="STEADY_STATE_PITCH" value="0"/>
+    <define name="ROLL_P" value="12"/>
+    <define name="PITCH_P" value="8"/>
     <define name="YAW_P" value="10"/>
     <define name="YAW_D" value="30"/>
+    <define name="GINV_ROLL_TO_ROLL" value="11681"/>
+    <define name="GINV_PITCH_TO_PITCH" value="13873"/>
+    <define name="GINV_YAW_TO_YAW" value="730"/>
     <define name="USE_NOTCHFILTER" value="1"/>
     <define name="USE_FAST_DYN_FILTERS" value="1" />
     <define name="FAST_DYN_ROLL_BW" value="68" />

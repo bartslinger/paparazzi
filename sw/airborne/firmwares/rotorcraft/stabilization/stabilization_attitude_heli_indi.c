@@ -37,25 +37,55 @@
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_quat_transformations.h"
 #include "filters/low_pass_filter.h"
 
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_USE_NOTCHFILTER
+#define STABILIZATION_ATTITUDE_HELI_INDI_USE_NOTCHFILTER 0
+#endif
 #if STABILIZATION_ATTITUDE_HELI_INDI_USE_NOTCHFILTER
 #ifndef RPM_PWM_CHANNEL
-#error notch filter requires module rpm_sensor
+#error notch filter requires module rpm_sensor.xml
 #endif
 #include "modules/sensors/rpm_sensor.h"
 #endif
 
-#ifndef STABILIZATION_ATTITUDE_STEADY_STATE_ROLL
-#define STABILIZATION_ATTITUDE_STEADY_STATE_ROLL 0
+/* Setup of all default values, these are configured for walkera genius cp v2 */
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_STEADY_STATE_ROLL
+#define STABILIZATION_ATTITUDE_HELI_INDI_STEADY_STATE_ROLL 0
 #endif
-#ifndef STABILIZATION_ATTITUDE_STEADY_STATE_PITCH
-#define STABILIZATION_ATTITUDE_STEADY_STATE_PITCH 0
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_STEADY_STATE_PITCH
+#define STABILIZATION_ATTITUDE_HELI_INDI_STEADY_STATE_PITCH 0
 #endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_ROLL_P
+#define STABILIZATION_ATTITUDE_HELI_INDI_ROLL_P 12
+#endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_PITCH_P
+#define STABILIZATION_ATTITUDE_HELI_INDI_PITCH_P 8
+#endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_YAW_P
+#define STABILIZATION_ATTITUDE_HELI_INDI_YAW_P 10
+#endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_YAW_D
+#define STABILIZATION_ATTITUDE_HELI_INDI_YAW_D 30
+#endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_GINV_ROLL_TO_ROLL
+#define STABILIZATION_ATTITUDE_HELI_INDI_GINV_ROLL_TO_ROLL 11681
+#endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_GINV_PITCH_TO_PITCH
+#define STABILIZATION_ATTITUDE_HELI_INDI_GINV_PITCH_TO_PITCH 13873
+#endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_GINV_YAW_TO_YAW
+#define STABILIZATION_ATTITUDE_HELI_INDI_GINV_YAW_TO_YAW 730
+#endif
+
+#define INVG_00 STABILIZATION_ATTITUDE_HELI_INDI_GINV_ROLL_TO_ROLL
+#define INVG_11 STABILIZATION_ATTITUDE_HELI_INDI_GINV_PITCH_TO_PITCH
+#define INVG_22 STABILIZATION_ATTITUDE_HELI_INDI_GINV_YAW_TO_YAW
+#define INVG_33 -50000 // Not used at the moment
 
 struct Int32Quat   stab_att_sp_quat;
 struct Int32Eulers stab_att_sp_euler;
 struct Int32Quat sp_offset;
-float sp_offset_roll = STABILIZATION_ATTITUDE_STEADY_STATE_ROLL;
-float sp_offset_pitch = STABILIZATION_ATTITUDE_STEADY_STATE_PITCH;
+float sp_offset_roll = STABILIZATION_ATTITUDE_HELI_INDI_STEADY_STATE_ROLL;
+float sp_offset_pitch = STABILIZATION_ATTITUDE_HELI_INDI_STEADY_STATE_PITCH;
 
 struct HeliIndiGains heli_indi_gains = {
   STABILIZATION_ATTITUDE_HELI_INDI_ROLL_P,
@@ -67,7 +97,7 @@ struct HeliIndiGains heli_indi_gains = {
 /* Main controller struct */
 struct IndiController_int heli_indi_ctl;
 
-/* Filter functions referenced to */
+/* Filter functions */
 struct delayed_first_order_lowpass_filter_t actuator_model[INDI_DOF];
 #if STABILIZATION_ATTITUDE_HELI_INDI_USE_FAST_DYN_FILTERS
 struct delayed_first_order_lowpass_filter_t fast_dynamics_model[2]; // only pitch and roll
@@ -321,10 +351,10 @@ void stabilization_attitude_init(void)
   /* Initialize model matrices */
   indi_set_identity(c->D);
 
-  c->invG[0][0] =   +11681; c->invG[0][1] =       0; c->invG[0][2] =    0; c->invG[0][3] =       0;
-  c->invG[1][0] =        0; c->invG[1][1] =  +13873; c->invG[1][2] =    0; c->invG[1][3] =       0;
-  c->invG[2][0] =        0; c->invG[2][1] =       0; c->invG[2][2] =  730; c->invG[2][3] =       0;
-  c->invG[3][0] =        0; c->invG[3][1] =       0; c->invG[3][2] =    0; c->invG[3][3] =  -50000;
+  c->invG[0][0] = INVG_00; c->invG[0][1] =       0; c->invG[0][2] =       0; c->invG[0][3] =       0;
+  c->invG[1][0] =       0; c->invG[1][1] = INVG_11; c->invG[1][2] =       0; c->invG[1][3] =       0;
+  c->invG[2][0] =       0; c->invG[2][1] =       0; c->invG[2][2] = INVG_22; c->invG[2][3] =       0;
+  c->invG[3][0] =       0; c->invG[3][1] =       0; c->invG[3][2] =       0; c->invG[3][3] = INVG_33;
 
   /* Actuator filter initialization */
   delayed_first_order_lowpass_initialize(&actuator_model[INDI_ROLL], 70, 9, 900, PERIODIC_FREQUENCY);
