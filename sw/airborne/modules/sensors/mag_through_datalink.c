@@ -24,8 +24,15 @@
  */
 
 #include "modules/sensors/mag_through_datalink.h"
+#include "subsystems/datalink/datalink.h"
 
-// void mag_through_datalink_init() {}
-// void mag_through_datalink_parse_msg() {}
+void mag_through_datalink_init() {
 
+}
 
+void mag_through_datalink_parse_msg() {
+  /* (Ab)used HITL_INFRARED message for this */
+  //int16_t mag_x = DL_HITL_INFRARED_roll(dl_buffer);
+  //int16_t mag_y = DL_HITL_INFRARED_pitch(dl_buffer);
+  //int16_t mag_z = DL_HITL_INFRARED_top(dl_buffer);
+}

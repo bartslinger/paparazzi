@@ -41,6 +41,7 @@
 	  </module>
     <module name="imu" type="lisa_s_v1.0">
       <define name="LISA_S_UPSIDE_DOWN"/> <!-- wtf hij zit gewoon rechtop maargoed -->
+      <define name="ASPIRIN_2_DISABLE_MAG" value="1"/>
     </module>
     <module name="gps" type="ublox"/>
     <module name="stabilization" type="heli_indi"/> <!-- int_quat / heli_indi -->
@@ -245,6 +246,7 @@
   <modules main_freq="512">
     <load name="gps_ubx_ucenter.xml"/>
     <load name="air_data.xml"/>
+    <load name="mag_through_datalink.xml"/>
     <load name="pwm_meas.xml"/>
     <load name="rpm_sensor.xml">
       <define name="RPM_PULSE_PER_RND" value="18"/>

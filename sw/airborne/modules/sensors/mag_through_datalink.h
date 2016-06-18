@@ -26,8 +26,8 @@
 #ifndef MAG_THROUGH_DATALINK_H
 #define MAG_THROUGH_DATALINK_H
 
-// extern void mag_through_datalink_init();
-// extern void mag_through_datalink_parse_msg();
+extern void mag_through_datalink_init(void);
+extern void mag_through_datalink_parse_msg(void);
 
 #endif
 
