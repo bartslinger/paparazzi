@@ -75,28 +75,27 @@ struct HeliIndiStab {
 /* All these values are in the struct to make it easier for logging */
 struct IndiController_int {
   int32_t reference[INDI_DOF];                                      ///< Range -MAX_PPRZ:MAX_PPRZ
-  int32_t dynamics_compensated_measurement[INDI_DOF];
+  int32_t dynamics_compensated_measurement[INDI_DOF];               ///< About to remove this one
   int32_t error[INDI_DOF];                                          ///< virtual control minus measurement
   int32_t invG[INDI_DOF][INDI_DOF];                                 ///< Inverse control effectiveness matrix
   int32_t D[INDI_DOF][INDI_DOF];                                    ///< Dynamics matrix, use identity matrix if not compensating for dynamics
   int32_t du[INDI_DOF];                                             ///< Actuator commanded increment
   int32_t u_setpoint[INDI_DOF];                                     ///< Actuator setpoint without compensator
-  void (*apply_compensator_filters)(int32_t _out[], int32_t _in[]);
+  int32_t actuator_out[INDI_DOF];                                   ///< Actuator position
   int32_t command_out[2][INDI_DOF];                                 ///< Command and command from previous measurement
+  int32_t filtered_actuator[INDI_NR_FILTERS][INDI_DOF];             ///< Filtered actuator position
+  int32_t measurement[INDI_DOF];                                    ///< Raw measurement
+  int32_t filtered_measurement[INDI_NR_FILTERS][INDI_DOF];          ///< Filtered measurement
+  int32_t pitch_comp_angle;                                         ///< Angle to rotate pitch/roll commands with INT32_ANGLE_FRAC
+  int32_t roll_comp_angle;                                          ///< Angle to rotate pitch/roll commands with INT32_ANGLE_FRAC
+  bool enable_notch;                                                ///< Use notch filters
+  int16_t motor_rpm;                                                ///< RPM of the main motor
+  float sp_offset_roll;                                             ///< Neutral roll angle [deg]
+  float sp_offset_pitch;                                            ///< Neutral pitch angle [deg]
+  void (*apply_compensator_filters)(int32_t _out[], int32_t _in[]);
   void (*apply_actuator_models)(int32_t _out[], int32_t _in[]);
   void (*apply_actuator_filters[INDI_NR_FILTERS])(int32_t _out[], int32_t _in[]);
-  int32_t actuator_out[INDI_DOF];
   void (*apply_measurement_filters[INDI_NR_FILTERS])(int32_t _out[], int32_t _in[]);
-  int32_t filtered_actuator[INDI_NR_FILTERS][INDI_DOF];
-  int32_t measurement[INDI_DOF];
-  int32_t filtered_measurement[INDI_NR_FILTERS][INDI_DOF];
-  int32_t roll_comp_angle;                                          ///< Angle to rotate pitch/roll commands with INT32_ANGLE_FRAC
-  int32_t pitch_comp_angle;                                         ///< Angle to rotate pitch/roll commands with INT32_ANGLE_FRAC
-  bool use_roll_dyn_filter;
-  bool enable_notch;                                      ///< Use notch filters
-  int16_t motor_rpm;                                      ///< RPM of the main motor
-  float sp_offset_roll;
-  float sp_offset_pitch;
 };
 
 //extern struct IndiController_int heli_indi_ctl; // keep private

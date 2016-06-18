@@ -216,10 +216,6 @@ static inline void indi_apply_actuator_models(int32_t _out[], int32_t _in[])
   /* Also apply first order filter that represents fast damping dynamics in pitch and roll rate */
   _out[INDI_ROLL]  = delayed_first_order_lowpass_propagate(&fast_dynamics_model[INDI_ROLL], temp_roll);
   _out[INDI_PITCH] = delayed_first_order_lowpass_propagate(&fast_dynamics_model[INDI_PITCH], temp_pitch);
-  /* For experiment, allow to (temporarily) disable the filter in roll */
-  if (!heli_indi_ctl.use_roll_dyn_filter) {
-    _out[INDI_ROLL] = temp_roll;
-  }
 #else
   _out[INDI_ROLL] = temp_roll;
   _out[INDI_PITCH] = temp_pitch;
@@ -386,7 +382,6 @@ void stabilization_attitude_init(void)
   struct IndiController_int *c = &heli_indi_ctl;
   c->roll_comp_angle = ANGLE_BFP_OF_REAL(STABILIZATION_ATTITUDE_HELI_INDI_PITCH_COMMAND_ROTATION * M_PI / 180.0);
   c->pitch_comp_angle = ANGLE_BFP_OF_REAL(STABILIZATION_ATTITUDE_HELI_INDI_ROLL_COMMAND_ROTATION * M_PI / 180.0);
-  c->use_roll_dyn_filter = TRUE;
 #if STABILIZATION_ATTITUDE_HELI_INDI_USE_NOTCHFILTER
   c->enable_notch = TRUE;
 #else
