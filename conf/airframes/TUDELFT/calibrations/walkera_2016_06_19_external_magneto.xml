@@ -1,0 +1,30 @@
+
+<airframe>
+  <section name="IMU" prefix="IMU_">
+    <define name="ACCEL_X_NEUTRAL" value="0"/>
+    <define name="ACCEL_Y_NEUTRAL" value="0"/>
+    <define name="ACCEL_Z_NEUTRAL" value="0"/>
+
+    <define name="MAG_X_NEUTRAL" value="412"/>
+    <define name="MAG_Y_NEUTRAL" value="67"/>
+    <define name="MAG_Z_NEUTRAL" value="94"/>
+    <define name="MAG_X_SENS" value="3.39336960237" integer="16"/>
+    <define name="MAG_Y_SENS" value="4.14060316148" integer="16"/>
+    <define name="MAG_Z_SENS" value="3.39505053841" integer="16"/>
+
+
+
+    <!-- Current correction -->
+	<!--define name= "MAG_X_CURRENT_COEF" value="-0.00826591496471"/>
+	<define name= "MAG_Y_CURRENT_COEF" value="0.0504179871004"/>
+	<define name= "MAG_Z_CURRENT_COEF" value="0.000356565353913"/-->
+  </section>
+
+  <section name="AHRS" prefix="AHRS_">
+  <!-- (0.390835, 0.00556658, 0.920444) 16mrt2016 delft -->
+    <define name="H_X" value=" 0.390835"/>
+    <define name="H_Y" value=" 0.00556658"/>
+    <define name="H_Z" value=" 0.920444"/>
+  </section>
+
+</airframe>

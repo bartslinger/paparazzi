@@ -126,7 +126,7 @@
   </section>
 
   <!-- magneto calibration -->
-  <include href="conf/airframes/TUDELFT/calibrations/walkera_2016_03_16.xml"/>
+  <include href="conf/airframes/TUDELFT/calibrations/walkera_2016_06_19_external_magneto.xml"/>
 
   <heli_curves>
     <curve throttle="0,4800,7200,8400,9600" collective="-1500,-1500,0,3000,3000"/>
@@ -220,7 +220,7 @@
 
   <section name="INS" prefix="INS_">
     <!-- Use GPS altitude measurments and set the R gain -->
-    <define name="USE_GPS_ALT" value="1"/>
+    <define name="USE_GPS_ALT" value="0"/>
     <define name="VFF_R_GPS" value="0.01"/>
   </section>
 
