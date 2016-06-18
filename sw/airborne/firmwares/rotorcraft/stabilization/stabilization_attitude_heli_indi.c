@@ -75,6 +75,12 @@
 #ifndef STABILIZATION_ATTITUDE_HELI_INDI_GINV_YAW_TO_YAW
 #define STABILIZATION_ATTITUDE_HELI_INDI_GINV_YAW_TO_YAW 730
 #endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_ROLL_COMMAND_ROTATION
+#define STABILIZATION_ATTITUDE_HELI_INDI_ROLL_COMMAND_ROTATION 11.0
+#endif
+#ifndef STABILIZATION_ATTITUDE_HELI_INDI_PITCH_COMMAND_ROTATION
+#define STABILIZATION_ATTITUDE_HELI_INDI_PITCH_COMMAND_ROTATION -30.0
+#endif
 
 #define INVG_00 STABILIZATION_ATTITUDE_HELI_INDI_GINV_ROLL_TO_ROLL
 #define INVG_11 STABILIZATION_ATTITUDE_HELI_INDI_GINV_PITCH_TO_PITCH
@@ -337,8 +343,8 @@ void stabilization_attitude_init(void)
 
   /* Initialization code INDI */
   struct IndiController_int *c = &heli_indi_ctl;
-  c->roll_comp_angle = ANGLE_BFP_OF_REAL(30.0 * M_PI / 180.0);
-  c->pitch_comp_angle = ANGLE_BFP_OF_REAL(11.0 * M_PI / 180.0);
+  c->roll_comp_angle = ANGLE_BFP_OF_REAL(STABILIZATION_ATTITUDE_HELI_INDI_PITCH_COMMAND_ROTATION * M_PI / 180.0);
+  c->pitch_comp_angle = ANGLE_BFP_OF_REAL(STABILIZATION_ATTITUDE_HELI_INDI_ROLL_COMMAND_ROTATION * M_PI / 180.0);
   c->use_roll_dyn_filter = TRUE;
   c->rollfilt_bw = 40.;
 #if STABILIZATION_ATTITUDE_HELI_INDI_USE_NOTCHFILTER
@@ -575,7 +581,7 @@ void stabilization_attitude_run(bool in_flight)
   stabilization_cmd[COMMAND_ROLL] = c->command_out[__k][INDI_ROLL]
                                     + c->command_out[__k][INDI_PITCH] * pprz_itrig_sin(c->pitch_comp_angle) / pprz_itrig_cos(c->pitch_comp_angle);
   stabilization_cmd[COMMAND_PITCH] = c->command_out[__k][INDI_PITCH]
-                                     - c->command_out[__k][INDI_ROLL] * pprz_itrig_sin(c->roll_comp_angle) / pprz_itrig_cos(c->roll_comp_angle);
+                                     + c->command_out[__k][INDI_ROLL] * pprz_itrig_sin(c->roll_comp_angle) / pprz_itrig_cos(c->roll_comp_angle);
 
   stabilization_cmd[COMMAND_YAW] = c->command_out[__k][INDI_YAW];
   /* Thrust is not applied */

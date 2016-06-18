@@ -194,6 +194,8 @@
     <define name="GINV_ROLL_TO_ROLL" value="11681"/>
     <define name="GINV_PITCH_TO_PITCH" value="13873"/>
     <define name="GINV_YAW_TO_YAW" value="730"/>
+    <define name="ROLL_COMMAND_ROTATION" value="11.0"/>
+    <define name="PITCH_COMMAND_ROTATION" value="-30.0"/>
     <define name="USE_NOTCHFILTER" value="1"/>
     <define name="USE_FAST_DYN_FILTERS" value="1" />
     <define name="FAST_DYN_ROLL_BW" value="68" />
