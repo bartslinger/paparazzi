@@ -1,0 +1,16 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module name="mag_through_datalink" dir="sensors">
+  <doc>
+    <description>gets magneto data through datalink</description>
+  </doc>
+  <header>
+    <file name="mag_through_datalink.h"/>
+  </header>
+  <init fun="mag_through_datalink_init()"/>
+  <datalink message="HITL_INFRARED" fun="mag_through_datalink_parse_msg()"/>
+  <makefile>
+    <file name="mag_through_datalink.c"/>
+  </makefile>
+</module>
+
