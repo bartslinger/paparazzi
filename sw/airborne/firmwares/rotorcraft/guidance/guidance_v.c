@@ -465,7 +465,7 @@ static void run_hover_loop(bool in_flight)
   guidance_v_delta_t = guidance_v_ff_cmd + guidance_v_fb_cmd;
 
   /* bound the result */
-  Bound(guidance_v_delta_t, 0, MAX_PPRZ);
+  Bound(guidance_v_delta_t, 0.11*MAX_PPRZ, MAX_PPRZ);
 
 }
 
