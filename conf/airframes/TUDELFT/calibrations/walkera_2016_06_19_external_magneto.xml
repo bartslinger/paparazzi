@@ -5,13 +5,20 @@
     <define name="ACCEL_Y_NEUTRAL" value="0"/>
     <define name="ACCEL_Z_NEUTRAL" value="0"/>
 
-    <define name="MAG_X_NEUTRAL" value="412"/>
+    <!--define name="MAG_X_NEUTRAL" value="412"/>
     <define name="MAG_Y_NEUTRAL" value="67"/>
     <define name="MAG_Z_NEUTRAL" value="94"/>
     <define name="MAG_X_SENS" value="3.39336960237" integer="16"/>
     <define name="MAG_Y_SENS" value="4.14060316148" integer="16"/>
-    <define name="MAG_Z_SENS" value="3.39505053841" integer="16"/>
-
+    <define name="MAG_Z_SENS" value="3.39505053841" integer="16"/-->
+    
+    <!-- outdoor calib -->
+    <define name="MAG_X_NEUTRAL" value="415"/>
+    <define name="MAG_Y_NEUTRAL" value="81"/>
+    <define name="MAG_Z_NEUTRAL" value="100"/>
+    <define name="MAG_X_SENS" value="3.34447209531" integer="16"/>
+    <define name="MAG_Y_SENS" value="3.92918226781" integer="16"/>
+    <define name="MAG_Z_SENS" value="3.3130793116" integer="16"/>
 
 
     <!-- Current correction -->

@@ -227,9 +227,10 @@
   </section>
 
   <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
-   <define name="PGAIN" value="165"/> <!-- 50/165 -->
-   <define name="DGAIN" value="185"/> <!-- 50/185 -->
-   <define name="IGAIN" value="31"/> <!-- 0/31 -->
+   <define name="PGAIN" value="50"/> <!-- 50/165 -->
+   <define name="DGAIN" value="50"/> <!-- 50/185 -->
+   <define name="IGAIN" value="0"/> <!-- 0/31 -->
+   <define name="REF_MAX_SPEED" value="0.5"/>
   </section>
 
   <modules main_freq="512">

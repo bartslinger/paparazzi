@@ -1,0 +1,110 @@
+<!DOCTYPE flight_plan SYSTEM "flight_plan.dtd">
+
+<flight_plan alt="5" geofence_max_alt="160" geofence_sector="Flight_Area" ground_alt="0" lat0="51.9892058" lon0="4.3865075" max_dist_from_home="400" name="Booz Test Enac" security_height="2">
+  <header>
+#include "autopilot.h"
+</header>
+  <waypoints>
+    <waypoint name="HOME" x="0.0" y="0.0"/>
+    <waypoint name="CLIMB" x="0.0" y="5.0"/>
+    <waypoint name="STDBY" x="0.3" y="-0.8"/>
+    <waypoint name="p1" x="8.9" y="9.6"/>
+    <waypoint name="p2" x="24.5" y="10.4"/>
+    <waypoint name="p3" x="27.7" y="-1.1"/>
+    <waypoint name="p4" x="17.1" y="-8.9"/>
+    <waypoint name="FLY1" x="133.7" y="110.8"/>
+    <waypoint name="FLY2" x="225.3" y="-100.8"/>
+    <waypoint name="FLY3" x="-43.3" y="-163.1"/>
+    <waypoint name="FLY4" x="-119.4" y="-1.9"/>
+    <waypoint name="KILL1" x="166.3" y="171.1"/>
+    <waypoint name="KILL2" x="281.2" y="-144.4"/>
+    <waypoint name="KILL3" x="-57.5" y="-199.2"/>
+    <waypoint name="KILL4" x="-170.6" y="22.2"/>
+    <waypoint height="2." name="CAM" x="-20" y="-50"/>
+    <waypoint name="TD" x="0.9" y="-1.2"/>
+  </waypoints>
+  <sectors>
+    <sector color="orange" name="Flight_Area">
+      <corner name="FLY1"/>
+      <corner name="FLY2"/>
+      <corner name="FLY3"/>
+      <corner name="FLY4"/>
+    </sector>
+    <sector color="red" name="Kill">
+      <corner name="KILL1"/>
+      <corner name="KILL2"/>
+      <corner name="KILL3"/>
+      <corner name="KILL4"/>
+    </sector>
+  </sectors>
+  <exceptions/>
+  <blocks>
+    <block name="Wait GPS">
+      <call fun="NavKillThrottle()"/>
+      <while cond="!GpsFixValid()"/>
+    </block>
+    <block name="Geo init">
+      <while cond="LessThan(NavBlockTime(), 10)"/>
+      <call fun="NavSetGroundReferenceHere()"/>
+    </block>
+    <block name="Holding point">
+      <call fun="NavKillThrottle()"/>
+      <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
+    </block>
+    <block name="Start Engine">
+      <call fun="NavResurrect()"/>
+      <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
+    </block>
+    <block name="Takeoff" strip_button="Takeoff" strip_icon="takeoff.png">
+      <exception cond="stateGetPositionEnu_f()->z > 2.0" deroute="route"/>
+      <call fun="NavSetWaypointHere(WP_CLIMB)"/>
+      <stay climb="0.5" vmode="climb" wp="CLIMB"/>
+    </block>
+    <block name="Standby" pre_call="if(!InsideKill(GetPosX(), GetPosY())) NavKillThrottle();" strip_button="Standby" strip_icon="home.png">
+      <stay wp="STDBY"/>
+    </block>
+    <block name="stay_p1">
+      <stay wp="p1"/>
+    </block>
+    <block name="go_p2">
+      <go wp="p2"/>
+      <deroute block="stay_p1"/>
+    </block>
+    <block name="line_p1_p2">
+      <go from="p1" hmode="route" wp="p2"/>
+      <stay until="stage_time>10" wp="p2"/>
+      <go from="p2" hmode="route" wp="p1"/>
+      <deroute block="stay_p1"/>
+    </block>
+    <block name="route">
+      <stay wp="STDBY"/>
+      <call fun="nav_set_heading_towards_waypoint(WP_p2)"/>
+      <go from="STDBY" hmode="route" wp="p2"/>
+      <call fun="nav_set_heading_towards_waypoint(WP_p3)"/>
+      <go from="p2" hmode="route" wp="p3"/>
+      <call fun="nav_set_heading_towards_waypoint(WP_p4)"/>
+      <go from="p3" hmode="route" wp="p4"/>
+      <call fun="nav_set_heading_towards_waypoint(WP_STDBY)"/>
+      <go from="p4" hmode="route" wp="STDBY"/>
+      <deroute block="land here"/>
+    </block>
+    <block name="circle">
+      <circle radius="nav_radius" wp="p1"/>
+    </block>
+    <block name="land here" strip_button="Land Here" strip_icon="land-right.png">
+      <call fun="NavSetWaypointHere(WP_TD)"/>
+    </block>
+    <block name="land">
+      <go wp="TD"/>
+    </block>
+    <block name="flare">
+      <exception cond="NavDetectGround()" deroute="Holding point"/>
+      <exception cond="!nav_is_in_flight()" deroute="landed"/>
+      <call fun="NavStartDetectGround()"/>
+      <stay climb="-0.8" vmode="climb" wp="TD"/>
+    </block>
+    <block name="landed">
+      <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
+    </block>
+  </blocks>
+</flight_plan>

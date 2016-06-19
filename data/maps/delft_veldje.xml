@@ -1,0 +1,4 @@
+<map file="delft_veldje.png" projection="Mercator">
+  <point x="0" y="0" geo="WGS84 51.9901777	4.3848257"/>
+  <point x="1065" y="590" geo="WGS84 51.9883241	4.3902497"/>
+</map>
