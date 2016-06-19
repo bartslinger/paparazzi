@@ -77,15 +77,17 @@
       <deroute block="stay_p1"/>
     </block>
     <block name="route">
-      <stay wp="STDBY"/>
+      <call fun="nav_set_heading_towards_waypoint(WP_p1)"/>
+      <go from="STDBY" hmode="route" wp="p1"/>
       <call fun="nav_set_heading_towards_waypoint(WP_p2)"/>
-      <go from="STDBY" hmode="route" wp="p2"/>
+      <go from="p1" hmode="route" wp="p2"/>
       <call fun="nav_set_heading_towards_waypoint(WP_p3)"/>
       <go from="p2" hmode="route" wp="p3"/>
       <call fun="nav_set_heading_towards_waypoint(WP_p4)"/>
       <go from="p3" hmode="route" wp="p4"/>
       <call fun="nav_set_heading_towards_waypoint(WP_STDBY)"/>
       <go from="p4" hmode="route" wp="STDBY"/>
+      <stay until="stage_time>10" wp="STDBY"/>
       <deroute block="land here"/>
     </block>
     <block name="circle">
