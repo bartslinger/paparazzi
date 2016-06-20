@@ -18,9 +18,9 @@
       <define name="AHRS_USE_GPS_HEADING" value="1"/>
       <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="0"/>
 
-      <module name="radio_control" type="ppm">
+      <subsystem name="radio_control" type="ppm">
         <configure name="RADIO_CONTROL_PPM_PIN" value="SUPERBIT_RST"/>
-      </module>
+      </subsystem>
 
       <!--configure name="USE_BARO_BOARD" value="0"/-->
       <define name="RADIO_KILL_SWITCH" value="RADIO_FLAP"/>
@@ -29,23 +29,23 @@
       <define name="USE_PERSISTENT_SETTINGS" value="TRUE"/>
     </target>
 
-    <module name="actuators" type="pwm">
+    <subsystem name="actuators" type="pwm">
       <define name="TIM5_SERVO_HZ" value="300"/>
       <define name="SERVO_HZ" value="300"/>
       <define name="USE_SERVOS_1AND2"/>
-    </module>
+    </subsystem>
 
-	  <module name="telemetry" type="transparent">
+	  <subsystem name="telemetry" type="transparent">
 	    <configure name="MODEM_BAUD" value="B115200"/>
 	    <configure name="MODEM_PORT" value="UART1"/>
-	  </module>
-    <module name="imu" type="lisa_s_v1.0">
+	  </subsystem>
+    <subsystem name="imu" type="lisa_s_v1.0">
       <define name="LISA_S_UPSIDE_DOWN"/> <!-- wtf hij zit gewoon rechtop maargoed -->
-    </module>
+    </subsystem>
     <module name="gps" type="optitrack"/>
-    <module name="stabilization" type="heli_indi"/> <!-- int_quat / heli_indi -->
-    <module name="ahrs" type="int_cmpl_quat"/>
-    <module name="ins"/>
+    <subsystem name="stabilization" type="int_quat"/> <!-- int_quat / heli_indi -->
+    <subsystem name="ahrs" type="int_cmpl_quat"/>
+    <subsystem name="ins"/>
   </firmware>
 
   <section name="IMU" prefix="IMU_">
@@ -74,6 +74,9 @@
 
   <!-- This section contains gains for PID -->
   <section name="STABILIZATION_ATTITUDE" prefix="STABILIZATION_ATTITUDE_">
+    <!-- setpoints -->
+    <define name="STEADY_STATE_ROLL" value="4.5"/>
+    <define name="STEADY_STATE_PITCH" value="0"/>
     <define name="DEADBAND_R" value="250"/>
     <define name="DEADBAND_A" value="250"/>
 
@@ -165,7 +168,7 @@
     <set servo="CIC_FRONT" value="-swashplate_mixing.commands[SW_FRONT]"/>
     <set servo="CIC_LEFT" value="-swashplate_mixing.commands[SW_LEFTBACK]"/>
     <set servo="CIC_RIGHT" value="swashplate_mixing.commands[SW_RIGHTBACK]"/>
-    <set servo="TAIL" value="@YAW"/> <!-- +0.4*@THRUST met pid -->    
+    <set servo="TAIL" value="@YAW+0.4*@THRUST"/> <!-- +0.4*@THRUST met pid -->    
     <set servo="GAS" value="$halfway * MAX_PPRZ"/>
 
 
@@ -184,30 +187,13 @@
  </section>
 
   <section name="STABILIZATION_ATTITUDE_HELI_INDI" prefix="STABILIZATION_ATTITUDE_HELI_INDI_">
-    <!-- setpoints -->
-    <define name="STEADY_STATE_ROLL" value="4.5"/>
-    <define name="STEADY_STATE_PITCH" value="0"/>
-    <define name="ROLL_P" value="12"/>
-    <define name="PITCH_P" value="8"/>
+    <define name="ROLL_P" value="12"/><!--20 3052 -->
+    <define name="PITCH_P" value="8"/><!--20 3052 -->
     <define name="YAW_P" value="10"/>
     <define name="YAW_D" value="30"/>
-    <define name="GINV_ROLL_TO_ROLL" value="11681"/>
-    <define name="GINV_PITCH_TO_PITCH" value="13873"/>
-    <define name="GINV_YAW_TO_YAW" value="730"/>
-    <define name="ROLL_COMMAND_ROTATION" value="11.0"/>
-    <define name="PITCH_COMMAND_ROTATION" value="-30.0"/>
-    <define name="USE_NOTCHFILTER" value="1"/>
-    <define name="NOTCHFILT_BW_ROLL" value="10.0" unit="Hz"/>
-    <define name="NOTCHFILT_BW_PITCH" value="10.0" unit="Hz"/>
-    <define name="NOTCHFILT_BW_YAW" value="20.0" unit="Hz"/>
-    <define name="NOTCHFILT_BW_THRUST" value="10.0" unit="Hz"/>
-    <define name="BUTTERW_CUTOFF_ROLL" value="40.0" unit="Hz"/>
-    <define name="BUTTERW_CUTOFF_PITCH" value="40.0" unit="Hz"/>
-    <define name="BUTTERW_CUTOFF_YAW" value="20.0" unit="Hz"/>
-    <define name="BUTTERW_CUTOFF_THRUST" value="10.0" unit="Hz"/>
-    <define name="USE_FAST_DYN_FILTERS" value="1"/>
-    <define name="FAST_DYN_ROLL_BW" value="68" unit="rad/s"/>
-    <define name="FAST_DYN_PITCH_BW" value="17" unit="rad/s"/>
+    <define name="USE_FAST_DYN_FILTERS" value="1" />
+    <define name="FAST_DYN_ROLL_BW" value="68" />
+    <define name="FAST_DYN_PITCH_BW" value="17" />
   </section>
 
   <section name="STABILIZATION_ATTITUDE" prefix="STABILIZATION_ATTITUDE_">
