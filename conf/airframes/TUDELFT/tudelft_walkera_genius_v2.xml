@@ -18,9 +18,15 @@
       <define name="AHRS_USE_GPS_HEADING" value="1"/>
       <define name="AHRS_GRAVITY_HEURISTIC_FACTOR" value="0"/>
 
+<<<<<<< HEAD
       <module name="radio_control" type="ppm">
         <configure name="RADIO_CONTROL_PPM_PIN" value="SUPERBIT_RST"/>
       </module>
+=======
+      <subsystem name="radio_control" type="ppm">
+        <configure name="RADIO_CONTROL_PPM_PIN" value="SUPERBIT_RST"/>
+      </subsystem>
+>>>>>>> master
 
       <!--configure name="USE_BARO_BOARD" value="0"/-->
       <define name="RADIO_KILL_SWITCH" value="RADIO_FLAP"/>
@@ -28,6 +34,7 @@
       <configure name="AHRS_PROPAGATE_FREQUENCY" value="500"/>
       <define name="USE_PERSISTENT_SETTINGS" value="TRUE"/>
     </target>
+<<<<<<< HEAD
 
     <module name="actuators" type="pwm">
       <define name="TIM5_SERVO_HZ" value="300"/>
@@ -46,6 +53,26 @@
     <module name="stabilization" type="heli_indi"/> <!-- int_quat / heli_indi -->
     <module name="ahrs" type="int_cmpl_quat"/>
     <module name="ins"/>
+=======
+
+    <subsystem name="actuators" type="pwm">
+      <define name="TIM5_SERVO_HZ" value="300"/>
+      <define name="SERVO_HZ" value="300"/>
+      <define name="USE_SERVOS_1AND2"/>
+    </subsystem>
+
+	  <subsystem name="telemetry" type="transparent">
+	    <configure name="MODEM_BAUD" value="B115200"/>
+	    <configure name="MODEM_PORT" value="UART1"/>
+	  </subsystem>
+    <subsystem name="imu" type="lisa_s_v1.0">
+      <define name="LISA_S_UPSIDE_DOWN"/> <!-- wtf hij zit gewoon rechtop maargoed -->
+    </subsystem>
+    <module name="gps" type="optitrack"/>
+    <subsystem name="stabilization" type="int_quat"/> <!-- int_quat / heli_indi -->
+    <subsystem name="ahrs" type="int_cmpl_quat"/>
+    <subsystem name="ins"/>
+>>>>>>> master
   </firmware>
 
   <section name="IMU" prefix="IMU_">
@@ -74,6 +101,12 @@
 
   <!-- This section contains gains for PID -->
   <section name="STABILIZATION_ATTITUDE" prefix="STABILIZATION_ATTITUDE_">
+<<<<<<< HEAD
+=======
+    <!-- setpoints -->
+    <define name="STEADY_STATE_ROLL" value="4.5"/>
+    <define name="STEADY_STATE_PITCH" value="0"/>
+>>>>>>> master
     <define name="DEADBAND_R" value="250"/>
     <define name="DEADBAND_A" value="250"/>
 
@@ -159,6 +192,7 @@
     <!-- fly with fixed rpm full throttle -->
     <let var="hoverstick" value=".1*MAX_PPRZ"/>
     <let var="halfway" value="(@THRUST >= ($hoverstick) ? 1 : 0)"/>
+<<<<<<< HEAD
 
     <call fun="throttle_curve_run(autopilot_motors_on, values)"/>
     <call fun="swashplate_mixing_run(values)"/>
@@ -168,6 +202,17 @@
     <set servo="TAIL" value="@YAW"/> <!-- +0.4*@THRUST met pid -->    
     <set servo="GAS" value="$halfway * MAX_PPRZ"/>
 
+=======
+
+    <call fun="throttle_curve_run(autopilot_motors_on, values)"/>
+    <call fun="swashplate_mixing_run(values)"/>
+    <set servo="CIC_FRONT" value="-swashplate_mixing.commands[SW_FRONT]"/>
+    <set servo="CIC_LEFT" value="-swashplate_mixing.commands[SW_LEFTBACK]"/>
+    <set servo="CIC_RIGHT" value="swashplate_mixing.commands[SW_RIGHTBACK]"/>
+    <set servo="TAIL" value="@YAW+0.4*@THRUST"/> <!-- +0.4*@THRUST met pid -->    
+    <set servo="GAS" value="$halfway * MAX_PPRZ"/>
+
+>>>>>>> master
 
     <!--set servo="CIC_LEFT" value="0"/>
     <set servo="CIC_RIGHT" value="0"/>
@@ -184,6 +229,7 @@
  </section>
 
   <section name="STABILIZATION_ATTITUDE_HELI_INDI" prefix="STABILIZATION_ATTITUDE_HELI_INDI_">
+<<<<<<< HEAD
     <!-- setpoints -->
     <define name="STEADY_STATE_ROLL" value="4.5"/>
     <define name="STEADY_STATE_PITCH" value="0"/>
@@ -208,6 +254,15 @@
     <define name="USE_FAST_DYN_FILTERS" value="1"/>
     <define name="FAST_DYN_ROLL_BW" value="68" unit="rad/s"/>
     <define name="FAST_DYN_PITCH_BW" value="17" unit="rad/s"/>
+=======
+    <define name="ROLL_P" value="12"/><!--20 3052 -->
+    <define name="PITCH_P" value="8"/><!--20 3052 -->
+    <define name="YAW_P" value="10"/>
+    <define name="YAW_D" value="30"/>
+    <define name="USE_FAST_DYN_FILTERS" value="1" />
+    <define name="FAST_DYN_ROLL_BW" value="68" />
+    <define name="FAST_DYN_PITCH_BW" value="17" />
+>>>>>>> master
   </section>
 
   <section name="STABILIZATION_ATTITUDE" prefix="STABILIZATION_ATTITUDE_">
@@ -229,6 +284,7 @@
     <define name="HOVER_KI" value="0"/>
     <define name="GUIDANCE_V_NOMINAL_HOVER_THROTTLE" value="0.9"/>
   </section>
+<<<<<<< HEAD
 
   <section name="AHRS" prefix="AHRS_">
     <define name="HEADING_UPDATE_GPS_MIN_SPEED" value="0"/>
@@ -263,5 +319,41 @@
     -->
   </modules>
 
+=======
+
+  <section name="AHRS" prefix="AHRS_">
+    <define name="HEADING_UPDATE_GPS_MIN_SPEED" value="0"/>
+    <define name="USE_RPM_SENSOR_NOTCH" value="0"/>
+    <define name="NOTCH_FILTER_BANDWIDTH" value="10"/>
+  </section>
+
+  <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
+   <define name="PGAIN" value="165"/> <!-- 50/165 -->
+   <define name="DGAIN" value="185"/> <!-- 50/185 -->
+   <define name="IGAIN" value="31"/> <!-- 0/31 -->
+  </section>
+
+  <modules main_freq="512">
+    <load name="pwm_meas.xml"/>
+    <load name="rpm_sensor.xml">
+      <define name="RPM_PULSE_PER_RND" value="18"/>
+    </load>
+    <load name="send_imu_mag_current.xml"/>
+    <load name="logger_sd_spi_direct.xml">
+      <configure name="LOGGER_CONTROL_SWITCH" value="RADIO_AUX2"/>
+      <configure name="LOGGER_LED" value="3"/>
+    </load>
+    <load name="heli_swashplate_mixing.xml"/>
+    <load name="heli_throttle_curve.xml"/>
+    <!--load name="roll_disturbance.xml"/-->
+    <!-- DISABLED MODULES
+      <load name="gps_ubx_ucenter.xml"/>
+      <load name="adc_expansion_uart.xml"/>
+      <load name="air_data.xml"/>
+      <load name="sys_mon.xml"/>
+    -->
+  </modules>
+
+>>>>>>> master
 </airframe>
 
