@@ -54,7 +54,7 @@
       <stay until="stage_time>5" wp="STDBY"/>
     </block>
     <block name="circle p3">
-      <circle radius="2" wp="p3" until="stage_time>20"/>
+      <circle radius="2" wp="p3"/>
     </block>
     <block name="return launch">
       <call fun="nav_set_heading_towards_waypoint(WP_CLIMB)"/>
