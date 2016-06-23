@@ -42,7 +42,7 @@
     <subsystem name="imu" type="lisa_s_v1.0">
       <define name="LISA_S_UPSIDE_DOWN"/> <!-- wtf hij zit gewoon rechtop maargoed -->
     </subsystem>
-    <module name="gps" type="optitrack"/>
+    <module name="gps" type="datalink"/>
     <subsystem name="stabilization" type="heli_indi"/> <!-- int_quat / heli_indi -->
     <subsystem name="ahrs" type="int_cmpl_quat"/>
     <subsystem name="ins"/>
