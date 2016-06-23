@@ -37,6 +37,9 @@
       <corner name="_OZ4"/>
     </sector>
   </sectors>
+  <exceptions>
+    <exception cond="electrical.bat_low && !(nav_block == IndexOfBlock('return launch')) && !(nav_block == IndexOfBlock('land here')) && !(nav_block == IndexOfBlock('land')) && !(nav_block == IndexOfBlock('flare')) && !(nav_block == IndexOfBlock('landed'))" deroute="return launch"/>
+  </exceptions>
   <blocks>
     <block name="Wait GPS">
       <call fun="NavKillThrottle()"/>
