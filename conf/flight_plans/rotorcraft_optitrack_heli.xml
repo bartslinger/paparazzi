@@ -1,0 +1,112 @@
+<!DOCTYPE flight_plan SYSTEM "flight_plan.dtd">
+
+<flight_plan alt="2.0" ground_alt="0" lat0="51.990634" lon0="4.376789" max_dist_from_home="100" name="Rotorcraft Optitrack (Delft)" security_height="0.3">
+  <header>
+#include "autopilot.h"
+</header>
+  <waypoints>
+    <waypoint name="HOME" x="-1.3" y="0.7"/>
+    <waypoint name="CLIMB" x="-1.3" y="0.3"/>
+    <waypoint name="GOAL" x="-0.6" y="-1.0"/>
+    <waypoint name="STDBY" x="-1.0" y="-0.1"/>
+    <waypoint name="TD" x="-0.9" y="-0.8"/>
+    <waypoint lat="51.990624" lon="4.376843" name="p1"/>
+    <waypoint lat="51.990638" lon="4.376749" name="p2"/>
+    <waypoint lat="51.990631" lon="4.376793" name="p3"/>
+    <waypoint lat="51.990646" lon="4.376784" name="p4"/>
+    <waypoint lat="51.9906213" lon="4.3768628" name="_CZ1"/>
+    <waypoint lat="51.9905874" lon="4.3767766" name="_CZ2"/>
+    <waypoint lat="51.9906409" lon="4.3767226" name="_CZ3"/>
+    <waypoint lat="51.990667" lon="4.376806" name="_CZ4"/>
+    <waypoint lat="51.990624" lon="4.376845" name="_OZ1"/>
+    <waypoint lat="51.990601" lon="4.376782" name="_OZ2"/>
+    <waypoint alt="11.5" lat="51.990638" lon="4.376748" name="_OZ3"/>
+    <waypoint lat="51.990657" lon="4.376804" name="_OZ4"/>
+  </waypoints>
+  <sectors>
+    <sector color="red" name="CyberZoo">
+      <corner name="_CZ1"/>
+      <corner name="_CZ2"/>
+      <corner name="_CZ3"/>
+      <corner name="_CZ4"/>
+    </sector>
+    <sector color="#FF9922" name="ObstacleZone">
+      <corner name="_OZ1"/>
+      <corner name="_OZ2"/>
+      <corner name="_OZ3"/>
+      <corner name="_OZ4"/>
+    </sector>
+  </sectors>
+  <blocks>
+    <block name="Wait GPS">
+      <call fun="NavKillThrottle()"/>
+      <while cond="!GpsFixValid()"/>
+    </block>
+    <block name="Holding point">
+      <call fun="NavKillThrottle()"/>
+      <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
+    </block>
+    <block name="Start Engine">
+      <call fun="NavResurrect()"/>
+      <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
+    </block>
+    <block name="Takeoff" strip_button="Takeoff" strip_icon="takeoff.png">
+      <exception cond="stateGetPositionEnu_f()->z > 1.0" deroute="Standby"/>
+      <call fun="NavSetWaypointHere(WP_CLIMB)"/>
+      <stay climb="nav_climb_vspeed" vmode="climb" wp="CLIMB"/>
+    </block>
+    <block name="Standby" strip_button="Standby" strip_icon="home.png">
+      <stay wp="STDBY"/>
+    </block>
+    <block name="START" strip_button="Go" strip_icon="lookfore.png">
+      <call fun="NavSetWaypointHere(WP_GOAL)"/>
+    </block>
+    <block name="StayGoal">
+      <stay wp="GOAL"/>
+    </block>
+    <block name="stay_p1">
+      <stay wp="p1"/>
+    </block>
+    <block name="go_p2">
+      <call fun="nav_set_heading_deg(90)"/>
+      <go wp="p2"/>
+      <deroute block="stay_p1"/>
+    </block>
+    <block name="line_p1_p2">
+      <go from="p1" hmode="route" wp="p2"/>
+      <stay until="stage_time>2" wp="p2"/>
+      <call fun="nav_set_heading_deg(110)"/>
+      <stay until="stage_time>2" wp="p2"/>
+      <go from="p2" hmode="route" wp="p1"/>
+      <stay until="stage_time>2" wp="p1"/>
+      <call fun="nav_set_heading_deg(290)"/>
+      <stay until="stage_time>2" wp="p1"/>
+      <deroute block="line_p1_p2"/>
+    </block>
+    <block name="route">
+      <go from="p1" hmode="route" wp="p3"/>
+      <go from="p3" hmode="route" wp="p4"/>
+      <go from="p4" hmode="route" wp="p1"/>
+      <deroute block="stay_p1"/>
+    </block>
+    <block name="land here" strip_button="Land Here" strip_icon="land-right.png">
+      <call fun="NavSetWaypointHere(WP_TD)"/>
+    </block>
+    <block name="land">
+      <go wp="TD"/>
+    </block>
+    <block name="flare">
+      <exception cond="NavDetectGround()" deroute="Holding point"/>
+      <exception cond="!nav_is_in_flight()" deroute="landed"/>
+      <call fun="NavStartDetectGround()"/>
+      <stay climb="nav_descend_vspeed" vmode="climb" wp="TD"/>
+    </block>
+    <block name="landed">
+      <call fun="NavKillThrottle()"/>
+      <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
+    </block>
+    <block name="circle p3">
+      <circle radius="2" wp="p3"/>
+    </block>
+  </blocks>
+</flight_plan>
