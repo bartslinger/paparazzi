@@ -223,6 +223,7 @@
   </section>
 
   <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
+   <define name="REF_MAX_SPEED" value="0.4"/> <!-- nice speed to fly circles -->
    <define name="PGAIN" value="165"/> <!-- 50/165 -->
    <define name="DGAIN" value="185"/> <!-- 50/185 -->
    <define name="IGAIN" value="31"/> <!-- 0/31 -->

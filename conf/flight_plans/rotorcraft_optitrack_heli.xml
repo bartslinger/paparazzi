@@ -1,8 +1,8 @@
 <!DOCTYPE flight_plan SYSTEM "flight_plan.dtd">
-
 <flight_plan alt="2.0" ground_alt="0" lat0="51.990634" lon0="4.376789" max_dist_from_home="100" name="Rotorcraft Optitrack (Delft)" security_height="0.3">
   <header>
 #include "autopilot.h"
+#include "subsystems/electrical.h"
 </header>
   <waypoints>
     <waypoint name="HOME" x="-1.3" y="0.7"/>
@@ -42,6 +42,23 @@
       <call fun="NavKillThrottle()"/>
       <while cond="!GpsFixValid()"/>
     </block>
+    <block name="Takeoff" strip_button="Takeoff" strip_icon="takeoff.png">
+      <exception cond="stateGetPositionEnu_f()->z > 1.0" deroute="Standby"/>
+      <call fun="NavSetWaypointHere(WP_CLIMB)"/>
+      <stay climb="nav_climb_vspeed" vmode="climb" wp="CLIMB"/>
+    </block>
+    <block name="Standby" strip_button="Standby" strip_icon="home.png">
+      <stay until="stage_time>5" wp="STDBY"/>
+    </block>
+    <block name="circle p3">
+      <circle radius="2" wp="p3" until="stage_time>20"/>
+    </block>
+    <block name="return launch">
+      <call fun="nav_set_heading_towards_waypoint(WP_CLIMB)"/>
+      <go wp="CLIMB"/>
+      <stay until="stage_time>5" wp="CLIMB"/>
+      <deroute block="land here"/>
+    </block>
     <block name="Holding point">
       <call fun="NavKillThrottle()"/>
       <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
@@ -49,14 +66,6 @@
     <block name="Start Engine">
       <call fun="NavResurrect()"/>
       <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
-    </block>
-    <block name="Takeoff" strip_button="Takeoff" strip_icon="takeoff.png">
-      <exception cond="stateGetPositionEnu_f()->z > 1.0" deroute="Standby"/>
-      <call fun="NavSetWaypointHere(WP_CLIMB)"/>
-      <stay climb="nav_climb_vspeed" vmode="climb" wp="CLIMB"/>
-    </block>
-    <block name="Standby" strip_button="Standby" strip_icon="home.png">
-      <stay wp="STDBY"/>
     </block>
     <block name="START" strip_button="Go" strip_icon="lookfore.png">
       <call fun="NavSetWaypointHere(WP_GOAL)"/>
@@ -104,9 +113,6 @@
     <block name="landed">
       <call fun="NavKillThrottle()"/>
       <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
-    </block>
-    <block name="circle p3">
-      <circle radius="2" wp="p3"/>
     </block>
   </blocks>
 </flight_plan>
