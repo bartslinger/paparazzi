@@ -71,7 +71,7 @@
     <define name="CALC_AMSL_BARO" value="TRUE"/>
   </section>
 
-  <include href="conf/airframes/TUDELFT/calibrations/bebop2_$AC_ID.xml" />
+  <include href="conf/airframes/TUDELFT/calibrations/bebop2_$AC_ID.xml"/>
 
   <!-- local magnetic field -->
   <!-- http://wiki.paparazziuav.org/wiki/Subsystem/ahrs#Local_Magnetic_Field -->
@@ -123,15 +123,15 @@
 
   <section name="PID_GAINS" prefix="STABILIZATION_ATTITUDE_">
     <!-- feedback -->
-    <define name="PHI_PGAIN" value="731"/>
-    <define name="PHI_DGAIN" value="53"/>
+    <define name="PHI_PGAIN" value="552"/>
+    <define name="PHI_DGAIN" value="72"/>
     <define name="PHI_IGAIN" value="0"/>
 
-    <define name="THETA_PGAIN" value="818"/>
-    <define name="THETA_DGAIN" value="57"/>
+    <define name="THETA_PGAIN" value="1129"/>
+    <define name="THETA_DGAIN" value="113"/>
     <define name="THETA_IGAIN" value="0"/>
 
-    <define name="PSI_PGAIN" value="15000"/>
+    <define name="PSI_PGAIN" value="3997"/>
     <define name="PSI_DGAIN" value="84"/>
     <define name="PSI_IGAIN" value="0"/>
 
@@ -152,7 +152,7 @@
   <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
     <!-- Good weather -->
     <define name="MAX_BANK" value="20" unit="deg"/>
-    <define name="REF_MAX_SPEED" value="2" unit="m/s"/>
+    <define name="REF_MAX_SPEED" value="2." unit="m/s"/>
     <!-- Bad weather -->
     <!-- define name="MAX_BANK" value="32" unit="deg"/ -->
     <define name="PGAIN" value="120"/>
@@ -162,7 +162,7 @@
 
   <section name="NAVIGATION" prefix="NAV_">
     <define name="CLIMB_VSPEED" value="4.5"/>
-    <define name="DESCEND_VSPEED" value="-1.0"/>
+    <define name="DESCEND_VSPEED" value="-1."/>
   </section>
 
   <section name="SIMULATOR" prefix="NPS_">
